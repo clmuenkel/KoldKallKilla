@@ -6,6 +6,12 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+// Timestamped note entry for calls
+export interface TimestampedNote {
+  time: string; // Format: "MM:SS" or "HH:MM:SS"
+  note: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -52,11 +58,76 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      companies: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          domain: string | null;
+          industry: string | null;
+          employee_count: number | null;
+          employee_range: string | null;
+          city: string | null;
+          state: string | null;
+          country: string;
+          timezone: string | null;
+          website: string | null;
+          linkedin_url: string | null;
+          annual_revenue: string | null;
+          intent_score: number | null;
+          intent_topics: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          domain?: string | null;
+          industry?: string | null;
+          employee_count?: number | null;
+          employee_range?: string | null;
+          city?: string | null;
+          state?: string | null;
+          country?: string;
+          timezone?: string | null;
+          website?: string | null;
+          linkedin_url?: string | null;
+          annual_revenue?: string | null;
+          intent_score?: number | null;
+          intent_topics?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          domain?: string | null;
+          industry?: string | null;
+          employee_count?: number | null;
+          employee_range?: string | null;
+          city?: string | null;
+          state?: string | null;
+          country?: string;
+          timezone?: string | null;
+          website?: string | null;
+          linkedin_url?: string | null;
+          annual_revenue?: string | null;
+          intent_score?: number | null;
+          intent_topics?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       contacts: {
         Row: {
           id: string;
           user_id: string;
+          company_id: string | null;
           apollo_id: string | null;
           enrichment_status: string;
           enriched_at: string | null;
@@ -94,12 +165,15 @@ export interface Database {
           next_follow_up: string | null;
           total_calls: number;
           total_emails: number;
+          direct_referral_contact_id: string | null;
+          direct_referral_note: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
+          company_id?: string | null;
           apollo_id?: string | null;
           enrichment_status?: string;
           enriched_at?: string | null;
@@ -137,12 +211,15 @@ export interface Database {
           next_follow_up?: string | null;
           total_calls?: number;
           total_emails?: number;
+          direct_referral_contact_id?: string | null;
+          direct_referral_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
+          company_id?: string | null;
           apollo_id?: string | null;
           enrichment_status?: string;
           enriched_at?: string | null;
@@ -180,9 +257,51 @@ export interface Database {
           next_follow_up?: string | null;
           total_calls?: number;
           total_emails?: number;
+          direct_referral_contact_id?: string | null;
+          direct_referral_note?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      persona_sets: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          titles: string[];
+          industries: string[];
+          employee_ranges: string[];
+          include_intent_data: boolean;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          titles?: string[];
+          industries?: string[];
+          employee_ranges?: string[];
+          include_intent_data?: boolean;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          titles?: string[];
+          industries?: string[];
+          employee_ranges?: string[];
+          include_intent_data?: boolean;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       calls: {
         Row: {
@@ -194,7 +313,9 @@ export interface Database {
           duration_seconds: number | null;
           outcome: string;
           disposition: string | null;
+          phone_used: string | null;
           notes: string | null;
+          timestamped_notes: TimestampedNote[];
           tags_applied: string[];
           confirmed_budget: boolean | null;
           confirmed_authority: boolean | null;
@@ -213,7 +334,9 @@ export interface Database {
           duration_seconds?: number | null;
           outcome: string;
           disposition?: string | null;
+          phone_used?: string | null;
           notes?: string | null;
+          timestamped_notes?: TimestampedNote[];
           tags_applied?: string[];
           confirmed_budget?: boolean | null;
           confirmed_authority?: boolean | null;
@@ -232,7 +355,9 @@ export interface Database {
           duration_seconds?: number | null;
           outcome?: string;
           disposition?: string | null;
+          phone_used?: string | null;
           notes?: string | null;
+          timestamped_notes?: TimestampedNote[];
           tags_applied?: string[];
           confirmed_budget?: boolean | null;
           confirmed_authority?: boolean | null;
@@ -242,16 +367,19 @@ export interface Database {
           follow_up_task_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       tasks: {
         Row: {
           id: string;
           user_id: string;
           contact_id: string | null;
+          meeting_id: string | null;
           title: string;
           description: string | null;
           type: string;
           priority: string;
+          importance: number | null;
           status: string;
           due_date: string | null;
           due_time: string | null;
@@ -266,10 +394,12 @@ export interface Database {
           id?: string;
           user_id: string;
           contact_id?: string | null;
+          meeting_id?: string | null;
           title: string;
           description?: string | null;
           type?: string;
           priority?: string;
+          importance?: number | null;
           status?: string;
           due_date?: string | null;
           due_time?: string | null;
@@ -284,10 +414,12 @@ export interface Database {
           id?: string;
           user_id?: string;
           contact_id?: string | null;
+          meeting_id?: string | null;
           title?: string;
           description?: string | null;
           type?: string;
           priority?: string;
+          importance?: number | null;
           status?: string;
           due_date?: string | null;
           due_time?: string | null;
@@ -298,6 +430,40 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      meeting_notes: {
+        Row: {
+          id: string;
+          meeting_id: string;
+          user_id: string;
+          content: string;
+          is_action_item: boolean;
+          task_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          meeting_id: string;
+          user_id: string;
+          content: string;
+          is_action_item?: boolean;
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          meeting_id?: string;
+          user_id?: string;
+          content?: string;
+          is_action_item?: boolean;
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       notes: {
         Row: {
@@ -305,8 +471,10 @@ export interface Database {
           user_id: string;
           contact_id: string;
           call_id: string | null;
+          company_id: string | null;
           content: string;
           is_pinned: boolean;
+          is_company_wide: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -315,8 +483,10 @@ export interface Database {
           user_id: string;
           contact_id: string;
           call_id?: string | null;
+          company_id?: string | null;
           content: string;
           is_pinned?: boolean;
+          is_company_wide?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -325,11 +495,74 @@ export interface Database {
           user_id?: string;
           contact_id?: string;
           call_id?: string | null;
+          company_id?: string | null;
           content?: string;
           is_pinned?: boolean;
+          is_company_wide?: boolean;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      meetings: {
+        Row: {
+          id: string;
+          user_id: string;
+          contact_id: string;
+          company_id: string | null;
+          title: string;
+          description: string | null;
+          scheduled_at: string;
+          duration_minutes: number;
+          location: string | null;
+          meeting_link: string | null;
+          status: string;
+          reminder_at: string | null;
+          reminder_sent: boolean;
+          outcome: string | null;
+          outcome_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          contact_id: string;
+          company_id?: string | null;
+          title: string;
+          description?: string | null;
+          scheduled_at: string;
+          duration_minutes?: number;
+          location?: string | null;
+          meeting_link?: string | null;
+          status?: string;
+          reminder_at?: string | null;
+          reminder_sent?: boolean;
+          outcome?: string | null;
+          outcome_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          contact_id?: string;
+          company_id?: string | null;
+          title?: string;
+          description?: string | null;
+          scheduled_at?: string;
+          duration_minutes?: number;
+          location?: string | null;
+          meeting_link?: string | null;
+          status?: string;
+          reminder_at?: string | null;
+          reminder_sent?: boolean;
+          outcome?: string | null;
+          outcome_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       email_templates: {
         Row: {
@@ -368,6 +601,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       emails: {
         Row: {
@@ -418,6 +652,7 @@ export interface Database {
           replied_at?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       call_lists: {
         Row: {
@@ -453,6 +688,7 @@ export interface Database {
           is_active?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       call_list_items: {
         Row: {
@@ -485,6 +721,7 @@ export interface Database {
           call_id?: string | null;
           added_at?: string;
         };
+        Relationships: [];
       };
       activity_log: {
         Row: {
@@ -520,6 +757,7 @@ export interface Database {
           summary?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       call_scripts: {
         Row: {
@@ -564,6 +802,37 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      dialer_drafts: {
+        Row: {
+          id: string;
+          user_id: string;
+          contact_id: string;
+          company_id: string | null;
+          payload: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          contact_id: string;
+          company_id?: string | null;
+          payload: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          contact_id?: string;
+          company_id?: string | null;
+          payload?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       user_settings: {
         Row: {
@@ -614,6 +883,7 @@ export interface Database {
           work_days?: number[];
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -623,6 +893,9 @@ export interface Database {
       [_ in never]: never;
     };
     Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
       [_ in never]: never;
     };
   };
@@ -638,9 +911,13 @@ export type UpdateTables<T extends keyof Database["public"]["Tables"]> =
 
 // Commonly used types
 export type Contact = Tables<"contacts">;
+export type Company = Tables<"companies">;
+export type PersonaSet = Tables<"persona_sets">;
 export type Call = Tables<"calls">;
 export type Task = Tables<"tasks">;
 export type Note = Tables<"notes">;
+export type Meeting = Tables<"meetings">;
+export type MeetingNote = Tables<"meeting_notes">;
 export type EmailTemplate = Tables<"email_templates">;
 export type Email = Tables<"emails">;
 export type CallList = Tables<"call_lists">;
@@ -649,3 +926,56 @@ export type ActivityLog = Tables<"activity_log">;
 export type CallScript = Tables<"call_scripts">;
 export type UserSettings = Tables<"user_settings">;
 export type Profile = Tables<"profiles">;
+export type DialerDraft = Tables<"dialer_drafts">;
+
+// Extended types with relations
+export interface ContactWithCompany extends Contact {
+  companies?: Company | null;
+}
+
+export interface ContactWithReferral extends Contact {
+  referrer?: Contact | null;
+}
+
+export interface CompanyWithContacts extends Company {
+  contacts?: Contact[];
+  contact_count?: number;
+  last_contacted_at?: string | null;
+}
+
+// Contact subset used in relations (for joined queries)
+export interface ContactRelation {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  company_name: string | null;
+  title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+// Extended types for joined queries
+export interface MeetingWithContact extends Meeting {
+  contacts: ContactRelation | null;
+}
+
+export interface TaskWithContact extends Task {
+  contacts: ContactRelation | null;
+}
+
+export interface CallWithContact extends Call {
+  contacts: ContactRelation | null;
+}
+
+export interface ActivityLogWithContact extends ActivityLog {
+  contacts: ContactRelation | null;
+}
+
+export interface MeetingNoteWithTask extends MeetingNote {
+  tasks: {
+    id: string;
+    title: string;
+    status: string;
+    due_date: string | null;
+  } | null;
+}

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { Task, InsertTables, UpdateTables } from "@/types/database";
+import type { Task, TaskWithContact, InsertTables, UpdateTables } from "@/types/database";
 
 export function useTasks(filters?: {
   status?: string;
@@ -12,7 +12,7 @@ export function useTasks(filters?: {
 }) {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<TaskWithContact[]>({
     queryKey: ["tasks", filters],
     queryFn: async () => {
       let query = supabase
@@ -45,7 +45,7 @@ export function useTasks(filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as unknown as TaskWithContact[];
     },
   });
 }
@@ -53,7 +53,7 @@ export function useTasks(filters?: {
 export function useTodayTasks() {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<TaskWithContact[]>({
     queryKey: ["tasks", "today"],
     queryFn: async () => {
       const today = new Date();
@@ -68,7 +68,7 @@ export function useTodayTasks() {
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return data as unknown as TaskWithContact[];
     },
   });
 }

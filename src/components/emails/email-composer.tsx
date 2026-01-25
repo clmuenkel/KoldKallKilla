@@ -114,20 +114,22 @@ export function EmailComposer({
                   <SelectValue placeholder="Select a template" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EMAIL_TEMPLATE_CATEGORIES.map((cat) => (
-                    templatesByCategory?.[cat.value]?.length > 0 && (
+                  {EMAIL_TEMPLATE_CATEGORIES.map((cat) => {
+                    const categoryTemplates = templatesByCategory?.[cat.value];
+                    if (!categoryTemplates || categoryTemplates.length === 0) return null;
+                    return (
                       <div key={cat.value}>
                         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                           {cat.label}
                         </div>
-                        {templatesByCategory[cat.value]?.map((template) => (
+                        {categoryTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}
                           </SelectItem>
                         ))}
                       </div>
-                    )
-                  ))}
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

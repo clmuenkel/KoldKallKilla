@@ -1,0 +1,428 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+import type { Company, Contact, Call, CallWithContact, InsertTables, UpdateTables } from "@/types/database";
+
+export interface CompanyWithStats extends Company {
+  contact_count: number;
+  last_contacted_at: string | null;
+  contacts?: Contact[];
+  talked_to?: {
+    first_name: string;
+    last_name: string | null;
+    title: string | null;
+    last_contacted_at: string | null;
+  } | null;
+}
+
+export interface CompanyFilters {
+  search?: string;
+  industry?: string;
+  hasContacts?: boolean;
+  limit?: number;
+}
+
+/**
+ * Fetch all companies with contact counts and last contacted date
+ */
+export function useCompanies(filters?: CompanyFilters) {
+  const supabase = createClient();
+
+  return useQuery({
+    queryKey: ["companies", filters],
+    queryFn: async () => {
+      // #region agent log
+      const startTime = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies query START',data:{filters,hasLimit:!!filters?.limit},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      
+      // First get companies
+      let query = supabase
+        .from("companies")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (filters?.search) {
+        query = query.or(
+          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%`
+        );
+      }
+
+      if (filters?.industry) {
+        query = query.eq("industry", filters.industry);
+      }
+
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data: companiesData, error } = await query;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies first query done',data:{durationMs:Date.now()-startTime,companyCount:companiesData?.length||0,error:error?.message||null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      
+      if (error) throw error;
+
+      const companies = companiesData as Company[];
+      if (!companies || companies.length === 0) {
+        return [] as CompanyWithStats[];
+      }
+
+      // Get contact counts and last contacted for each company
+      const companyIds = companies.map((c) => c.id);
+      
+      // #region agent log
+      const contactQueryStart = Date.now();
+      // #endregion
+      
+      const { data: contactStatsData } = await supabase
+        .from("contacts")
+        .select("company_id, last_contacted_at")
+        .in("company_id", companyIds);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies contact stats query done',data:{contactQueryDurationMs:Date.now()-contactQueryStart,totalDurationMs:Date.now()-startTime,contactStatsCount:contactStatsData?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+
+      const contactStats = contactStatsData as { company_id: string | null; last_contacted_at: string | null }[] | null;
+
+      // Aggregate stats per company
+      const statsMap = new Map<string, { count: number; lastContacted: string | null }>();
+      
+      contactStats?.forEach((contact) => {
+        if (!contact.company_id) return;
+        
+        const current = statsMap.get(contact.company_id) || { count: 0, lastContacted: null };
+        current.count++;
+        
+        if (contact.last_contacted_at) {
+          if (!current.lastContacted || contact.last_contacted_at > current.lastContacted) {
+            current.lastContacted = contact.last_contacted_at;
+          }
+        }
+        
+        statsMap.set(contact.company_id, current);
+      });
+
+      // Merge stats into companies
+      const companiesWithStats: CompanyWithStats[] = companies.map((company) => {
+        const stats = statsMap.get(company.id) || { count: 0, lastContacted: null };
+        return {
+          ...company,
+          contact_count: stats.count,
+          last_contacted_at: stats.lastContacted,
+        };
+      });
+
+      // Filter by hasContacts if specified
+      if (filters?.hasContacts) {
+        return companiesWithStats.filter((c) => c.contact_count > 0);
+      }
+
+      return companiesWithStats;
+    },
+  });
+}
+
+/**
+ * Fetch a single company with all its contacts
+ */
+export function useCompany(id: string) {
+  const supabase = createClient();
+
+  return useQuery<CompanyWithStats>({
+    queryKey: ["company", id],
+    queryFn: async () => {
+      const { data: companyData, error } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      const company = companyData as Company;
+
+      // Get contacts for this company
+      const { data: contactsData } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("company_id", id)
+        .order("last_contacted_at", { ascending: false, nullsFirst: false });
+
+      const contacts = contactsData as Contact[] | null;
+
+      // Calculate stats
+      const contact_count = contacts?.length || 0;
+      const last_contacted_at = contacts?.reduce((latest: string | null, contact) => {
+        if (!contact.last_contacted_at) return latest;
+        if (!latest || contact.last_contacted_at > latest) {
+          return contact.last_contacted_at;
+        }
+        return latest;
+      }, null) || null;
+
+      // Find the most recently contacted person at this company
+      const talked_to = contacts?.find(c => c.last_contacted_at) || null;
+
+      return {
+        ...company,
+        contacts: contacts || [],
+        contact_count,
+        last_contacted_at,
+        talked_to: talked_to ? {
+          first_name: talked_to.first_name,
+          last_name: talked_to.last_name,
+          title: talked_to.title,
+          last_contacted_at: talked_to.last_contacted_at,
+        } : null,
+      } as CompanyWithStats;
+    },
+    enabled: !!id,
+  });
+}
+
+/**
+ * Get all contacts for a company
+ */
+export function useCompanyContacts(companyId: string) {
+  const supabase = createClient();
+
+  return useQuery({
+    queryKey: ["company-contacts", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("last_contacted_at", { ascending: false, nullsFirst: false });
+
+      if (error) throw error;
+      return data as Contact[];
+    },
+    enabled: !!companyId,
+  });
+}
+
+/**
+ * Get call history for all contacts at a company
+ */
+export function useCompanyCallHistory(companyId: string) {
+  const supabase = createClient();
+
+  return useQuery<CallWithContact[]>({
+    queryKey: ["company-calls", companyId],
+    queryFn: async () => {
+      // First get all contact IDs for this company
+      const { data: contacts } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("company_id", companyId);
+
+      if (!contacts || contacts.length === 0) {
+        return [] as CallWithContact[];
+      }
+
+      const contactIds = contacts.map((c) => c.id);
+
+      // Get all calls for these contacts
+      const { data: calls, error } = await supabase
+        .from("calls")
+        .select("*, contacts(id, first_name, last_name, title)")
+        .in("contact_id", contactIds)
+        .order("started_at", { ascending: false });
+
+      if (error) throw error;
+      return (calls || []) as unknown as CallWithContact[];
+    },
+    enabled: !!companyId,
+  });
+}
+
+/**
+ * Get contacts at the same company as a given contact (for referral context)
+ */
+export function useCompanyColleagues(contactId: string, companyId?: string | null) {
+  const supabase = createClient();
+
+  return useQuery({
+    queryKey: ["company-colleagues", contactId, companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, last_contacted_at, total_calls")
+        .eq("company_id", companyId)
+        .neq("id", contactId)
+        .order("last_contacted_at", { ascending: false, nullsFirst: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+  });
+}
+
+/**
+ * Get the "talked to" reference for a company (most recently contacted person)
+ */
+export function useCompanyTalkedTo(companyId: string) {
+  const supabase = createClient();
+
+  return useQuery({
+    queryKey: ["company-talked-to", companyId],
+    queryFn: async () => {
+      // Get the most recently contacted person at this company
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, title, last_contacted_at")
+        .eq("company_id", companyId)
+        .not("last_contacted_at", "is", null)
+        .order("last_contacted_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+      return data || null;
+    },
+    enabled: !!companyId,
+  });
+}
+
+/**
+ * Create a new company
+ */
+export function useCreateCompany() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (company: InsertTables<"companies">) => {
+      const { data, error } = await supabase
+        .from("companies")
+        .insert(company)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as Company;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+  });
+}
+
+/**
+ * Update a company
+ */
+export function useUpdateCompany() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: UpdateTables<"companies">;
+    }) => {
+      const { data, error } = await supabase
+        .from("companies")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Company;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company", data.id] });
+    },
+  });
+}
+
+/**
+ * Delete a company
+ */
+export function useDeleteCompany() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // First unlink all contacts from this company
+      await supabase
+        .from("contacts")
+        .update({ company_id: null })
+        .eq("company_id", id);
+
+      // Then delete the company
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+  });
+}
+
+/**
+ * Find or create a company by domain
+ */
+export function useFindOrCreateCompany() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      domain,
+      companyData,
+    }: {
+      userId: string;
+      domain: string;
+      companyData: Omit<InsertTables<"companies">, "user_id">;
+    }) => {
+      // Try to find existing company by domain
+      const { data: existing } = await supabase
+        .from("companies")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("domain", domain)
+        .single();
+
+      if (existing) {
+        return existing as Company;
+      }
+
+      // Create new company
+      const { data, error } = await supabase
+        .from("companies")
+        .insert({
+          ...companyData,
+          user_id: userId,
+          domain,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Company;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+  });
+}

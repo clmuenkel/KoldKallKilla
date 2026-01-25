@@ -15,7 +15,11 @@ export const CALL_OUTCOMES = [
   { value: "busy", label: "Busy", icon: "🔴" },
   { value: "wrong_number", label: "Wrong Number", icon: "❌" },
   { value: "gatekeeper", label: "Gatekeeper", icon: "🚫" },
+  { value: "skipped", label: "Skipped", icon: "⏭️" },
 ] as const;
+
+// Outcomes shown in the UI selector (excludes skipped - that's set programmatically)
+export const CALL_OUTCOMES_UI = CALL_OUTCOMES.filter(o => o.value !== "skipped");
 
 export const CALL_DISPOSITIONS = [
   { value: "interested_meeting", label: "Interested - Book Meeting" },
@@ -32,7 +36,9 @@ export const TASK_TYPES = [
   { value: "email", label: "Email", icon: "✉️" },
   { value: "follow_up", label: "Follow Up", icon: "🔄" },
   { value: "meeting_prep", label: "Meeting Prep", icon: "📋" },
+  { value: "meeting", label: "Meeting", icon: "📅" },
   { value: "proposal", label: "Proposal", icon: "📝" },
+  { value: "custom", label: "Custom", icon: "📌" },
   { value: "other", label: "Other", icon: "📌" },
 ] as const;
 
@@ -49,6 +55,7 @@ export const INDUSTRIES = [
   { value: "bank", label: "Bank" },
   { value: "healthcare", label: "Healthcare" },
   { value: "financial_services", label: "Financial Services" },
+  { value: "insurance", label: "Insurance" },
 ] as const;
 
 export const EMPLOYEE_RANGES = [
@@ -80,4 +87,161 @@ export const TEMPLATE_VARIABLES = [
   { key: "sender_calendar", label: "Calendar Link", example: "https://calendly.com/..." },
   { key: "meeting_date", label: "Meeting Date", example: "Tuesday, January 20th" },
   { key: "meeting_time", label: "Meeting Time", example: "2:00 PM EST" },
+] as const;
+
+// ============================================
+// QUICK TASK PRESETS
+// ============================================
+export const QUICK_TASK_PRESETS = [
+  {
+    id: "call-1-day",
+    label: "Follow up in 1 day",
+    type: "call",
+    daysFromNow: 1,
+    priority: "medium",
+  },
+  {
+    id: "call-3-days",
+    label: "Follow up in 3 days",
+    type: "call",
+    daysFromNow: 3,
+    priority: "medium",
+  },
+  {
+    id: "call-1-week",
+    label: "Follow up in 1 week",
+    type: "call",
+    daysFromNow: 7,
+    priority: "low",
+  },
+  {
+    id: "email-today",
+    label: "Send email today",
+    type: "email",
+    daysFromNow: 0,
+    priority: "high",
+  },
+  {
+    id: "schedule-meeting",
+    label: "Schedule meeting",
+    type: "meeting",
+    daysFromNow: 1,
+    priority: "high",
+  },
+] as const;
+
+// ============================================
+// US STATE TIMEZONE MAPPINGS
+// ============================================
+export const US_STATES_TIMEZONES: Record<string, string> = {
+  // Eastern Time
+  CT: "America/New_York",
+  DE: "America/New_York",
+  DC: "America/New_York",
+  FL: "America/New_York",
+  GA: "America/New_York",
+  IN: "America/Indiana/Indianapolis",
+  KY: "America/Kentucky/Louisville",
+  ME: "America/New_York",
+  MD: "America/New_York",
+  MA: "America/New_York",
+  MI: "America/Detroit",
+  NH: "America/New_York",
+  NJ: "America/New_York",
+  NY: "America/New_York",
+  NC: "America/New_York",
+  OH: "America/New_York",
+  PA: "America/New_York",
+  RI: "America/New_York",
+  SC: "America/New_York",
+  VT: "America/New_York",
+  VA: "America/New_York",
+  WV: "America/New_York",
+
+  // Central Time
+  AL: "America/Chicago",
+  AR: "America/Chicago",
+  IL: "America/Chicago",
+  IA: "America/Chicago",
+  KS: "America/Chicago",
+  LA: "America/Chicago",
+  MN: "America/Chicago",
+  MS: "America/Chicago",
+  MO: "America/Chicago",
+  NE: "America/Chicago",
+  ND: "America/Chicago",
+  OK: "America/Chicago",
+  SD: "America/Chicago",
+  TN: "America/Chicago",
+  TX: "America/Chicago",
+  WI: "America/Chicago",
+
+  // Mountain Time
+  AZ: "America/Phoenix",
+  CO: "America/Denver",
+  ID: "America/Boise",
+  MT: "America/Denver",
+  NV: "America/Los_Angeles",
+  NM: "America/Denver",
+  UT: "America/Denver",
+  WY: "America/Denver",
+
+  // Pacific Time
+  CA: "America/Los_Angeles",
+  OR: "America/Los_Angeles",
+  WA: "America/Los_Angeles",
+
+  // Alaska & Hawaii
+  AK: "America/Anchorage",
+  HI: "America/Honolulu",
+};
+
+// Timezone friendly names
+export const TIMEZONE_FRIENDLY_NAMES: Record<string, string> = {
+  "America/New_York": "Eastern",
+  "America/Chicago": "Central",
+  "America/Denver": "Mountain",
+  "America/Los_Angeles": "Pacific",
+  "America/Phoenix": "Arizona",
+  "America/Anchorage": "Alaska",
+  "America/Honolulu": "Hawaii",
+  "America/Detroit": "Eastern",
+  "America/Indiana/Indianapolis": "Eastern (Indiana)",
+  "America/Kentucky/Louisville": "Eastern (Kentucky)",
+  "America/Boise": "Mountain",
+};
+
+// ============================================
+// APOLLO INTENT TOPICS (for reference)
+// ============================================
+export const APOLLO_INTENT_TOPICS = [
+  { id: "healthcare_technology", label: "Healthcare Technology" },
+  { id: "financial_services_technology", label: "Financial Services Technology" },
+  { id: "cybersecurity", label: "Cybersecurity" },
+  { id: "cloud_computing", label: "Cloud Computing" },
+  { id: "digital_transformation", label: "Digital Transformation" },
+  { id: "data_analytics", label: "Data Analytics" },
+  { id: "artificial_intelligence", label: "Artificial Intelligence" },
+  { id: "automation", label: "Automation" },
+] as const;
+
+// ============================================
+// REFERRAL CONTEXT TYPES
+// ============================================
+export const REFERRAL_CONTEXT_TYPES = [
+  { 
+    value: "direct", 
+    label: "Direct Referral", 
+    description: "Someone specifically told them to expect your call" 
+  },
+  { 
+    value: "company", 
+    label: "Company Reference", 
+    description: "You've spoken with someone else at this company" 
+  },
+  { 
+    value: "manual", 
+    label: "Manual Reference", 
+    description: "You're adding a custom opener reference" 
+  },
 ] as const;

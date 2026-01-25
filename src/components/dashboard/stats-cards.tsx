@@ -2,10 +2,13 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { RingProgress } from "@/components/ui/ring-progress";
-import { Phone, PhoneCall, Calendar, Voicemail } from "lucide-react";
+import { Phone, PhoneCall, Calendar, Voicemail, Pencil } from "lucide-react";
 import { useTodayCallStats } from "@/hooks/use-calls";
+import { useMeetingsBookedToday } from "@/hooks/use-meetings";
+import { useDailyTargets, useUpdateTarget } from "@/hooks/use-targets";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { EditableTarget } from "./editable-target";
 
 interface StatCardProps {
   title: string;
@@ -15,10 +18,22 @@ interface StatCardProps {
   color: string;
   ringColor: string;
   delay?: number;
+  onEditGoal?: (value: number) => Promise<void>;
+  isPending?: boolean;
 }
 
-function StatCard({ title, value, goal, icon, color, ringColor, delay = 0 }: StatCardProps) {
-  const percentage = Math.min(Math.round((value / goal) * 100), 100);
+function StatCard({ 
+  title, 
+  value, 
+  goal, 
+  icon, 
+  color, 
+  ringColor, 
+  delay = 0,
+  onEditGoal,
+  isPending,
+}: StatCardProps) {
+  const percentage = goal > 0 ? Math.min(Math.round((value / goal) * 100), 100) : 0;
 
   return (
     <Card 
@@ -31,7 +46,17 @@ function StatCard({ title, value, goal, icon, color, ringColor, delay = 0 }: Sta
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold">{value}</span>
-              <span className="text-sm text-muted-foreground">/ {goal}</span>
+              <span className="text-sm text-muted-foreground">/ </span>
+              {onEditGoal ? (
+                <EditableTarget
+                  value={goal}
+                  label={title}
+                  onSave={onEditGoal}
+                  isPending={isPending}
+                />
+              ) : (
+                <span className="text-sm text-muted-foreground">{goal}</span>
+              )}
             </div>
           </div>
           <RingProgress
@@ -48,7 +73,7 @@ function StatCard({ title, value, goal, icon, color, ringColor, delay = 0 }: Sta
         </div>
         <div className="mt-4 flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
-            {percentage >= 100 ? "Goal reached!" : `${100 - percentage}% to go`}
+            {percentage >= 100 ? "Goal reached! 🎉" : `${100 - percentage}% to go`}
           </span>
           <span className={cn(
             "font-semibold",
@@ -80,7 +105,41 @@ function StatCardSkeleton() {
 }
 
 export function StatsCards() {
-  const { data: callStats, isLoading } = useTodayCallStats();
+  const { data: callStats, isLoading: loadingCalls } = useTodayCallStats();
+  const { data: meetingsBookedToday, isLoading: loadingMeetings } = useMeetingsBookedToday();
+  const { data: targets, isLoading: loadingTargets } = useDailyTargets();
+  const updateTarget = useUpdateTarget();
+
+  const isLoading = loadingCalls || loadingMeetings || loadingTargets;
+
+  // Helper to update a specific target
+  const updateCallsTarget = async (value: number) => {
+    await updateTarget.mutateAsync({
+      targetType: "daily",
+      updates: { calls_target: value },
+    });
+  };
+
+  const updateConnectedTarget = async (value: number) => {
+    await updateTarget.mutateAsync({
+      targetType: "daily",
+      updates: { connected_target: value },
+    });
+  };
+
+  const updateMeetingsTarget = async (value: number) => {
+    await updateTarget.mutateAsync({
+      targetType: "daily",
+      updates: { meetings_target: value },
+    });
+  };
+
+  const updateVoicemailsTarget = async (value: number) => {
+    await updateTarget.mutateAsync({
+      targetType: "daily",
+      updates: { voicemails_target: value },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -97,38 +156,46 @@ export function StatsCards() {
       <StatCard
         title="Calls Made"
         value={callStats?.total || 0}
-        goal={50}
+        goal={targets?.calls_target || 50}
         icon={<Phone className="h-5 w-5 text-white" />}
         color="bg-blue-500"
         ringColor="hsl(217, 91%, 60%)"
         delay={0}
+        onEditGoal={updateCallsTarget}
+        isPending={updateTarget.isPending}
       />
       <StatCard
         title="Connected"
         value={callStats?.connected || 0}
-        goal={15}
+        goal={targets?.connected_target || 15}
         icon={<PhoneCall className="h-5 w-5 text-white" />}
         color="bg-green-500"
         ringColor="hsl(142, 71%, 45%)"
         delay={50}
+        onEditGoal={updateConnectedTarget}
+        isPending={updateTarget.isPending}
       />
       <StatCard
         title="Meetings Booked"
-        value={callStats?.meetingsBooked || 0}
-        goal={3}
+        value={meetingsBookedToday || 0}
+        goal={targets?.meetings_target || 3}
         icon={<Calendar className="h-5 w-5 text-white" />}
         color="bg-purple-500"
         ringColor="hsl(263, 70%, 50%)"
         delay={100}
+        onEditGoal={updateMeetingsTarget}
+        isPending={updateTarget.isPending}
       />
       <StatCard
         title="Voicemails"
         value={callStats?.voicemail || 0}
-        goal={20}
+        goal={targets?.voicemails_target || 20}
         icon={<Voicemail className="h-5 w-5 text-white" />}
         color="bg-orange-500"
         ringColor="hsl(25, 95%, 53%)"
         delay={150}
+        onEditGoal={updateVoicemailsTarget}
+        isPending={updateTarget.isPending}
       />
     </div>
   );

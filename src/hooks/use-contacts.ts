@@ -11,9 +11,14 @@ export function useContacts(filters?: {
 }) {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<Contact[]>({
     queryKey: ["contacts", filters],
     queryFn: async () => {
+      // #region agent log
+      const startTime = Date.now();
+      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-contacts.ts:queryFn',message:'useContacts query START',data:{filters,hasLimit:!!filters?.limit},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
       let query = supabase
         .from("contacts")
         .select("*")
@@ -34,6 +39,11 @@ export function useContacts(filters?: {
       }
 
       const { data, error } = await query;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-contacts.ts:queryFn',message:'useContacts query END',data:{durationMs:Date.now()-startTime,recordCount:data?.length||0,error:error?.message||null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      
       if (error) throw error;
       return data as Contact[];
     },
@@ -43,7 +53,7 @@ export function useContacts(filters?: {
 export function useContact(id: string) {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<Contact>({
     queryKey: ["contact", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -143,7 +153,7 @@ export function useBulkCreateContacts() {
 export function useContactsByStage() {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<Record<string, number>>({
     queryKey: ["contacts-by-stage"],
     queryFn: async () => {
       const { data, error } = await supabase

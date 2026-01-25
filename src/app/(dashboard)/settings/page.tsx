@@ -3,20 +3,25 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { createClient } from "@/lib/supabase/client";
+import { seedDummyData, clearDummyData } from "@/lib/seed-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, User, Key, Bell } from "lucide-react";
+import { Loader2, Save, User, Key, Bell, Database, Trash2, Download, AlertTriangle } from "lucide-react";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
+import type { Profile } from "@/types/database";
 
 export default function SettingsPage() {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   // Profile
   const [fullName, setFullName] = useState("");
@@ -35,11 +40,13 @@ export default function SettingsPage() {
     const loadSettings = async () => {
       try {
         // Load profile
-        const { data: profile } = await supabase
+        const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", DEFAULT_USER_ID)
           .single();
+        
+        const profile = profileData as Profile | null;
 
         if (profile) {
           setFullName(profile.full_name || "");
@@ -50,11 +57,13 @@ export default function SettingsPage() {
         }
 
         // Load settings
-        const { data: settings } = await supabase
+        const { data: settingsData } = await supabase
           .from("user_settings")
           .select("*")
           .eq("user_id", DEFAULT_USER_ID)
           .single();
+        
+        const settings = settingsData as { apollo_api_key?: string } | null;
 
         if (settings) {
           setApolloApiKey(settings.apollo_api_key || "");
@@ -78,11 +87,12 @@ export default function SettingsPage() {
         .upsert({
           id: DEFAULT_USER_ID,
           full_name: fullName,
+          email,
           phone,
           calendar_link: calendarLink,
           daily_call_goal: dailyCallGoal,
           daily_email_goal: dailyEmailGoal,
-        });
+        } as any);
 
       // Update settings
       await supabase
@@ -90,13 +100,48 @@ export default function SettingsPage() {
         .upsert({
           user_id: DEFAULT_USER_ID,
           apollo_api_key: apolloApiKey,
-        });
+        } as any);
 
       toast.success("Settings saved!");
     } catch (error: any) {
       toast.error(error.message || "Failed to save settings");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const results = await seedDummyData();
+      
+      if (results.errors.length > 0) {
+        console.error("Seed errors:", results.errors);
+      }
+
+      toast.success(
+        `Created ${results.companies} companies, ${results.contacts} contacts, ${results.calls} calls, and ${results.tasks} tasks!`
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to seed data");
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (!confirm("Are you sure you want to delete ALL data? This cannot be undone.")) {
+      return;
+    }
+    
+    setIsClearing(true);
+    try {
+      await clearDummyData();
+      toast.success("All data cleared!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to clear data");
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -259,10 +304,68 @@ export default function SettingsPage() {
 
           <Separator />
 
+          {/* Data Management */}
+          <Card
+            className="opacity-0 animate-fade-in border-amber-500/50"
+            style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Data Management
+                <Badge variant="outline" className="text-amber-600 border-amber-600">
+                  Dev Only
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Seed dummy data for testing or clear all data
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSeedData} 
+                  disabled={isSeeding}
+                  className="gap-2"
+                >
+                  {isSeeding ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Seed Dummy Data
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleClearData} 
+                  disabled={isClearing}
+                  className="gap-2"
+                >
+                  {isClearing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Clear All Data
+                </Button>
+              </div>
+              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>
+                  Seeding will create 5 companies with 17 contacts, some calls, and tasks.
+                  Clearing will delete ALL your data permanently.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
           {/* Save */}
           <div 
             className="flex justify-end opacity-0 animate-fade-in"
-            style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
+            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
           >
             <Button onClick={handleSave} disabled={isSaving} className="press-scale">
               {isSaving ? (

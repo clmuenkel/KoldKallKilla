@@ -1,8 +1,18 @@
 import { create } from "zustand";
-import type { Contact } from "@/types/database";
+import type { Contact, TimestampedNote } from "@/types/database";
 
-export type CallOutcome = "connected" | "voicemail" | "no_answer" | "busy" | "wrong_number" | "gatekeeper";
+export type CallOutcome = "connected" | "voicemail" | "no_answer" | "busy" | "wrong_number" | "gatekeeper" | "skipped";
 export type CallDisposition = "interested_meeting" | "interested_info" | "callback" | "not_interested_fit" | "not_interested_solution" | "not_interested_budget" | "do_not_contact";
+export type PhoneType = "mobile" | "office";
+
+export interface ReferralContext {
+  type: "direct" | "company" | "manual" | "none";
+  name?: string;
+  title?: string;
+  contactId?: string;
+  date?: string;
+  note?: string;
+}
 
 interface DialerState {
   // Session state
@@ -15,11 +25,16 @@ interface DialerState {
   callStartTime: Date | null;
   callDuration: number;
   isCallActive: boolean;
+  selectedPhoneType: PhoneType;
 
   // Call data
   notes: string;
+  timestampedNotes: TimestampedNote[];
   outcome: CallOutcome | null;
   disposition: CallDisposition | null;
+
+  // Referral context for opener
+  referralContext: ReferralContext;
 
   // Qualification during call
   confirmedBudget: boolean;
@@ -45,11 +60,21 @@ interface DialerState {
   goToContact: (index: number) => void;
 
   setNotes: (notes: string) => void;
+  addTimestampedNote: (note: TimestampedNote) => void;
+  updateTimestampedNote: (index: number, note: TimestampedNote) => void;
+  deleteTimestampedNote: (index: number) => void;
+  clearTimestampedNotes: () => void;
+  
   setOutcome: (outcome: CallOutcome | null) => void;
   setDisposition: (disposition: CallDisposition | null) => void;
   
+  setReferralContext: (context: ReferralContext) => void;
+  clearReferralContext: () => void;
+  
   setQualification: (field: "budget" | "authority" | "need" | "timeline", value: boolean) => void;
   setFollowUpDate: (date: Date | null) => void;
+  setSelectedPhoneType: (phoneType: PhoneType) => void;
+  getSelectedPhone: () => string | null;
 
   resetCallState: () => void;
 }
@@ -63,9 +88,12 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   callStartTime: null,
   callDuration: 0,
   isCallActive: false,
+  selectedPhoneType: "mobile",
   notes: "",
+  timestampedNotes: [],
   outcome: null,
   disposition: null,
+  referralContext: { type: "none" },
   confirmedBudget: false,
   confirmedAuthority: false,
   confirmedNeed: false,
@@ -91,8 +119,10 @@ export const useDialerStore = create<DialerState>((set, get) => ({
       callDuration: 0,
       isCallActive: false,
       notes: "",
+      timestampedNotes: [],
       outcome: null,
       disposition: null,
+      referralContext: { type: "none" },
       confirmedBudget: false,
       confirmedAuthority: false,
       confirmedNeed: false,
@@ -171,8 +201,36 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   },
 
   setNotes: (notes) => set({ notes }),
+  
+  addTimestampedNote: (note) => {
+    set((state) => ({
+      timestampedNotes: [...state.timestampedNotes, note],
+    }));
+  },
+
+  updateTimestampedNote: (index, note) => {
+    set((state) => {
+      const updated = [...state.timestampedNotes];
+      updated[index] = note;
+      return { timestampedNotes: updated };
+    });
+  },
+
+  deleteTimestampedNote: (index) => {
+    set((state) => ({
+      timestampedNotes: state.timestampedNotes.filter((_, i) => i !== index),
+    }));
+  },
+
+  clearTimestampedNotes: () => {
+    set({ timestampedNotes: [] });
+  },
+
   setOutcome: (outcome) => set({ outcome }),
   setDisposition: (disposition) => set({ disposition }),
+
+  setReferralContext: (context) => set({ referralContext: context }),
+  clearReferralContext: () => set({ referralContext: { type: "none" } }),
 
   setQualification: (field, value) => {
     switch (field) {
@@ -193,15 +251,32 @@ export const useDialerStore = create<DialerState>((set, get) => ({
 
   setFollowUpDate: (date) => set({ followUpDate: date }),
 
+  setSelectedPhoneType: (phoneType) => set({ selectedPhoneType: phoneType }),
+
+  getSelectedPhone: () => {
+    const { currentContact, selectedPhoneType } = get();
+    if (!currentContact) return null;
+    
+    if (selectedPhoneType === "mobile") {
+      return currentContact.mobile || currentContact.phone || null;
+    }
+    return currentContact.phone || currentContact.mobile || null;
+  },
+
   resetCallState: () => {
     const { currentContact } = get();
+    // Default to mobile if available, otherwise office
+    const defaultPhoneType: PhoneType = currentContact?.mobile ? "mobile" : "office";
     set({
       callStartTime: null,
       callDuration: 0,
       isCallActive: false,
+      selectedPhoneType: defaultPhoneType,
       notes: "",
+      timestampedNotes: [],
       outcome: null,
       disposition: null,
+      referralContext: { type: "none" },
       confirmedBudget: currentContact?.has_budget || false,
       confirmedAuthority: currentContact?.is_authority || false,
       confirmedNeed: currentContact?.has_need || false,

@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { useContact, useUpdateContact, useDeleteContact } from "@/hooks/use-contacts";
 import { useTasks } from "@/hooks/use-tasks";
+import type { Task } from "@/types/database";
 import { useNotes } from "@/hooks/use-notes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ActivityTimeline } from "@/components/contacts/activity-timeline";
 import { ContactForm } from "@/components/contacts/contact-form";
+import { MeetingsList } from "@/components/meetings/meetings-list";
+import { MeetingDialog } from "@/components/dialer/meeting-dialog";
 import { STAGES } from "@/lib/constants";
+import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { formatPhone, copyToClipboard, getInitials } from "@/lib/utils";
 import {
   Phone,
@@ -28,6 +32,7 @@ import {
   CheckSquare,
   MessageSquare,
   ExternalLink,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -58,11 +63,14 @@ export default function ContactDetailPage() {
   const contactId = params.id as string;
 
   const { data: contact, isLoading } = useContact(contactId);
-  const { data: tasks } = useTasks({ contactId, status: "todo", limit: 5 });
+  const { data: tasksData } = useTasks({ contactId, status: "todo", limit: 5 });
+  const tasks = (tasksData ?? []) as Task[];
   const updateContact = useUpdateContact();
   const deleteContact = useDeleteContact();
 
   const [editOpen, setEditOpen] = useState(false);
+  const [meetingOpen, setMeetingOpen] = useState(false);
+  const userId = DEFAULT_USER_ID;
 
   const handleCopy = async (text: string, type: string) => {
     await copyToClipboard(text);
@@ -261,7 +269,7 @@ export default function ContactDetailPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex gap-2 mt-6">
+                <div className="flex gap-2 mt-6 flex-wrap">
                   <Link href={`/dialer?contact=${contact.id}`}>
                     <Button>
                       <Phone className="mr-2 h-4 w-4" />
@@ -272,11 +280,11 @@ export default function ContactDetailPage() {
                     <Mail className="mr-2 h-4 w-4" />
                     Email
                   </Button>
-                  <AbuButton contactName={`${contact.first_name} ${contact.last_name || ''}`.trim()} />
-                  <Button variant="outline">
-                    <CheckSquare className="mr-2 h-4 w-4" />
-                    Add Task
+                  <Button variant="outline" onClick={() => setMeetingOpen(true)}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule Meeting
                   </Button>
+                  <AbuButton contactName={`${contact.first_name} ${contact.last_name || ''}`.trim()} />
                 </div>
               </CardContent>
             </Card>
@@ -285,6 +293,7 @@ export default function ContactDetailPage() {
             <Tabs defaultValue="activity">
               <TabsList>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="meetings">Meetings</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="emails">Emails</TabsTrigger>
               </TabsList>
@@ -294,6 +303,15 @@ export default function ContactDetailPage() {
                     <ActivityTimeline contactId={contactId} />
                   </CardContent>
                 </Card>
+              </TabsContent>
+              <TabsContent value="meetings" className="mt-4">
+                <MeetingsList
+                  contactId={contactId}
+                  userId={userId}
+                  title="Meetings"
+                  showScheduleButton={true}
+                  onScheduleClick={() => setMeetingOpen(true)}
+                />
               </TabsContent>
               <TabsContent value="notes" className="mt-4">
                 <Card>
@@ -379,7 +397,7 @@ export default function ContactDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!tasks || tasks.length === 0 ? (
+                {tasks.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     No open tasks
                   </p>
@@ -429,6 +447,14 @@ export default function ContactDetailPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Meeting Dialog */}
+      <MeetingDialog
+        open={meetingOpen}
+        onOpenChange={setMeetingOpen}
+        contact={contact}
+        userId={userId}
+      />
     </div>
   );
 }

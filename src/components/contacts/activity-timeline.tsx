@@ -79,14 +79,14 @@ export function ActivityTimeline({ contactId }: ActivityTimelineProps) {
   }
 
   // Group activities by date
-  const groupedActivities = activities.reduce((groups, activity) => {
+  const groupedActivities = activities.reduce((groups: Record<string, any[]>, activity: any) => {
     const date = format(new Date(activity.created_at), "yyyy-MM-dd");
     if (!groups[date]) {
       groups[date] = [];
     }
     groups[date].push(activity);
     return groups;
-  }, {} as Record<string, typeof activities>);
+  }, {} as Record<string, any[]>);
 
   return (
     <div className="space-y-6">

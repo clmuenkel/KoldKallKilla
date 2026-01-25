@@ -39,9 +39,9 @@ export function TodayTasks() {
     );
   }
 
-  const overdueTasks = tasks?.filter(
+  const overdueTasks = (tasks ?? []).filter(
     (t) => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date))
-  ) || [];
+  );
 
   return (
     <Card>
@@ -71,7 +71,7 @@ export function TodayTasks() {
           <div className="space-y-3">
             {tasks.slice(0, 5).map((task) => {
               const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
-              const contact = task.contacts as any;
+              const contact = task.contacts;
 
               return (
                 <div

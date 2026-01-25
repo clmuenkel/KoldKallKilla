@@ -3,17 +3,19 @@
 import { useDialerStore } from "@/stores/dialer-store";
 import { useCallTimer } from "@/hooks/use-call-timer";
 import { useContacts } from "@/hooks/use-contacts";
+import { useCompanyColleagues } from "@/hooks/use-companies";
+import { useDialerAutosave, useHydrateDraft } from "@/hooks/use-dialer-autosave";
 import { CallQueue } from "./call-queue";
-import { ContactPanel } from "./contact-panel";
-import { CallControls } from "./call-controls";
-import { CallScript } from "./call-script";
+import { ContactPanelCompact } from "./contact-panel";
+import { CallControlsHeader } from "./call-controls";
+import { NotesAndTasks } from "./notes-and-tasks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Phone, X, Zap, Users } from "lucide-react";
+import { Phone, Zap, Users, Save } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
-import { formatDuration } from "@/lib/utils";
+import type { Contact } from "@/types/database";
 
 export function PowerDialer() {
   const userId = DEFAULT_USER_ID;
@@ -25,8 +27,12 @@ export function PowerDialer() {
     currentIndex,
     isCallActive,
     callDuration,
+    timestampedNotes,
     startSession,
-    endSession,
+    addTimestampedNote,
+    updateTimestampedNote,
+    deleteTimestampedNote,
+    goToContact,
   } = useDialerStore();
 
   const { data: contacts, isLoading } = useContacts({
@@ -34,23 +40,34 @@ export function PowerDialer() {
     limit: 100,
   });
 
+  const { data: colleagues } = useCompanyColleagues(
+    currentContact?.id || "",
+    currentContact?.company_id
+  );
+
   // Initialize call timer
   useCallTimer();
+
+  // Autosave dialer state (debounced)
+  const { isSaving } = useDialerAutosave(userId);
+  
+  // Hydrate from saved draft when switching contacts
+  useHydrateDraft(userId);
 
   const handleStartSession = () => {
     if (!contacts || contacts.length === 0) {
       toast.error("No contacts to call. Import some leads first!");
       return;
     }
-    startSession(contacts.filter(c => c.phone)); // Only contacts with phone numbers
+    startSession(contacts.filter(c => c.phone));
   };
 
   if (isLoading) {
     return (
       <div className="h-full p-6 space-y-4">
-        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-14 w-full" />
         <div className="flex gap-4 h-[calc(100%-5rem)]">
-          <Skeleton className="w-72 h-full" />
+          <Skeleton className="w-64 h-full" />
           <Skeleton className="flex-1 h-full" />
           <Skeleton className="w-80 h-full" />
         </div>
@@ -60,6 +77,7 @@ export function PowerDialer() {
 
   const contactsWithPhone = contacts?.filter(c => c.phone).length || 0;
 
+  // Start Screen
   if (!isActive) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
@@ -100,63 +118,34 @@ export function PowerDialer() {
     );
   }
 
+  // Active Dialer - 3-Column Layout
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Focus Mode Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center gap-4">
-          {/* Status Indicator */}
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-            isCallActive 
-              ? "bg-green-500/20 ring-2 ring-green-500/50" 
-              : "bg-amber-500/20"
-          }`}>
-            <Phone className={`h-5 w-5 ${isCallActive ? "text-green-500" : "text-amber-500"}`} />
-          </div>
-          
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold">
-                {isCallActive ? "Call Active" : "Ready to Dial"}
-              </h2>
-              {isCallActive && (
-                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 font-mono">
-                  {formatDuration(callDuration)}
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Contact {currentIndex + 1} of {queue.length}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="font-normal">
-            {queue.length} in queue
+      {/* Top Bar: Call Controls */}
+      <div className="relative">
+        <CallControlsHeader />
+        {/* Autosave indicator */}
+        {isSaving && (
+          <Badge variant="secondary" className="absolute top-2 right-2 text-[10px] gap-1">
+            <Save className="h-3 w-3 animate-pulse" />
+            Saving...
           </Badge>
-          <Button variant="ghost" size="sm" onClick={endSession} className="text-muted-foreground hover:text-destructive">
-            <X className="mr-2 h-4 w-4" />
-            End Session
-          </Button>
-        </div>
+        )}
       </div>
 
-      {/* Main Content - Focus Mode Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Compact Queue */}
-        <div className="w-64 border-r bg-card/30 overflow-hidden flex flex-col">
+      {/* Main Content: 3-Column Layout */}
+      <div className="flex-1 flex min-h-0">
+        {/* Column 1: Call Queue (keep same width) */}
+        <div className="w-64 border-r bg-card/30 flex flex-col shrink-0">
           <CallQueue />
         </div>
 
-        {/* Center: Contact Info + Notes (40%) */}
-        <div className="flex-[4] flex flex-col overflow-hidden border-r">
+        {/* Column 2: Contact + Company Info (flex grow) */}
+        <div className="flex-1 border-r flex flex-col min-w-0">
           {currentContact ? (
-            <>
-              <div className="flex-1 overflow-auto">
-                <ContactPanel />
-              </div>
-            </>
+            <div className="flex-1 overflow-y-auto p-4">
+              <ContactPanelCompact />
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-muted-foreground">No contact selected</p>
@@ -164,14 +153,27 @@ export function PowerDialer() {
           )}
         </div>
 
-        {/* Right: Script & Checklist (60%) */}
-        <div className="flex-[6] bg-card/30 overflow-hidden flex flex-col">
-          <CallScript />
+        {/* Column 3: Notes + Tasks (fixed width) */}
+        <div className="w-80 flex flex-col shrink-0 bg-card/30">
+          {currentContact ? (
+            <NotesAndTasks
+              contact={currentContact}
+              colleagues={(colleagues as Contact[]) || []}
+              userId={userId}
+              notes={timestampedNotes}
+              elapsedSeconds={callDuration}
+              isCallActive={isCallActive}
+              onAddNote={addTimestampedNote}
+              onUpdateNote={updateTimestampedNote}
+              onDeleteNote={deleteTimestampedNote}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-muted-foreground text-sm">Select a contact</p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Bottom: Call Controls Bar */}
-      {currentContact && <CallControls />}
     </div>
   );
 }

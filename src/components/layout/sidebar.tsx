@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   LayoutDashboard,
   Users,
+  Building2,
   Phone,
   Kanban,
   CheckSquare,
@@ -17,6 +18,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   Zap,
+  Calendar,
+  CalendarCheck,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -29,8 +33,12 @@ import { toast } from "sonner";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Contacts", href: "/contacts", icon: Users },
+  { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Power Dialer", href: "/dialer", icon: Phone },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
+  { name: "Meetings", href: "/meetings", icon: CalendarCheck },
   { name: "Pipeline", href: "/pipeline", icon: Kanban },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Templates", href: "/templates", icon: Mail },

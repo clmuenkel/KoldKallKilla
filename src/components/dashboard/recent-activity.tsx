@@ -65,7 +65,7 @@ export function RecentActivity() {
           ) : (
             <div className="space-y-4">
               {activities.map((activity) => {
-                const contact = activity.contacts as any;
+                const contact = activity.contacts;
                 const icon = activityIcons[activity.activity_type] || <MessageSquare className="h-4 w-4" />;
                 const colorClass = activityColors[activity.activity_type] || "bg-muted text-muted-foreground";
 

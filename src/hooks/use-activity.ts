@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import type { ActivityLog, InsertTables } from "@/types/database";
+import type { ActivityLog, ActivityLogWithContact, InsertTables } from "@/types/database";
 
 export function useActivity(filters?: {
   contactId?: string;
@@ -10,7 +10,7 @@ export function useActivity(filters?: {
 }) {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<ActivityLogWithContact[]>({
     queryKey: ["activity", filters],
     queryFn: async () => {
       let query = supabase
@@ -28,7 +28,7 @@ export function useActivity(filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as unknown as ActivityLogWithContact[];
     },
   });
 }
@@ -36,7 +36,7 @@ export function useActivity(filters?: {
 export function useRecentActivity() {
   const supabase = createClient();
 
-  return useQuery({
+  return useQuery<ActivityLogWithContact[]>({
     queryKey: ["activity", "recent"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,7 +46,7 @@ export function useRecentActivity() {
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return data as unknown as ActivityLogWithContact[];
     },
   });
 }
@@ -59,7 +59,7 @@ export function useLogActivity() {
     mutationFn: async (activity: InsertTables<"activity_log">) => {
       const { data, error } = await supabase
         .from("activity_log")
-        .insert(activity)
+        .insert(activity as any)
         .select()
         .single();
       if (error) throw error;

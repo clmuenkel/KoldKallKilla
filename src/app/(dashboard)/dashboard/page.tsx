@@ -5,10 +5,14 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { TodayTasks } from "@/components/dashboard/today-tasks";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { PipelineOverview } from "@/components/dashboard/pipeline-overview";
+import { MeetingsWidget } from "@/components/dashboard/meetings-widget";
+import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { Button } from "@/components/ui/button";
 import { AbuButton } from "@/components/ui/abu-button";
-import { Phone, Download, Zap, Target } from "lucide-react";
+import { Zap, Download, Target, BarChart3 } from "lucide-react";
 import Link from "next/link";
+import { useDailyTargets, useUpdateTarget } from "@/hooks/use-targets";
+import { InlineEditableTarget } from "@/components/dashboard/editable-target";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -19,6 +23,15 @@ function getGreeting(): string {
 
 export default function DashboardPage() {
   const greeting = getGreeting();
+  const { data: targets } = useDailyTargets();
+  const updateTarget = useUpdateTarget();
+
+  const handleUpdateCallsTarget = async (value: number) => {
+    await updateTarget.mutateAsync({
+      targetType: "daily",
+      updates: { calls_target: value },
+    });
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -34,7 +47,13 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-bold tracking-tight">{greeting}!</h2>
             <p className="text-muted-foreground flex items-center gap-2">
               <Target className="h-4 w-4" />
-              Today's target: <span className="font-medium text-foreground">50 calls</span>
+              Today's target:{" "}
+              <InlineEditableTarget
+                value={targets?.calls_target || 50}
+                suffix=" calls"
+                onSave={handleUpdateCallsTarget}
+                isPending={updateTarget.isPending}
+              />
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -42,6 +61,12 @@ export default function DashboardPage() {
               <Button size="lg" className="gap-2 shadow-lg shadow-primary/25 press-scale">
                 <Zap className="h-5 w-5" />
                 Start Calling
+              </Button>
+            </Link>
+            <Link href="/analytics">
+              <Button size="lg" variant="outline" className="gap-2 press-scale">
+                <BarChart3 className="h-5 w-5" />
+                Analytics
               </Button>
             </Link>
             <Link href="/import">
@@ -70,12 +95,13 @@ export default function DashboardPage() {
           <PipelineOverview />
         </div>
 
-        {/* Two Column Layout */}
+        {/* Three Column Layout */}
         <div 
-          className="grid gap-6 lg:grid-cols-2 opacity-0 animate-fade-in"
+          className="grid gap-6 lg:grid-cols-3 opacity-0 animate-fade-in"
           style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
         >
           <TodayTasks />
+          <MeetingsWidget userId={DEFAULT_USER_ID} />
           <RecentActivity />
         </div>
       </div>
