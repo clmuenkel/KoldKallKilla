@@ -21,10 +21,21 @@ export interface CompanyFilters {
   industry?: string;
   hasContacts?: boolean;
   limit?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedCompanyResult {
+  data: CompanyWithStats[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 /**
  * Fetch all companies with contact counts and last contacted date
+ * Search includes company fields AND companies that have contacts matching the search term
  */
 export function useCompanies(filters?: CompanyFilters) {
   const supabase = createClient();
@@ -32,22 +43,112 @@ export function useCompanies(filters?: CompanyFilters) {
   return useQuery({
     queryKey: ["companies", filters],
     queryFn: async () => {
-      // #region agent log
-      const startTime = Date.now();
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies query START',data:{filters,hasLimit:!!filters?.limit},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
-      
-      // First get companies
+      let companyIds: string[] = [];
+
+      if (filters?.search) {
+        // Step 1: Get company IDs where company fields match
+        let companyQuery = supabase
+          .from("companies")
+          .select("id");
+        
+        // Search across company fields: name, domain, industry, city, state, country
+        companyQuery = companyQuery.or(
+          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%,industry.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`
+        );
+
+        if (filters.industry) {
+          companyQuery = companyQuery.eq("industry", filters.industry);
+        }
+
+        const { data: companyMatches } = await companyQuery;
+        const companyMatchIds = (companyMatches || []).map(c => c.id);
+
+        // Step 2: Get company IDs from contacts that match the search term
+        const { data: contactMatches } = await supabase
+          .from("contacts")
+          .select("company_id")
+          .not("company_id", "is", null)
+          .or(
+            `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%`
+          );
+
+        const contactCompanyIds = (contactMatches || [])
+          .map(c => c.company_id)
+          .filter((id): id is string => id !== null);
+
+        // Step 3: Merge and dedupe company IDs
+        companyIds = [...new Set([...companyMatchIds, ...contactCompanyIds])];
+
+        if (companyIds.length === 0) {
+          return [] as CompanyWithStats[];
+        }
+
+        // Step 4: Fetch companies by merged IDs
+        let finalQuery = supabase
+          .from("companies")
+          .select("*")
+          .in("id", companyIds)
+          .order("name", { ascending: true });
+
+        if (filters.industry) {
+          finalQuery = finalQuery.eq("industry", filters.industry);
+        }
+
+        if (filters.limit) {
+          finalQuery = finalQuery.limit(filters.limit);
+        }
+
+        const { data: companiesData, error } = await finalQuery;
+        if (error) throw error;
+
+        const companies = companiesData as Company[];
+        if (!companies || companies.length === 0) {
+          return [] as CompanyWithStats[];
+        }
+
+        // Get contact stats for these companies
+        const finalCompanyIds = companies.map(c => c.id);
+        const { data: contactStatsData } = await supabase
+          .from("contacts")
+          .select("company_id, last_contacted_at")
+          .in("company_id", finalCompanyIds);
+
+        const contactStats = contactStatsData as { company_id: string | null; last_contacted_at: string | null }[] | null;
+        const statsMap = new Map<string, { count: number; lastContacted: string | null }>();
+        
+        contactStats?.forEach((contact) => {
+          if (!contact.company_id) return;
+          const current = statsMap.get(contact.company_id) || { count: 0, lastContacted: null };
+          current.count++;
+          if (contact.last_contacted_at) {
+            if (!current.lastContacted || contact.last_contacted_at > current.lastContacted) {
+              current.lastContacted = contact.last_contacted_at;
+            }
+          }
+          statsMap.set(contact.company_id, current);
+        });
+
+        const companiesWithStats: CompanyWithStats[] = companies.map((company) => {
+          const stats = statsMap.get(company.id) || { count: 0, lastContacted: null };
+          return {
+            ...company,
+            contact_count: stats.count,
+            last_contacted_at: stats.lastContacted,
+          };
+        });
+
+        if (filters.hasContacts) {
+          return companiesWithStats.filter((c) => c.contact_count > 0);
+        }
+
+        return companiesWithStats;
+      }
+
+      // No search term - use simple query
       let query = supabase
         .from("companies")
         .select("*")
         .order("name", { ascending: true });
-
-      if (filters?.search) {
-        query = query.or(
-          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%`
-        );
-      }
 
       if (filters?.industry) {
         query = query.eq("industry", filters.industry);
@@ -59,10 +160,6 @@ export function useCompanies(filters?: CompanyFilters) {
 
       const { data: companiesData, error } = await query;
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies first query done',data:{durationMs:Date.now()-startTime,companyCount:companiesData?.length||0,error:error?.message||null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
-      
       if (error) throw error;
 
       const companies = companiesData as Company[];
@@ -71,20 +168,12 @@ export function useCompanies(filters?: CompanyFilters) {
       }
 
       // Get contact counts and last contacted for each company
-      const companyIds = companies.map((c) => c.id);
-      
-      // #region agent log
-      const contactQueryStart = Date.now();
-      // #endregion
+      const finalCompanyIds = companies.map((c) => c.id);
       
       const { data: contactStatsData } = await supabase
         .from("contacts")
         .select("company_id, last_contacted_at")
-        .in("company_id", companyIds);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-companies.ts:queryFn',message:'useCompanies contact stats query done',data:{contactQueryDurationMs:Date.now()-contactQueryStart,totalDurationMs:Date.now()-startTime,contactStatsCount:contactStatsData?.length||0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
+        .in("company_id", finalCompanyIds);
 
       const contactStats = contactStatsData as { company_id: string | null; last_contacted_at: string | null }[] | null;
 
@@ -122,6 +211,219 @@ export function useCompanies(filters?: CompanyFilters) {
       }
 
       return companiesWithStats;
+    },
+  });
+}
+
+/**
+ * Paginated companies hook for large datasets
+ * Search includes company fields AND companies that have contacts matching the search term
+ */
+export function usePaginatedCompanies(filters?: CompanyFilters) {
+  const supabase = createClient();
+  const page = filters?.page || 1;
+  const pageSize = filters?.pageSize || 50;
+
+  return useQuery<PaginatedCompanyResult>({
+    queryKey: ["companies-paginated", filters],
+    queryFn: async () => {
+      if (filters?.search) {
+        // When searching, we need to merge company-based and contact-based results
+        // Step 1: Get company IDs where company fields match
+        let companyQuery = supabase
+          .from("companies")
+          .select("id");
+        
+        // Search across company fields: name, domain, industry, city, state, country
+        companyQuery = companyQuery.or(
+          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%,industry.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`
+        );
+
+        if (filters.industry) {
+          companyQuery = companyQuery.eq("industry", filters.industry);
+        }
+
+        const { data: companyMatches } = await companyQuery;
+        const companyMatchIds = (companyMatches || []).map(c => c.id);
+
+        // Step 2: Get company IDs from contacts that match the search term
+        const { data: contactMatches } = await supabase
+          .from("contacts")
+          .select("company_id")
+          .not("company_id", "is", null)
+          .or(
+            `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%`
+          );
+
+        const contactCompanyIds = (contactMatches || [])
+          .map(c => c.company_id)
+          .filter((id): id is string => id !== null);
+
+        // Step 3: Merge and dedupe company IDs
+        const allCompanyIds = [...new Set([...companyMatchIds, ...contactCompanyIds])];
+        const totalCount = allCompanyIds.length;
+
+        if (totalCount === 0) {
+          return {
+            data: [] as CompanyWithStats[],
+            totalCount: 0,
+            page,
+            pageSize,
+            totalPages: 0,
+          };
+        }
+
+        // Step 4: Fetch all matching companies to sort them, then paginate
+        let allCompaniesQuery = supabase
+          .from("companies")
+          .select("*")
+          .in("id", allCompanyIds)
+          .order("name", { ascending: true });
+
+        if (filters.industry) {
+          allCompaniesQuery = allCompaniesQuery.eq("industry", filters.industry);
+        }
+
+        const { data: allCompaniesData, error: allCompaniesError } = await allCompaniesQuery;
+        if (allCompaniesError) throw allCompaniesError;
+
+        const allCompanies = allCompaniesData as Company[];
+        
+        // Apply pagination in memory (companies are sorted by name)
+        const from = (page - 1) * pageSize;
+        const companies = allCompanies.slice(from, from + pageSize);
+
+        if (companies.length === 0) {
+          return {
+            data: [] as CompanyWithStats[],
+            totalCount: allCompanies.length,
+            page,
+            pageSize,
+            totalPages: Math.ceil(allCompanies.length / pageSize),
+          };
+        }
+
+        // Get contact stats for this page of companies
+        const pageCompanyIds = companies.map(c => c.id);
+        const { data: contactStatsData } = await supabase
+          .from("contacts")
+          .select("company_id, last_contacted_at")
+          .in("company_id", pageCompanyIds);
+
+        const contactStats = contactStatsData as { company_id: string | null; last_contacted_at: string | null }[] | null;
+        const statsMap = new Map<string, { count: number; lastContacted: string | null }>();
+        
+        contactStats?.forEach((contact) => {
+          if (!contact.company_id) return;
+          const current = statsMap.get(contact.company_id) || { count: 0, lastContacted: null };
+          current.count++;
+          if (contact.last_contacted_at) {
+            if (!current.lastContacted || contact.last_contacted_at > current.lastContacted) {
+              current.lastContacted = contact.last_contacted_at;
+            }
+          }
+          statsMap.set(contact.company_id, current);
+        });
+
+        const companiesWithStats: CompanyWithStats[] = companies.map((company) => {
+          const stats = statsMap.get(company.id) || { count: 0, lastContacted: null };
+          return {
+            ...company,
+            contact_count: stats.count,
+            last_contacted_at: stats.lastContacted,
+          };
+        });
+
+        return {
+          data: companiesWithStats,
+          totalCount: allCompanies.length,
+          page,
+          pageSize,
+          totalPages: Math.ceil(allCompanies.length / pageSize),
+        };
+      }
+
+      // No search term - use simple paginated query
+      // Get total count
+      let countQuery = supabase
+        .from("companies")
+        .select("id", { count: "exact", head: true });
+
+      if (filters?.industry) {
+        countQuery = countQuery.eq("industry", filters.industry);
+      }
+
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+      const totalCount = count || 0;
+
+      // Get paginated companies
+      let query = supabase
+        .from("companies")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (filters?.industry) {
+        query = query.eq("industry", filters.industry);
+      }
+
+      // Pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data: companiesData, error } = await query;
+      if (error) throw error;
+
+      const companies = companiesData as Company[];
+      if (!companies || companies.length === 0) {
+        return {
+          data: [] as CompanyWithStats[],
+          totalCount,
+          page,
+          pageSize,
+          totalPages: Math.ceil(totalCount / pageSize),
+        };
+      }
+
+      // Get contact stats
+      const companyIds = companies.map((c) => c.id);
+      const { data: contactStatsData } = await supabase
+        .from("contacts")
+        .select("company_id, last_contacted_at")
+        .in("company_id", companyIds);
+
+      const contactStats = contactStatsData as { company_id: string | null; last_contacted_at: string | null }[] | null;
+      const statsMap = new Map<string, { count: number; lastContacted: string | null }>();
+      
+      contactStats?.forEach((contact) => {
+        if (!contact.company_id) return;
+        const current = statsMap.get(contact.company_id) || { count: 0, lastContacted: null };
+        current.count++;
+        if (contact.last_contacted_at) {
+          if (!current.lastContacted || contact.last_contacted_at > current.lastContacted) {
+            current.lastContacted = contact.last_contacted_at;
+          }
+        }
+        statsMap.set(contact.company_id, current);
+      });
+
+      const companiesWithStats: CompanyWithStats[] = companies.map((company) => {
+        const stats = statsMap.get(company.id) || { count: 0, lastContacted: null };
+        return {
+          ...company,
+          contact_count: stats.count,
+          last_contacted_at: stats.lastContacted,
+        };
+      });
+
+      return {
+        data: companiesWithStats,
+        totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize),
+      };
     },
   });
 }
@@ -349,7 +651,7 @@ export function useUpdateCompany() {
 }
 
 /**
- * Delete a company
+ * Delete a company (cascades to contacts and all related data)
  */
 export function useDeleteCompany() {
   const supabase = createClient();
@@ -357,13 +659,7 @@ export function useDeleteCompany() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // First unlink all contacts from this company
-      await supabase
-        .from("contacts")
-        .update({ company_id: null })
-        .eq("company_id", id);
-
-      // Then delete the company
+      // Delete the company - CASCADE will delete all contacts and their related data
       const { error } = await supabase
         .from("companies")
         .delete()
@@ -374,6 +670,11 @@ export function useDeleteCompany() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
   });
 }

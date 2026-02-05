@@ -4,17 +4,16 @@ import { useDialerStore } from "@/stores/dialer-store";
 import { useCompany } from "@/hooks/use-companies";
 import { useContactContext, formatOpenerSuggestion, useUpdateReferralNote, useSetCustomOpener, useRemoveDirectReferral } from "@/hooks/use-referrals";
 import { useCompanyNotes } from "@/hooks/use-notes";
-import { Badge } from "@/components/ui/badge";
+import { Badge, StageBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { STAGES, CALL_OUTCOMES_UI, CALL_DISPOSITIONS } from "@/lib/constants";
-import { formatPhone, copyToClipboard, getInitials } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { STAGES, CALL_OUTCOMES_UI, CALL_DISPOSITIONS, PICKUP_DISPOSITIONS } from "@/lib/constants";
+import { formatPhone, copyToClipboard, getInitials, cn } from "@/lib/utils";
 import { getTimezoneFromLocation, getLocalTime, getTimezoneAbbreviation, isBusinessHours } from "@/lib/timezone";
 import {
   Phone,
@@ -31,6 +30,11 @@ import {
   Edit2,
   Target,
   StickyNote,
+  Smartphone,
+  Globe,
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -59,6 +63,7 @@ export function ContactPanelCompact() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingOpener, setIsEditingOpener] = useState(false);
   const [openerText, setOpenerText] = useState("");
+  const [companyExpanded, setCompanyExpanded] = useState(true);
 
   const updateReferralNote = useUpdateReferralNote();
   const setCustomOpener = useSetCustomOpener();
@@ -80,6 +85,7 @@ export function ContactPanelCompact() {
 
   // BANT score
   const bantScore = [confirmedBudget, confirmedAuthority, confirmedNeed, confirmedTimeline].filter(Boolean).length;
+  const bantPercent = bantScore * 25;
 
   const handleCopy = async (text: string, field: string) => {
     await copyToClipboard(text);
@@ -88,19 +94,28 @@ export function ContactPanelCompact() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const CopyButton = ({ text, field }: { text: string; field: string }) => (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 shrink-0 hover:bg-primary/10"
-      onClick={() => handleCopy(text, field)}
+  // Quick copy button with animated feedback
+  const CopyButton = ({ text, field, className }: { text: string; field: string; className?: string }) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleCopy(text, field);
+      }}
+      className={cn(
+        "p-1.5 rounded-md transition-all duration-200",
+        "hover:bg-primary/10 active:scale-95",
+        copiedField === field 
+          ? "bg-emerald-500/10 text-emerald-600" 
+          : "text-muted-foreground hover:text-foreground",
+        className
+      )}
     >
       {copiedField === field ? (
-        <Check className="h-3.5 w-3.5 text-green-500" />
+        <Check className="h-3.5 w-3.5" />
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
-    </Button>
+    </button>
   );
 
   // Get full name with title for opener context
@@ -116,202 +131,293 @@ export function ContactPanelCompact() {
     return null;
   };
 
+  const contactFullName = `${currentContact.first_name} ${currentContact.last_name || ""}`.trim();
+
   return (
-    <div className="space-y-5">
-      {/* Contact Header */}
-      <div className="flex items-start gap-4">
-        <Avatar className="h-14 w-14 ring-2 ring-primary/20">
-          <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">
-            {getInitials(`${currentContact.first_name} ${currentContact.last_name || ""}`)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold truncate">
-              {currentContact.first_name} {currentContact.last_name}
-            </h2>
-            <CopyButton 
-              text={`${currentContact.first_name} ${currentContact.last_name || ""}`.trim()} 
-              field="name" 
-            />
-          </div>
-          {currentContact.title && (
-            <div className="flex items-center gap-1">
-              <p className="text-muted-foreground truncate">{currentContact.title}</p>
-              <CopyButton text={currentContact.title} field="title" />
+    <div className="space-y-4">
+      {/* Hero Section */}
+      <div className="relative rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/5 dark:to-transparent p-5">
+        <div className="flex items-start gap-4">
+          {/* Large Avatar */}
+          <Avatar className="h-16 w-16 ring-4 ring-background shadow-lg">
+            <AvatarFallback className="text-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-bold">
+              {getInitials(contactFullName)}
+            </AvatarFallback>
+          </Avatar>
+
+          {/* Name & Title */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-2xl font-bold tracking-tight truncate">
+                {contactFullName}
+              </h2>
+              <CopyButton text={contactFullName} field="name" />
             </div>
-          )}
-          <div className="flex items-center gap-2 mt-1.5">
-            <Badge variant={currentContact.stage as any}>
-              {stage?.label || currentContact.stage}
-            </Badge>
-            {bantScore > 0 && (
-              <Badge variant="outline" className="gap-1">
-                <Target className="h-3 w-3" />
-                {bantScore}/4 BANT
-              </Badge>
+            {currentContact.title && (
+              <p className="text-muted-foreground font-medium mt-0.5 flex items-center gap-2">
+                <Briefcase className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{currentContact.title}</span>
+              </p>
             )}
+            
+            {/* Badges Row */}
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <StageBadge 
+                stage={currentContact.stage as "fresh" | "contacted" | "qualified" | "meeting" | "proposal" | "won" | "lost"} 
+                className="shadow-sm"
+              />
+              {bantScore > 0 && (
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "gap-1 font-medium",
+                    bantScore >= 3 
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : bantScore >= 2
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                      : ""
+                  )}
+                >
+                  <Target className="h-3 w-3" />
+                  {bantScore}/4 BANT
+                </Badge>
+              )}
+              {/* Timezone Badge */}
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "gap-1.5",
+                  isBusiness 
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" 
+                    : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                )}
+              >
+                <Clock className="h-3 w-3" />
+                <span className="font-mono">{localTime}</span>
+                <span className="text-[10px] opacity-70">{tzAbbr}</span>
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Timezone + Location */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono font-semibold">{localTime} {tzAbbr}</span>
-            </div>
-            {isBusiness ? (
-              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                Business Hours
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                After Hours
-              </Badge>
+      {/* Quick Action Bar - 2 Column Grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Mobile */}
+        {currentContact.mobile && (
+          <button
+            onClick={() => handleCopy(currentContact.mobile!, "mobile")}
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+              "active:scale-[0.98]",
+              copiedField === "mobile" && "bg-emerald-500/10 border-emerald-500/30"
             )}
-          </div>
-          {(currentContact.city || currentContact.state) && (
-            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5" />
-              {[currentContact.city, currentContact.state].filter(Boolean).join(", ")}
+          >
+            <div className={cn(
+              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+              "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+            )}>
+              <Smartphone className="h-5 w-5" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Mobile</p>
+              <p className="font-mono font-semibold truncate">{formatPhone(currentContact.mobile)}</p>
+            </div>
+            {copiedField === "mobile" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+          </button>
+        )}
 
-      {/* Contact Info */}
-      <div className="space-y-2">
+        {/* Direct Phone */}
         {currentContact.phone && (
-          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-3">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono">{formatPhone(currentContact.phone)}</span>
+          <button
+            onClick={() => handleCopy(currentContact.phone!, "phone")}
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+              "active:scale-[0.98]",
+              copiedField === "phone" && "bg-emerald-500/10 border-emerald-500/30"
+            )}
+          >
+            <div className={cn(
+              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+              "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            )}>
+              <Phone className="h-5 w-5" />
             </div>
-            <CopyButton text={currentContact.phone} field="phone" />
-          </div>
-        )}
-        
-        {currentContact.email && (
-          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex items-center gap-3 min-w-0">
-              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">{currentContact.email}</span>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Direct</p>
+              <p className="font-mono font-semibold truncate">{formatPhone(currentContact.phone)}</p>
             </div>
-            <CopyButton text={currentContact.email} field="email" />
-          </div>
+            {copiedField === "phone" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+          </button>
         )}
 
+        {/* Email */}
+        {currentContact.email && (
+          <button
+            onClick={() => handleCopy(currentContact.email!, "email")}
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+              "active:scale-[0.98]",
+              copiedField === "email" && "bg-emerald-500/10 border-emerald-500/30"
+            )}
+          >
+            <div className={cn(
+              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+              "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+            )}>
+              <Mail className="h-5 w-5" />
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Email</p>
+              <p className="font-semibold truncate">{currentContact.email}</p>
+            </div>
+            {copiedField === "email" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+          </button>
+        )}
+
+        {/* LinkedIn */}
         {currentContact.linkedin_url && (
-          <div className="flex items-center gap-3 p-2">
-            <Linkedin className="h-4 w-4 text-muted-foreground" />
-            <a
-              href={currentContact.linkedin_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline flex items-center gap-1"
-            >
-              LinkedIn Profile <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
+          <a
+            href={currentContact.linkedin_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+              "hover:bg-blue-500/5 hover:border-blue-500/30 hover:shadow-sm",
+              "active:scale-[0.98]"
+            )}
+          >
+            <div className={cn(
+              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+              "bg-blue-600/10 text-blue-600 dark:text-blue-400"
+            )}>
+              <Linkedin className="h-5 w-5" />
+            </div>
+            <div className="text-left min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">LinkedIn</p>
+              <p className="font-semibold text-blue-600 dark:text-blue-400">View Profile</p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+          </a>
         )}
       </div>
 
-      {/* Company Info */}
+      {/* Location Row */}
+      {(currentContact.city || currentContact.state) && (
+        <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 shrink-0" />
+          <span>{[currentContact.city, currentContact.state, currentContact.country].filter(Boolean).join(", ")}</span>
+        </div>
+      )}
+
+      {/* Company Card - Collapsible */}
       {(company || currentContact.company_name) && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
-              <span className="font-semibold text-lg">{company?.name || currentContact.company_name}</span>
-              <CopyButton text={company?.name || currentContact.company_name || ""} field="company" />
-            </div>
-            
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(company?.industry || currentContact.industry) && (
-                <Badge variant="outline">
-                  {company?.industry || currentContact.industry}
-                </Badge>
-              )}
-              {(company?.employee_range || currentContact.employee_range) && (
-                <Badge variant="secondary" className="gap-1">
-                  <Users className="h-3 w-3" />
-                  {company?.employee_range || currentContact.employee_range} employees
-                </Badge>
-              )}
-            </div>
-
-            {/* Company Description Placeholder */}
-            <p className="text-sm text-muted-foreground italic">
-              {company?.industry 
-                ? `${company.industry} company${company.employee_range ? ` with ${company.employee_range} employees` : ""}`
-                : currentContact.industry 
-                  ? `${currentContact.industry} company`
-                  : "Company information"}
-            </p>
-
-            {/* Company-Wide Notes */}
-            {companyNotes && companyNotes.length > 0 && (
-              <div className="mt-3 pt-3 border-t">
-                <div className="flex items-center gap-2 mb-2">
-                  <StickyNote className="h-3.5 w-3.5 text-blue-500" />
-                  <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                    Company Notes ({companyNotes.length})
-                  </span>
-                </div>
-                <div className="space-y-2 max-h-24 overflow-y-auto">
-                  {companyNotes.slice(0, 3).map((note) => (
-                    <div 
-                      key={note.id} 
-                      className="text-xs p-2 bg-blue-50 dark:bg-blue-900/20 rounded border-l-2 border-blue-400"
-                    >
-                      <p className="text-blue-800 dark:text-blue-200">{note.content}</p>
-                      <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">
-                        {new Date(note.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
+        <Card className="overflow-hidden">
+          <button
+            onClick={() => setCompanyExpanded(!companyExpanded)}
+            className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-slate-500/10 to-slate-600/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold">{company?.name || currentContact.company_name}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {(company?.industry || currentContact.industry) && (
+                    <span>{company?.industry || currentContact.industry}</span>
+                  )}
+                  {(company?.employee_range || currentContact.employee_range) && (
+                    <>
+                      <span className="text-border">•</span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {company?.employee_range || currentContact.employee_range}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
+            </div>
+            {companyExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             )}
-          </CardContent>
+          </button>
+          
+          {companyExpanded && (
+            <CardContent className="pt-0 pb-4 px-4 border-t">
+              {/* Company-Wide Notes */}
+              {companyNotes && companyNotes.length > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <StickyNote className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      Company Notes ({companyNotes.length})
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-28 overflow-y-auto">
+                    {companyNotes.slice(0, 3).map((note) => (
+                      <div 
+                        key={note.id} 
+                        className="text-xs p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-2 border-blue-400"
+                      >
+                        <p className="text-blue-800 dark:text-blue-200">{note.content}</p>
+                        <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1">
+                          {new Date(note.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!companyNotes || companyNotes.length === 0) && (
+                <p className="text-xs text-muted-foreground italic mt-2">
+                  No company notes yet
+                </p>
+              )}
+            </CardContent>
+          )}
         </Card>
       )}
 
       {/* Opener Context */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <MessageSquare className="h-4 w-4" />
-            Opener Context
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Opener Context
+            </div>
+            {(context?.type === "direct" || context?.type === "company" || currentContact.direct_referral_note) && !isEditingOpener && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setOpenerText(context?.note || currentContact.direct_referral_note || "");
+                  setIsEditingOpener(true);
+                }}
+              >
+                <Edit2 className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            )}
           </div>
-          {(context?.type === "direct" || context?.type === "company" || currentContact.direct_referral_note) && !isEditingOpener && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-xs"
-              onClick={() => {
-                setOpenerText(context?.note || currentContact.direct_referral_note || "");
-                setIsEditingOpener(true);
-              }}
-            >
-              <Edit2 className="h-3 w-3 mr-1" />
-              Edit
-            </Button>
-          )}
-        </div>
-        
-        {isEditingOpener ? (
-          <Card>
-            <CardContent className="p-3 space-y-3">
+          
+          {isEditingOpener ? (
+            <div className="space-y-3">
               <div>
-                <Label className="text-xs text-muted-foreground">Opener text (what you'll say)</Label>
+                <Label className="text-xs text-muted-foreground">What you'll say:</Label>
                 <Textarea
                   value={openerText}
                   onChange={(e) => setOpenerText(e.target.value)}
-                  placeholder="e.g., John Smith (VP of Sales) told me to reach out..."
+                  placeholder="e.g., John Smith told me to reach out..."
                   className="mt-1.5"
                   rows={3}
                 />
@@ -369,155 +475,168 @@ export function ContactPanelCompact() {
                   Save
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {context?.type === "direct" && context.referrer && (
-              <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-                <CardContent className="p-3">
-                  <p className="font-medium text-green-800 dark:text-green-300">
+            </div>
+          ) : (
+            <>
+              {context?.type === "direct" && context.referrer && (
+                <div className="p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+                  <p className="font-medium text-emerald-800 dark:text-emerald-300">
                     {getOpenerName()} told them to expect your call
                   </p>
-                  {context.note && (
-                    <p className="text-sm text-green-700 dark:text-green-400 mt-2 italic">
-                      "{context.note}"
-                    </p>
-                  )}
-                  {!context.note && (
-                    <p className="text-sm text-green-700 dark:text-green-300 mt-2 italic">
-                      "{formatOpenerSuggestion(context)}"
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-2 italic">
+                    "{context.note || formatOpenerSuggestion(context)}"
+                  </p>
+                </div>
+              )}
 
-            {context?.type === "company" && context.companyTalkedTo && (
-              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-3">
+              {context?.type === "company" && context.companyTalkedTo && (
+                <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20">
                   <p className="font-medium text-blue-800 dark:text-blue-300">
                     You spoke with {getOpenerName()}
                   </p>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-2 italic">
                     "{formatOpenerSuggestion(context)}"
                   </p>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
 
-            {context?.type === "none" && !currentContact.direct_referral_note && (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setOpenerText("");
-                  setIsEditingOpener(true);
-                }}
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Add opener (first & last name of reference)
-              </Button>
-            )}
+              {context?.type === "none" && !currentContact.direct_referral_note && (
+                <Button
+                  variant="outline"
+                  className="w-full border-dashed"
+                  onClick={() => {
+                    setOpenerText("");
+                    setIsEditingOpener(true);
+                  }}
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Add opener context
+                </Button>
+              )}
 
-            {context?.type === "none" && currentContact.direct_referral_note && (
-              <Card className="bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
-                <CardContent className="p-3">
+              {context?.type === "none" && currentContact.direct_referral_note && (
+                <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/10 to-purple-500/5 border border-purple-500/20">
                   <p className="font-medium text-purple-800 dark:text-purple-300">
                     Custom Opener
                   </p>
                   <p className="text-sm text-purple-700 dark:text-purple-300 mt-2 italic">
                     "{currentContact.direct_referral_note}"
                   </p>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* BANT Qualification */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Target className="h-4 w-4 text-muted-foreground" />
-            Qualification (BANT)
-          </div>
-          <span className="text-sm text-muted-foreground">{bantScore * 25}%</span>
-        </div>
-        <div className="grid grid-cols-4 gap-3">
-          <label className="flex flex-col items-center gap-1.5 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-            <Checkbox
-              checked={confirmedBudget}
-              onCheckedChange={(checked) => setQualification("budget", !!checked)}
-            />
-            <span className="text-xs font-medium">Budget</span>
-          </label>
-          <label className="flex flex-col items-center gap-1.5 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-            <Checkbox
-              checked={confirmedAuthority}
-              onCheckedChange={(checked) => setQualification("authority", !!checked)}
-            />
-            <span className="text-xs font-medium">Authority</span>
-          </label>
-          <label className="flex flex-col items-center gap-1.5 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-            <Checkbox
-              checked={confirmedNeed}
-              onCheckedChange={(checked) => setQualification("need", !!checked)}
-            />
-            <span className="text-xs font-medium">Need</span>
-          </label>
-          <label className="flex flex-col items-center gap-1.5 p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-            <Checkbox
-              checked={confirmedTimeline}
-              onCheckedChange={(checked) => setQualification("timeline", !!checked)}
-            />
-            <span className="text-xs font-medium">Timeline</span>
-          </label>
-        </div>
-      </div>
-
-      <Separator />
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Call Outcome */}
-      <div>
-        <div className="text-sm font-medium mb-3">Call Outcome</div>
-        <div className="grid grid-cols-3 gap-2">
-          {CALL_OUTCOMES_UI.map((o) => (
-            <Button
-              key={o.value}
-              variant={outcome === o.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOutcome(o.value as any)}
-              className="h-9"
-            >
-              <span className="mr-1.5">{o.icon}</span>
-              {o.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Disposition (shown if connected) */}
-      {outcome === "connected" && (
-        <div>
-          <div className="text-sm font-medium mb-3">Result</div>
-          <div className="grid grid-cols-2 gap-2">
-            {CALL_DISPOSITIONS.slice(0, 4).map((d) => (
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-sm font-semibold mb-3">Call Outcome</div>
+          <div className="grid grid-cols-3 gap-2">
+            {CALL_OUTCOMES_UI.map((o) => (
               <Button
-                key={d.value}
-                variant={disposition === d.value ? "default" : "outline"}
+                key={o.value}
+                variant={outcome === o.value ? "default" : "outline"}
                 size="sm"
-                onClick={() => setDisposition(d.value as any)}
-                className="h-9 justify-start"
+                onClick={() => setOutcome(o.value as any)}
+                className={cn(
+                  "h-10 transition-all",
+                  outcome === o.value && "shadow-md"
+                )}
               >
-                {d.label}
+                <span className="mr-1.5 text-base">{o.icon}</span>
+                {o.label}
               </Button>
             ))}
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* BANT Qualification */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Target className="h-4 w-4 text-primary" />
+              Qualification (BANT)
+            </div>
+            <span className={cn(
+              "text-sm font-bold",
+              bantPercent >= 75 ? "text-emerald-600 dark:text-emerald-400" :
+              bantPercent >= 50 ? "text-amber-600 dark:text-amber-400" :
+              "text-muted-foreground"
+            )}>
+              {bantPercent}%
+            </span>
+          </div>
+          
+          {/* Progress Bar */}
+          <Progress 
+            value={bantPercent} 
+            className={cn(
+              "h-2 mb-4",
+              bantPercent >= 75 ? "[&>div]:bg-emerald-500" :
+              bantPercent >= 50 ? "[&>div]:bg-amber-500" : ""
+            )} 
+          />
+          
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { key: "budget" as const, label: "Budget", checked: confirmedBudget },
+              { key: "authority" as const, label: "Authority", checked: confirmedAuthority },
+              { key: "need" as const, label: "Need", checked: confirmedNeed },
+              { key: "timeline" as const, label: "Timeline", checked: confirmedTimeline },
+            ].map((item) => (
+              <label 
+                key={item.key}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-200",
+                  item.checked 
+                    ? "bg-emerald-500/10 border-emerald-500/30" 
+                    : "hover:bg-muted/50 hover:border-border/80"
+                )}
+              >
+                <Checkbox
+                  checked={item.checked}
+                  onCheckedChange={(checked) => setQualification(item.key, !!checked)}
+                  className={item.checked ? "border-emerald-500 data-[state=checked]:bg-emerald-500" : ""}
+                />
+                <span className={cn(
+                  "text-xs font-medium",
+                  item.checked ? "text-emerald-700 dark:text-emerald-400" : ""
+                )}>
+                  {item.label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pickup Disposition (shown if connected) */}
+      {outcome === "connected" && (
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="p-4">
+            <div className="text-sm font-semibold mb-3 text-emerald-800 dark:text-emerald-300">What happened?</div>
+            <div className="grid grid-cols-2 gap-2">
+              {PICKUP_DISPOSITIONS.map((d) => (
+                <Button
+                  key={d.value}
+                  variant={disposition === d.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDisposition(d.value as any)}
+                  className={cn(
+                    "h-10 justify-start transition-all text-xs",
+                    disposition === d.value && "shadow-md bg-emerald-500 hover:bg-emerald-600"
+                  )}
+                >
+                  {d.label}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

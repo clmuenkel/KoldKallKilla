@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Header } from "@/components/layout/header";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ import { useSessions } from "@/hooks/use-sessions";
 import { useTargets } from "@/hooks/use-targets";
 import type { DateRange, TrendDataPoint, SessionWithStats } from "@/types/analytics";
 import { cn } from "@/lib/utils";
+import { DISPOSITION_LABEL_MAP } from "@/lib/constants";
 
 const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "today", label: "Today" },
@@ -75,26 +77,24 @@ export default function AnalyticsPage() {
       <div className="flex-1 p-6 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header with Date Range */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Performance Analytics</h2>
-              <p className="text-muted-foreground">
-                Track your cold calling performance and identify trends
-              </p>
-            </div>
-            <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_RANGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <PageHeader
+            title="Performance Analytics"
+            description="Track your cold calling performance and identify trends"
+            actions={
+              <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_RANGE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
 
           {/* Streak Banner */}
           {streak && streak.currentStreak > 0 && (
@@ -251,8 +251,8 @@ export default function AnalyticsPage() {
                   {dispositions?.map((d) => (
                     <div key={d.disposition} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="capitalize">
-                          {d.disposition.replace(/_/g, " ")}
+                        <span>
+                          {DISPOSITION_LABEL_MAP[d.disposition] || d.disposition.replace(/_/g, " ")}
                         </span>
                         <span className="text-muted-foreground">{d.count}</span>
                       </div>

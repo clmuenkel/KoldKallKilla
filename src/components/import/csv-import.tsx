@@ -4,13 +4,23 @@ import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
 import {
-  parseCSV,
+  parseCSVByTemplate,
   dedupeByLink,
+  inferMissingStates,
   extractDomain,
   mapToContact,
   mapToCompany,
   type ParsedCSVRow,
+  type CSVTemplate,
+  type InferenceStats,
 } from "@/lib/csv-parser";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,9 +55,11 @@ import {
   AlertCircle,
   X,
   Phone,
+  Calendar,
+  Clock,
 } from "lucide-react";
 
-type ImportStep = "upload" | "preview" | "importing" | "done";
+type ImportStep = "upload" | "preview" | "importing" | "done" | "scheduling";
 
 interface ImportStats {
   created: number;
@@ -79,11 +91,13 @@ export function CSVImport() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string>("");
   const [listName, setListName] = useState<string>("");
+  const [csvTemplate, setCsvTemplate] = useState<CSVTemplate>("apollo"); // Default to Apollo
   
   // Parsed data
   const [parsedRows, setParsedRows] = useState<ParsedCSVRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [parseStats, setParseStats] = useState({ totalRows: 0, afterDedupe: 0, duplicatesRemoved: 0 });
+  const [inferenceStats, setInferenceStats] = useState<InferenceStats | null>(null);
   
   // Import progress
   const [importProgress, setImportProgress] = useState(0);
@@ -97,6 +111,15 @@ export function CSVImport() {
   const [failedImports, setFailedImports] = useState<FailedImport[]>([]);
   const [showFailedDialog, setShowFailedDialog] = useState(false);
   
+  // Scheduling state
+  const [importedContactIds, setImportedContactIds] = useState<string[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(true);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState<{
+    scheduled: number;
+    distribution: { date: string; count: number }[];
+  } | null>(null);
+  
   const supabase = createClient();
   const userId = DEFAULT_USER_ID;
 
@@ -107,39 +130,49 @@ export function CSVImport() {
     }
     
     setFileName(file.name);
-    console.log("[CSV Import] Reading file:", file.name, "Size:", file.size);
+    console.log("[CSV Import] Reading file:", file.name, "Size:", file.size, "Template:", csvTemplate);
     
     try {
       const text = await file.text();
       console.log("[CSV Import] File text length:", text.length, "First 200 chars:", text.substring(0, 200));
       
-      const allRows = parseCSV(text);
+      const allRows = parseCSVByTemplate(text, csvTemplate);
       console.log("[CSV Import] Parsed rows:", allRows.length);
       
       const dedupedRows = dedupeByLink(allRows);
       console.log("[CSV Import] After dedupe:", dedupedRows.length);
       
-      setParsedRows(dedupedRows);
+      // Infer missing states for timezone derivation
+      const { rows: rowsWithStates, stats: stateInferenceStats } = inferMissingStates(dedupedRows);
+      console.log("[CSV Import] State inference:", stateInferenceStats);
+      setInferenceStats(stateInferenceStats);
+      
+      setParsedRows(rowsWithStates);
       setParseStats({
         totalRows: allRows.length,
-        afterDedupe: dedupedRows.length,
-        duplicatesRemoved: allRows.length - dedupedRows.length,
+        afterDedupe: rowsWithStates.length,
+        duplicatesRemoved: allRows.length - rowsWithStates.length,
       });
       
       // Select all by default
-      setSelectedRows(new Set(dedupedRows.map((_, i) => i)));
+      setSelectedRows(new Set(rowsWithStates.map((_, i) => i)));
       
-      if (dedupedRows.length === 0) {
+      if (rowsWithStates.length === 0) {
         toast.error("No contacts found in CSV. Check console for details.");
       } else {
         setStep("preview");
-        toast.success(`Parsed ${dedupedRows.length} contacts (${allRows.length - dedupedRows.length} duplicates removed)`);
+        const totalInferred = stateInferenceStats.fromCompany + stateInferenceStats.fromPhone;
+        if (totalInferred > 0) {
+          toast.success(`Parsed ${rowsWithStates.length} contacts. Inferred state for ${totalInferred} (${stateInferenceStats.fromCompany} from company, ${stateInferenceStats.fromPhone} from phone).`);
+        } else {
+          toast.success(`Parsed ${rowsWithStates.length} contacts (${allRows.length - rowsWithStates.length} duplicates removed)`);
+        }
       }
     } catch (error) {
       console.error("[CSV Import] Parse error:", error);
       toast.error("Failed to parse CSV file. Check console for details.");
     }
-  }, []);
+  }, [csvTemplate]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -199,6 +232,7 @@ export function CSVImport() {
     setImportProgress(0);
     setImportStats({ created: 0, updated: 0, companiesCreated: 0, failed: 0, notesCreated: 0 });
     setFailedImports([]); // Clear previous failures
+    setImportedContactIds([]); // Clear previous imported IDs
 
     const sourceList = listName || `CSV Import ${new Date().toLocaleDateString()}`;
     let created = 0;
@@ -207,6 +241,7 @@ export function CSVImport() {
     let failed = 0;
     let notesCreated = 0;
     const failures: FailedImport[] = [];
+    const newContactIds: string[] = []; // Track newly created contact IDs for scheduling
 
     // Cache for companies by domain to avoid duplicates
     const companyCache = new Map<string, string>(); // domain -> company_id
@@ -278,7 +313,7 @@ export function CSVImport() {
           }
         }
 
-        // 2. Find existing contact by linkedin_url → email → phone
+        // 2. Find existing contact by linkedin_url → email → mobile → phone
         let existingContactId: string | null = null;
         
         // Try LinkedIn URL first
@@ -305,7 +340,19 @@ export function CSVImport() {
           if (byEmail) existingContactId = byEmail.id;
         }
         
-        // Try phone (direct)
+        // Try mobile (primary phone for Apollo imports)
+        if (!existingContactId && row.mobile) {
+          const { data: byMobile } = await supabase
+            .from("contacts")
+            .select("id")
+            .eq("user_id", userId)
+            .eq("mobile", row.mobile)
+            .single();
+          
+          if (byMobile) existingContactId = byMobile.id;
+        }
+        
+        // Try phone (direct/other)
         if (!existingContactId && row.direct) {
           const { data: byPhone } = await supabase
             .from("contacts")
@@ -318,48 +365,124 @@ export function CSVImport() {
         }
 
         // 3. Insert or update contact
-        const contactData = {
-          ...mapToContact(row, userId, companyId || undefined),
-          source_list: sourceList,
+        // Helper to check if a value is "missing" (null, empty string, or whitespace only)
+        const isMissing = (v: unknown): boolean => {
+          if (v == null) return true;
+          if (typeof v === "string" && v.trim() === "") return true;
+          return false;
         };
 
         if (existingContactId) {
-          // Update existing contact
-          const { error: updateError } = await supabase
+          // UPDATE: Fetch existing contact to build a "fill missing only" patch
+          const { data: existingContact } = await supabase
             .from("contacts")
-            .update(contactData)
-            .eq("id", existingContactId);
+            .select("first_name, last_name, email, linkedin_url, title, mobile, phone, industry, city, state, company_id, company_name, company_domain, employee_range")
+            .eq("id", existingContactId)
+            .single();
           
-          if (updateError) {
-            console.error("Update error:", updateError);
-            failures.push({
-              row,
-              type: "contact",
-              error: updateError.message,
-              errorCode: updateError.code,
-            });
-            failed++;
-          } else {
-            updated++;
+          // Build patch object - only fill in missing fields
+          // NEVER touch: stage, BANT flags, cadence fields, is_aaa, call stats, tags
+          const updates: Record<string, unknown> = {};
+          
+          if (existingContact) {
+            // Fill basic info if missing
+            if (isMissing(existingContact.first_name) && row.firstName) {
+              updates.first_name = row.firstName;
+            }
+            if (isMissing(existingContact.last_name) && row.lastName) {
+              updates.last_name = row.lastName;
+            }
+            if (isMissing(existingContact.email) && row.email) {
+              updates.email = row.email;
+            }
+            if (isMissing(existingContact.linkedin_url) && row.linkedinUrl) {
+              updates.linkedin_url = row.linkedinUrl;
+            }
+            if (isMissing(existingContact.title) && row.position) {
+              updates.title = row.position;
+            }
             
-            // Create note if there's content
-            if (row.notes?.trim()) {
-              const { error: noteError } = await supabase
-                .from("notes")
-                .insert({
-                  user_id: userId,
-                  contact_id: existingContactId,
-                  company_id: companyId,
-                  content: row.notes.trim(),
-                  is_pinned: false,
-                  is_company_wide: false,
-                });
-              
-              if (!noteError) notesCreated++;
+            // Fill phone numbers if missing (mobile is primary)
+            if (isMissing(existingContact.mobile) && row.mobile) {
+              updates.mobile = row.mobile;
+            }
+            if (isMissing(existingContact.phone) && row.direct) {
+              updates.phone = row.direct;
+            }
+            
+            // Fill location/company info if missing
+            if (isMissing(existingContact.industry) && row.type) {
+              updates.industry = row.type;
+            }
+            if (isMissing(existingContact.city) && row.city) {
+              updates.city = row.city;
+            }
+            if (isMissing(existingContact.state) && row.companyInfo) {
+              updates.state = row.companyInfo;
+            }
+            if (isMissing(existingContact.company_name) && row.company) {
+              updates.company_name = row.company;
+            }
+            if (isMissing(existingContact.company_domain) && row.email) {
+              const domain = extractDomain(row.email);
+              if (domain) updates.company_domain = domain;
+            }
+            if (isMissing(existingContact.employee_range) && row.companyHeadcount) {
+              updates.employee_range = row.companyHeadcount;
+            }
+            
+            // Only set company_id if it's currently missing
+            if (isMissing(existingContact.company_id) && companyId) {
+              updates.company_id = companyId;
             }
           }
+          
+          // Only update if there are changes
+          if (Object.keys(updates).length > 0) {
+            const { error: updateError } = await supabase
+              .from("contacts")
+              .update(updates)
+              .eq("id", existingContactId);
+            
+            if (updateError) {
+              console.error("Update error:", updateError);
+              failures.push({
+                row,
+                type: "contact",
+                error: updateError.message,
+                errorCode: updateError.code,
+              });
+              failed++;
+            } else {
+              updated++;
+            }
+          } else {
+            // No changes needed but still count as "updated" (matched)
+            updated++;
+          }
+          
+          // Create note if there's content
+          if (row.notes?.trim()) {
+            const { error: noteError } = await supabase
+              .from("notes")
+              .insert({
+                user_id: userId,
+                contact_id: existingContactId,
+                company_id: companyId,
+                content: row.notes.trim(),
+                is_pinned: true,
+                is_company_wide: false,
+              });
+            
+            if (!noteError) notesCreated++;
+          }
         } else {
-          // Insert new contact
+          // INSERT: Create new contact with full data
+          const contactData = {
+            ...mapToContact(row, userId, companyId || undefined),
+            source_list: sourceList,
+          };
+          
           const { data: newContact, error: insertError } = await supabase
             .from("contacts")
             .insert(contactData)
@@ -377,6 +500,10 @@ export function CSVImport() {
             failed++;
           } else {
             created++;
+            // Track new contact ID for scheduling
+            if (newContact) {
+              newContactIds.push(newContact.id);
+            }
             
             // Create note if there's content
             if (row.notes?.trim() && newContact) {
@@ -387,7 +514,7 @@ export function CSVImport() {
                   contact_id: newContact.id,
                   company_id: companyId,
                   content: row.notes.trim(),
-                  is_pinned: false,
+                  is_pinned: true,
                   is_company_wide: false,
                 });
               
@@ -412,13 +539,44 @@ export function CSVImport() {
 
     // Set final state
     setFailedImports(failures);
-    setStep("done");
+    setImportedContactIds(newContactIds);
     
     if (failures.length > 0) {
       toast.warning(`Imported ${created + updated} contacts with ${failures.length} failure(s)`);
     } else {
       toast.success(`Imported ${created + updated} contacts!`);
     }
+    
+    // Auto-schedule if enabled and there are new contacts
+    if (scheduleEnabled && newContactIds.length > 0) {
+      setIsScheduling(true);
+      setStep("scheduling");
+      
+      try {
+        const response = await fetch("/api/dialer/schedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contactIds: newContactIds,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to schedule contacts");
+        }
+
+        const result = await response.json();
+        setScheduleResult(result);
+        toast.success(`Scheduled ${result.scheduled} contacts across ${result.distribution.length} business days`);
+      } catch (error) {
+        console.error("Schedule error:", error);
+        toast.error("Failed to schedule contacts - you can try again from the dialer");
+      } finally {
+        setIsScheduling(false);
+      }
+    }
+    
+    setStep("done");
   };
 
   // Step: Upload
@@ -436,6 +594,26 @@ export function CSVImport() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* CSV Template Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="csv-template">CSV Format</Label>
+              <Select value={csvTemplate} onValueChange={(v) => setCsvTemplate(v as CSVTemplate)}>
+                <SelectTrigger id="csv-template" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="apollo">Apollo Export</SelectItem>
+                  <SelectItem value="legacy">Legacy (CX Call List)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {csvTemplate === "apollo" 
+                  ? "Standard Apollo contact export with Mobile Phone, Other Phone, City, State columns"
+                  : "Legacy CX Call List format with Direct, Mobile, Company Info columns"
+                }
+              </p>
+            </div>
+
             {/* Drop Zone */}
             <div
               onDragOver={handleDragOver}
@@ -474,7 +652,10 @@ export function CSVImport() {
               <Label htmlFor="list-name">Import List Name (optional)</Label>
               <Input
                 id="list-name"
-                placeholder={`e.g., CX Call List ${new Date().toLocaleDateString()}`}
+                placeholder={csvTemplate === "apollo" 
+                  ? `Apollo Import ${new Date().toLocaleDateString()}`
+                  : `CX Call List ${new Date().toLocaleDateString()}`
+                }
                 value={listName}
                 onChange={(e) => setListName(e.target.value)}
               />
@@ -485,19 +666,36 @@ export function CSVImport() {
 
             {/* Expected Format */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <p className="text-sm font-medium">Expected CSV columns:</p>
+              <p className="text-sm font-medium">Expected CSV columns ({csvTemplate === "apollo" ? "Apollo" : "Legacy"}):</p>
               <div className="flex flex-wrap gap-1.5">
-                {[
-                  "Last Name", "First Name", "Company", "Link (LinkedIn)", 
-                  "Type", "Company Info", "Company Headcount", "Time Zone",
-                  "Mobile", "Direct", "Email", "Position", "Personal Connector + Bio",
-                  "Answered", "Notes"
-                ].map((col) => (
-                  <Badge key={col} variant="secondary" className="text-xs">
-                    {col}
-                  </Badge>
-                ))}
+                {csvTemplate === "apollo" ? (
+                  [
+                    "First Name", "Last Name", "Title", "Company Name", "Email",
+                    "Mobile Phone", "Other Phone", "Work Direct Phone", "Home Phone",
+                    "Person Linkedin Url", "Industry", "City", "State", "# Employees"
+                  ].map((col) => (
+                    <Badge key={col} variant="secondary" className="text-xs">
+                      {col}
+                    </Badge>
+                  ))
+                ) : (
+                  [
+                    "Last Name", "First Name", "Company", "Link (LinkedIn)", 
+                    "Type", "Company Info", "Company Headcount", "Time Zone",
+                    "Mobile", "Direct", "Email", "Position", "Personal Connector + Bio",
+                    "Answered", "Notes"
+                  ].map((col) => (
+                    <Badge key={col} variant="secondary" className="text-xs">
+                      {col}
+                    </Badge>
+                  ))
+                )}
               </div>
+              {csvTemplate === "apollo" && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Phone priority: Mobile Phone (primary) → Other Phone → Work Direct Phone → Home Phone (fallback)
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -526,19 +724,28 @@ export function CSVImport() {
               )}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => {
-              setStep("upload");
-              setParsedRows([]);
-              setFileName("");
-            }}>
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button onClick={handleImport} disabled={selectedRows.size === 0}>
-              <Upload className="mr-2 h-4 w-4" />
-              Import {selectedRows.size} Contacts
-            </Button>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={scheduleEnabled}
+                onCheckedChange={(v) => setScheduleEnabled(!!v)}
+              />
+              <span className="text-muted-foreground">Auto-schedule into cadence</span>
+            </label>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                setStep("upload");
+                setParsedRows([]);
+                setFileName("");
+              }}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleImport} disabled={selectedRows.size === 0}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import {selectedRows.size} Contacts
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -590,6 +797,20 @@ export function CSVImport() {
           </Card>
         </div>
 
+        {/* State Inference Info */}
+        {inferenceStats && (inferenceStats.fromCompany > 0 || inferenceStats.fromPhone > 0) && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <span>
+              Inferred state/timezone for {inferenceStats.fromCompany + inferenceStats.fromPhone} contacts
+              {inferenceStats.fromCompany > 0 && ` (${inferenceStats.fromCompany} from company data`}
+              {inferenceStats.fromCompany > 0 && inferenceStats.fromPhone > 0 && ", "}
+              {inferenceStats.fromPhone > 0 && `${inferenceStats.fromPhone} from phone area code`}
+              {(inferenceStats.fromCompany > 0 || inferenceStats.fromPhone > 0) && ")"}
+            </span>
+          </div>
+        )}
+
         {/* Preview Table */}
         <Card>
           <ScrollArea className="h-[400px]">
@@ -633,13 +854,22 @@ export function CSVImport() {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {row.companyInfo || "-"}
+                      {row._template === "apollo" 
+                        ? (row.city && row.companyInfo 
+                            ? `${row.city}, ${row.companyInfo}` 
+                            : row.city || row.companyInfo || "-")
+                        : (row.companyInfo || "-")
+                      }
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1 flex-wrap">
                         {row.email && <Badge variant="outline">Email</Badge>}
-                        {row.direct && <Badge variant="outline">Direct</Badge>}
-                        {row.mobile && <Badge variant="outline">Mobile</Badge>}
+                        {row.mobile && <Badge variant="outline" className="bg-green-500/10">Mobile</Badge>}
+                        {row.direct && (
+                          <Badge variant="outline">
+                            {row._template === "apollo" ? "Other/Work" : "Direct"}
+                          </Badge>
+                        )}
                         {row.linkedinUrl && <Badge variant="outline">LinkedIn</Badge>}
                         {!row.email && !row.direct && !row.mobile && !row.linkedinUrl && (
                           <Badge variant="destructive">No contact info</Badge>
@@ -676,6 +906,57 @@ export function CSVImport() {
             <p className="text-red-500">{importStats.failed} failed</p>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // Step: Scheduling
+  if (step === "scheduling") {
+    return (
+      <div className="max-w-md mx-auto text-center space-y-6">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+          <Calendar className="h-8 w-8 text-blue-600 animate-pulse" />
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold">Scheduling Contacts</h2>
+          <p className="text-muted-foreground">
+            Distributing {importedContactIds.length} new contacts across business days...
+          </p>
+        </div>
+        <Progress value={isScheduling ? 50 : 100} className="w-full" />
+        {scheduleResult && (
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p className="text-green-600 font-medium">
+              Scheduled {scheduleResult.scheduled} contacts across {scheduleResult.distribution.length} days
+            </p>
+            <div className="text-left bg-muted/50 rounded-lg p-4 max-h-48 overflow-y-auto">
+              <p className="font-medium mb-2">Distribution:</p>
+              {scheduleResult.distribution.slice(0, 10).map(({ date, count }) => (
+                <div key={date} className="flex justify-between text-xs">
+                  <span>{new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+                  <span className="font-medium">{count} contacts</span>
+                </div>
+              ))}
+              {scheduleResult.distribution.length > 10 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  ...and {scheduleResult.distribution.length - 10} more days
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        {!isScheduling && (
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => window.location.href = "/companies"}>
+              <Building2 className="mr-2 h-4 w-4" />
+              View Companies
+            </Button>
+            <Button onClick={() => window.location.href = "/dialer"}>
+              <Phone className="mr-2 h-4 w-4" />
+              Start Calling
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -727,6 +1008,54 @@ export function CSVImport() {
           </CardContent>
         </Card>
       )}
+
+      {/* Scheduling Results (auto-scheduled during import) */}
+      {scheduleResult && scheduleResult.scheduled > 0 && (
+        <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-900/10">
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-green-600" />
+              <span className="font-medium text-green-700 dark:text-green-400">
+                {scheduleResult.scheduled} contacts scheduled
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground text-left">
+              Distributed across {scheduleResult.distribution.length} business days to maintain ~150 new contacts/day
+            </p>
+            <div className="text-left bg-muted/50 rounded-lg p-3 max-h-32 overflow-y-auto">
+              {scheduleResult.distribution.slice(0, 5).map(({ date, count }) => (
+                <div key={date} className="flex justify-between text-xs py-0.5">
+                  <span>{new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+                  <span className="font-medium">{count}</span>
+                </div>
+              ))}
+              {scheduleResult.distribution.length > 5 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  ...and {scheduleResult.distribution.length - 5} more days
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Show if scheduling was skipped */}
+      {importedContactIds.length > 0 && !scheduleResult && (
+        <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-900/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-amber-600" />
+              <span className="text-sm text-amber-700 dark:text-amber-400">
+                {importedContactIds.length} contacts not scheduled (cadence toggle was off)
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              You can distribute these later from the Power Dialer
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex gap-2 justify-center">
         <Button variant="outline" onClick={() => {
           setStep("upload");
@@ -734,6 +1063,8 @@ export function CSVImport() {
           setFileName("");
           setImportStats({ created: 0, updated: 0, companiesCreated: 0, failed: 0, notesCreated: 0 });
           setImportProgress(0);
+          setImportedContactIds([]);
+          setScheduleResult(null);
         }}>
           Import More
         </Button>

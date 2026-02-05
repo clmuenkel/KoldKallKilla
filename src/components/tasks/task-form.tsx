@@ -22,10 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ContactCombobox } from "@/components/ui/contact-combobox";
 import { TASK_TYPES, TASK_PRIORITIES } from "@/lib/constants";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { useEffect, useState } from "react";
 
 const taskSchema = z.object({
@@ -46,7 +48,7 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps) {
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(DEFAULT_USER_ID);
   const supabase = createClient();
   const createTask = useCreateTask();
   const { data: contacts } = useContacts();
@@ -54,7 +56,7 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserId(user.id);
+      setUserId(user?.id ?? DEFAULT_USER_ID);
     };
     getUser();
   }, [supabase]);
@@ -77,6 +79,13 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
       contact_id: defaultContactId || "",
     },
   });
+
+  // When dialog opens from contact page, sync contact_id so the Related Contact select shows the right value
+  useEffect(() => {
+    if (open) {
+      setValue("contact_id", defaultContactId || "");
+    }
+  }, [open, defaultContactId, setValue]);
 
   const onSubmit = async (data: TaskFormValues) => {
     if (!userId) {
@@ -175,23 +184,12 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
 
           <div className="space-y-2">
             <Label>Related Contact</Label>
-            <Select
+            <ContactCombobox
+              contacts={contacts}
               value={watch("contact_id")}
               onValueChange={(v) => setValue("contact_id", v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select contact (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No contact</SelectItem>
-                {contacts?.map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.first_name} {contact.last_name}
-                    {contact.company_name && ` • ${contact.company_name}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Search contacts (optional)"
+            />
           </div>
 
           <div className="flex justify-end gap-2">

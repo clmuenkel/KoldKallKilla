@@ -14,7 +14,7 @@ export function PipelineOverview() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card variant="elevated">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Kanban className="h-5 w-5" />

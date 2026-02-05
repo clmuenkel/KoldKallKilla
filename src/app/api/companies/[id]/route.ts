@@ -138,7 +138,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/companies/[id] - Delete a company
+// DELETE /api/companies/[id] - Delete a company (cascades to contacts and all related data)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -147,13 +147,8 @@ export async function DELETE(
     const supabase = createClient();
     const { id } = params;
 
-    // First unlink all contacts from this company
-    await (supabase as any)
-      .from("contacts")
-      .update({ company_id: null })
-      .eq("company_id", id);
-
-    // Then delete the company
+    // Delete the company - CASCADE will delete all contacts and their related data
+    // (calls, notes, emails, meetings, activity_log, tasks, dialer_drafts, call_list_items)
     const { error } = await (supabase as any)
       .from("companies")
       .delete()

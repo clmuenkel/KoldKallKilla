@@ -3,14 +3,22 @@
 import { useContacts, useUpdateContact } from "@/hooks/use-contacts";
 import { STAGES } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, StageBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getInitials, cn } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Building2, Phone } from "lucide-react";
+import { Building2, Phone, Mail, Clock, CheckCircle2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import type { Contact } from "@/types/database";
 
 export function PipelineBoard() {
@@ -109,17 +117,34 @@ function ContactCard({
   contact: Contact;
   onDragStart: (e: React.DragEvent) => void;
 }) {
+  const router = useRouter();
+  const bantScore = [contact.has_budget, contact.is_authority, contact.has_need, contact.has_timeline].filter(Boolean).length;
+  
+  const handleCall = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(`/dialer?contact=${contact.id}`);
+  };
+
+  const handleEmail = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (contact.email) {
+      window.open(`mailto:${contact.email}`, "_blank");
+    }
+  };
+
   return (
     <Link href={`/contacts/${contact.id}`}>
       <Card
-        className="cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+        className="cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative"
         draggable
         onDragStart={onDragStart}
       >
         <CardContent className="p-3">
           <div className="flex items-start gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className="text-xs">
+              <AvatarFallback className="text-xs bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold">
                 {getInitials(`${contact.first_name} ${contact.last_name || ""}`)}
               </AvatarFallback>
             </Avatar>
@@ -140,17 +165,83 @@ function ContactCard({
               )}
             </div>
           </div>
-          {/* Quick Info */}
-          <div className="flex items-center gap-2 mt-2">
+
+          {/* Last Contacted & BANT Score */}
+          <div className="flex items-center justify-between mt-2 text-xs">
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>
+                {contact.last_contacted_at 
+                  ? formatDistanceToNow(new Date(contact.last_contacted_at), { addSuffix: true })
+                  : "Never contacted"}
+              </span>
+            </div>
+            {bantScore > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(4)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          i < bantScore ? "bg-emerald-500" : "bg-muted"
+                        )} 
+                      />
+                    ))}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  BANT Score: {bantScore}/4
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
+          {/* Quick Actions - Show on Hover */}
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {contact.phone && (
-              <Badge variant="outline" className="text-xs">
-                <Phone className="h-3 w-3 mr-1" />
-                Has Phone
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="secondary" 
+                    className="h-7 w-7 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600"
+                    onClick={handleCall}
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Call</TooltipContent>
+              </Tooltip>
+            )}
+            {contact.email && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="secondary" 
+                    className="h-7 w-7 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600"
+                    onClick={handleEmail}
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Email</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+
+          {/* Quick Info Tags */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {contact.industry && (
+              <Badge variant="outline" className="text-[10px] h-5">
+                {contact.industry}
               </Badge>
             )}
-            {contact.industry && (
-              <Badge variant="outline" className="text-xs">
-                {contact.industry}
+            {contact.total_calls > 0 && (
+              <Badge variant="secondary" className="text-[10px] h-5">
+                {contact.total_calls} call{contact.total_calls !== 1 ? "s" : ""}
               </Badge>
             )}
           </div>

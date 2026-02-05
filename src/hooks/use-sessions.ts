@@ -154,16 +154,132 @@ export function useUpdateSession() {
   });
 }
 
-// End a session
+// End a session - calculates duration accounting for pause time
 export function useEndSession() {
-  const updateSession = useUpdateSession();
+  const supabase = createClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      return updateSession.mutateAsync({
-        id: sessionId,
-        updates: { ended_at: new Date().toISOString() },
-      });
+      // Fetch the session to get started_at and total_pause_duration_seconds
+      const { data: session, error: fetchError } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("started_at, total_pause_duration_seconds")
+        .eq("id", sessionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const now = new Date();
+      const startedAt = new Date(session.started_at);
+      const totalSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+      const pauseSeconds = session.total_pause_duration_seconds || 0;
+      const effectiveDuration = Math.max(0, totalSeconds - pauseSeconds);
+
+      const { data, error } = await (supabase as any)
+        .from("dialer_sessions")
+        .update({
+          ended_at: now.toISOString(),
+          duration_seconds: effectiveDuration,
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as DialerSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["current-session"] });
+    },
+  });
+}
+
+// Pause a session - records pause timestamp
+export function usePauseSession() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const now = new Date().toISOString();
+
+      // Fetch current paused_at array
+      const { data: session, error: fetchError } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("paused_at")
+        .eq("id", sessionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const pausedAtArray = session?.paused_at || [];
+
+      const { data, error } = await (supabase as any)
+        .from("dialer_sessions")
+        .update({
+          paused_at: [...pausedAtArray, now],
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as DialerSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["current-session"] });
+    },
+  });
+}
+
+// Resume a session - records resume timestamp and calculates pause duration
+export function useResumeSession() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const now = new Date();
+
+      // Fetch current session state
+      const { data: session, error: fetchError } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("paused_at, resumed_at, total_pause_duration_seconds")
+        .eq("id", sessionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const pausedAtArray: string[] = session?.paused_at || [];
+      const resumedAtArray: string[] = session?.resumed_at || [];
+      let totalPauseDuration = session?.total_pause_duration_seconds || 0;
+
+      // Calculate duration of this pause (last pause timestamp to now)
+      if (pausedAtArray.length > resumedAtArray.length) {
+        const lastPausedAt = new Date(pausedAtArray[pausedAtArray.length - 1]);
+        const pauseDuration = Math.floor((now.getTime() - lastPausedAt.getTime()) / 1000);
+        totalPauseDuration += pauseDuration;
+      }
+
+      const { data, error } = await (supabase as any)
+        .from("dialer_sessions")
+        .update({
+          resumed_at: [...resumedAtArray, now.toISOString()],
+          total_pause_duration_seconds: totalPauseDuration,
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as DialerSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["current-session"] });
     },
   });
 }
@@ -223,8 +339,8 @@ export function useSessionTracker() {
           case "wrong_number":
             updates.wrong_numbers = (recentSession.wrong_numbers || 0) + 1;
             break;
-          case "busy":
-            updates.busy = (recentSession.busy || 0) + 1;
+          case "ai_screener":
+            updates.ai_screener = (recentSession.ai_screener || 0) + 1;
             break;
         }
 
@@ -244,7 +360,7 @@ export function useSessionTracker() {
           skipped: callData.outcome === "skipped" ? 1 : 0,
           gatekeepers: callData.outcome === "gatekeeper" ? 1 : 0,
           wrong_numbers: callData.outcome === "wrong_number" ? 1 : 0,
-          busy: callData.outcome === "busy" ? 1 : 0,
+          ai_screener: callData.outcome === "ai_screener" ? 1 : 0,
           total_talk_time_seconds: callData.outcome === "connected" ? callData.duration_seconds : 0,
         };
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Header } from "@/components/layout/header";
+import { PageHeader } from "@/components/layout/page-header";
 import { useEmailTemplates, useDeleteEmailTemplate } from "@/hooks/use-email-templates";
 import { TemplateEditor } from "@/components/emails/template-editor";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EMAIL_TEMPLATE_CATEGORIES } from "@/lib/constants";
 import { Plus, MoreHorizontal, Pencil, Trash2, Mail } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { EmailTemplate } from "@/types/database";
 
 export default function TemplatesPage() {
@@ -36,13 +54,11 @@ export default function TemplatesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this template?")) {
-      try {
-        await deleteTemplate.mutateAsync(id);
-        toast.success("Template deleted");
-      } catch (error) {
-        toast.error("Failed to delete template");
-      }
+    try {
+      await deleteTemplate.mutateAsync(id);
+      toast.success("Template deleted");
+    } catch (error) {
+      toast.error("Failed to delete template");
     }
   };
 
@@ -58,22 +74,17 @@ export default function TemplatesPage() {
     <div className="flex flex-col h-full">
       <Header title="Email Templates" />
       
-      <div className="flex-1 p-6 overflow-auto">
-        <div 
-          className="flex justify-between items-center mb-6 opacity-0 animate-fade-in"
-          style={{ animationDelay: "0ms", animationFillMode: "forwards" }}
-        >
-          <div>
-            <h2 className="text-lg font-semibold">Template Library</h2>
-            <p className="text-sm text-muted-foreground">
-              Create and manage your email templates
-            </p>
-          </div>
-          <Button onClick={handleCreate} className="press-scale">
-            <Plus className="mr-2 h-4 w-4" />
-            New Template
-          </Button>
-        </div>
+      <div className="flex-1 p-6 space-y-6 overflow-auto">
+        <PageHeader
+          title="Template Library"
+          description="Create and manage your email templates"
+          actions={
+            <Button onClick={handleCreate} className="press-scale">
+              <Plus className="mr-2 h-4 w-4" />
+              New Template
+            </Button>
+          }
+        />
 
         <div 
           className="opacity-0 animate-fade-in"
@@ -86,17 +97,17 @@ export default function TemplatesPage() {
               ))}
             </div>
           ) : !templates || templates.length === 0 ? (
-            <div className="text-center py-12">
-              <Mail className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No templates yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first email template to speed up your outreach
-              </p>
-              <Button onClick={handleCreate} className="press-scale">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Template
-              </Button>
-            </div>
+            <EmptyState
+              icon={Mail}
+              title="No templates yet"
+              description="Create your first email template to speed up your outreach"
+              action={
+                <Button onClick={handleCreate} className="press-scale">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Template
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-8">
               {EMAIL_TEMPLATE_CATEGORIES.map((category) => {
@@ -110,7 +121,7 @@ export default function TemplatesPage() {
                     </h3>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {categoryTemplates.map((template) => (
-                        <Card key={template.id} className="hover:shadow-md transition-shadow">
+                        <Card key={template.id} variant="interactive">
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between">
                               <div>
@@ -119,26 +130,49 @@ export default function TemplatesPage() {
                                   {template.subject_template}
                                 </CardDescription>
                               </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEdit(template)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(template.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <AlertDialog>
+                                <DropdownMenu>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Template actions</TooltipContent>
+                                  </Tooltip>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(template)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onSelect={(e) => e.preventDefault()}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Template</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{template.name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(template.id)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </CardHeader>
                           <CardContent>

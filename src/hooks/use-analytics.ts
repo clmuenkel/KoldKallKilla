@@ -213,7 +213,7 @@ export function useOutcomeBreakdown(range: DateRange = "this_week") {
         connected: "#22c55e",
         voicemail: "#f59e0b",
         no_answer: "#ef4444",
-        busy: "#6366f1",
+        ai_screener: "#6366f1",
         gatekeeper: "#8b5cf6",
         wrong_number: "#ec4899",
       };

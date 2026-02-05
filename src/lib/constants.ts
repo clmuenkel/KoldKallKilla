@@ -12,7 +12,7 @@ export const CALL_OUTCOMES = [
   { value: "connected", label: "Connected", icon: "✅" },
   { value: "voicemail", label: "Voicemail", icon: "📧" },
   { value: "no_answer", label: "No Answer", icon: "📵" },
-  { value: "busy", label: "Busy", icon: "🔴" },
+  { value: "ai_screener", label: "AI Screener", icon: "🤖" },
   { value: "wrong_number", label: "Wrong Number", icon: "❌" },
   { value: "gatekeeper", label: "Gatekeeper", icon: "🚫" },
   { value: "skipped", label: "Skipped", icon: "⏭️" },
@@ -30,6 +30,43 @@ export const CALL_DISPOSITIONS = [
   { value: "not_interested_budget", label: "Not Interested - No Budget" },
   { value: "do_not_contact", label: "Do Not Contact" },
 ] as const;
+
+// Pickup dispositions - required when outcome is "connected"
+// These are the specific results after someone picks up the phone
+export const PICKUP_DISPOSITIONS = [
+  { value: "referral", label: "Referral", description: "They gave a referral to someone else" },
+  { value: "hang_up", label: "Hang up", description: "They hung up quickly" },
+  { value: "not_interested", label: "Not interested", description: "Explicitly said not interested" },
+  { value: "retired", label: "Retired", description: "Contact is retired/left position" },
+  { value: "wrong_number", label: "Wrong number", description: "Wrong number reached" },
+  { value: "meeting", label: "Meeting", description: "Meeting scheduled" },
+  { value: "interested_follow_up", label: "Interested/Follow up", description: "Interested, needs follow-up" },
+  { value: "other", label: "Other", description: "Something else - add your own note" },
+] as const;
+
+// Type for pickup disposition values
+export type PickupDispositionValue = typeof PICKUP_DISPOSITIONS[number]["value"];
+
+// Label map for displaying pickup dispositions in analytics
+export const DISPOSITION_LABEL_MAP: Record<string, string> = {
+  // New pickup dispositions
+  referral: "Referral",
+  hang_up: "Hang up",
+  not_interested: "Not interested",
+  retired: "Retired",
+  wrong_number: "Wrong number",
+  meeting: "Meeting",
+  interested_follow_up: "Interested/Follow up",
+  other: "Other",
+  // Legacy dispositions
+  interested_meeting: "Interested - Book Meeting",
+  interested_info: "Interested - Send Info",
+  callback: "Callback Requested",
+  not_interested_fit: "Not Interested - Bad Fit",
+  not_interested_solution: "Not Interested - Has Solution",
+  not_interested_budget: "Not Interested - No Budget",
+  do_not_contact: "Do Not Contact",
+};
 
 export const TASK_TYPES = [
   { value: "call", label: "Call", icon: "📞" },

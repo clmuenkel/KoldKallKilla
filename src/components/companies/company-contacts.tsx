@@ -21,6 +21,11 @@ import {
   ChevronRight,
   MessageSquare,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -137,54 +142,66 @@ function ContactRow({
       <TableCell>
         <div className="flex gap-1">
           {contact.phone && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard(contact.phone!, "phone");
-              }}
-              title={contact.phone}
-            >
-              {copiedField === "phone" ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Phone className="h-4 w-4" />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyToClipboard(contact.phone!, "phone");
+                  }}
+                >
+                  {copiedField === "phone" ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Phone className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy phone: {contact.phone}</TooltipContent>
+            </Tooltip>
           )}
           {contact.email && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard(contact.email!, "email");
-              }}
-              title={contact.email}
-            >
-              {copiedField === "email" ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Mail className="h-4 w-4" />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyToClipboard(contact.email!, "email");
+                  }}
+                >
+                  {copiedField === "email" ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Mail className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy email: {contact.email}</TooltipContent>
+            </Tooltip>
           )}
           {contact.linkedin_url && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(contact.linkedin_url!, "_blank");
-              }}
-              title="Open LinkedIn"
-            >
-              <Linkedin className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(contact.linkedin_url!, "_blank");
+                  }}
+                >
+                  <Linkedin className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open LinkedIn profile</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </TableCell>
@@ -205,11 +222,16 @@ function ContactRow({
               Call
             </Button>
           )}
-          <Link href={`/contacts/${contact.id}`}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href={`/contacts/${contact.id}`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>View contact</TooltipContent>
+          </Tooltip>
         </div>
       </TableCell>
     </TableRow>

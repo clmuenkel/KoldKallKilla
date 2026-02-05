@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isTomorrow, differenceInMinutes } from "date-fns";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import type { MeetingWithContact } from "@/types/database";
 
 interface MeetingsWidgetProps {
@@ -58,7 +59,7 @@ export function MeetingsWidget({ userId }: MeetingsWidgetProps) {
 
   return (
     <>
-      <Card>
+      <Card variant="elevated">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
@@ -169,13 +170,11 @@ function MeetingItem({ meeting, onClick, showTimeUntil = false }: MeetingItemPro
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-3 rounded-lg border transition-colors hover:bg-muted ${
-        isHappeningNow 
-          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" 
-          : isHappeningSoon 
-            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-            : ""
-      }`}
+      className={cn(
+        "w-full text-left p-3 rounded-lg border transition-colors hover:bg-muted",
+        isHappeningNow && "bg-green-500/5 dark:bg-green-500/10 border-green-500/30",
+        isHappeningSoon && !isHappeningNow && "bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/30"
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">

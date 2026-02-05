@@ -183,11 +183,16 @@ export function useCreateMeeting() {
         .select()
         .single();
       if (error) throw error;
+      const contactId = data?.contact_id ?? meeting.contact_id;
+      if (contactId) {
+        await supabase.from("contacts").update({ stage: "meeting" }).eq("id", contactId);
+      }
       return data as Meeting;
     },
     onSuccess: () => {
       // Invalidate all meetings queries including booked-today for dashboard stats
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }

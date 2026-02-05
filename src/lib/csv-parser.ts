@@ -1,9 +1,14 @@
 /**
  * CSV Parser for importing contacts from spreadsheets
  * Handles multi-line quoted fields, row deduplication, and field mapping
+ * Supports multiple CSV templates: Legacy (CX Call List) and Apollo Export
  */
 
 import type { InsertTables } from "@/types/database";
+import { getTimezoneFromLocation, getStateFromPhone } from "@/lib/timezone";
+
+// CSV template types
+export type CSVTemplate = "legacy" | "apollo";
 
 // Parsed row from CSV (raw string values)
 export interface ParsedCSVRow {
@@ -22,8 +27,11 @@ export interface ParsedCSVRow {
   personalConnector: string;
   answered: string;
   notes: string;
+  city: string; // For Apollo imports
   // Original row index for debugging
   _rowIndex?: number;
+  // Template used for parsing
+  _template?: CSVTemplate;
 }
 
 // Timezone abbreviation to IANA mapping
@@ -143,6 +151,144 @@ export function parseCSV(csvText: string): ParsedCSVRow[] {
 }
 
 /**
+ * Parse Apollo CSV export (header-based mapping)
+ * Apollo headers: First Name, Last Name, Title, Company Name, Email, Work Direct Phone, 
+ * Home Phone, Mobile Phone, Other Phone, # Employees, Industry, Person Linkedin Url, 
+ * Website, City, State, etc.
+ */
+export function parseApolloCSV(csvText: string): ParsedCSVRow[] {
+  const rows: ParsedCSVRow[] = [];
+  const lines: string[] = [];
+  
+  // Normalize line endings
+  const normalizedText = csvText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  
+  // Parse CSV handling quoted fields with newlines
+  let currentLine = "";
+  let inQuotes = false;
+  
+  for (let i = 0; i < normalizedText.length; i++) {
+    const char = normalizedText[i];
+    
+    if (char === '"') {
+      if (normalizedText[i + 1] === '"') {
+        currentLine += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+        currentLine += char;
+      }
+    } else if (char === "\n" && !inQuotes) {
+      if (currentLine.trim()) {
+        lines.push(currentLine);
+      }
+      currentLine = "";
+    } else {
+      currentLine += char;
+    }
+  }
+  
+  if (currentLine.trim()) {
+    lines.push(currentLine);
+  }
+  
+  console.log(`[Apollo CSV Parser] Parsed ${lines.length} lines from CSV`);
+  
+  if (lines.length === 0) {
+    console.log("[Apollo CSV Parser] No lines found in CSV");
+    return [];
+  }
+  
+  // Parse header row to build column index map
+  const headerFields = parseCSVLine(lines[0]);
+  const headerIndex: Record<string, number> = {};
+  
+  headerFields.forEach((header, index) => {
+    // Normalize header names (trim, lowercase for matching)
+    const normalizedHeader = header.trim();
+    headerIndex[normalizedHeader] = index;
+  });
+  
+  console.log("[Apollo CSV Parser] Headers found:", Object.keys(headerIndex).slice(0, 15).join(", "));
+  
+  // Helper to get field by header name (case-insensitive matching)
+  const getField = (fields: string[], ...headerNames: string[]): string => {
+    for (const name of headerNames) {
+      // Try exact match first
+      if (headerIndex[name] !== undefined) {
+        return cleanField(fields[headerIndex[name]]);
+      }
+      // Try case-insensitive match
+      const lowerName = name.toLowerCase();
+      for (const [header, idx] of Object.entries(headerIndex)) {
+        if (header.toLowerCase() === lowerName) {
+          return cleanField(fields[idx]);
+        }
+      }
+    }
+    return "";
+  };
+  
+  // Parse each data row
+  for (let rowIndex = 1; rowIndex < lines.length; rowIndex++) {
+    const fields = parseCSVLine(lines[rowIndex]);
+    
+    // Get phone with priority: Mobile Phone is primary for contacts.mobile
+    // Other Phone > Work Direct Phone > Home Phone for contacts.phone (stored in direct)
+    const mobilePhone = getField(fields, "Mobile Phone");
+    const otherPhone = getField(fields, "Other Phone");
+    const workDirectPhone = getField(fields, "Work Direct Phone");
+    const homePhone = getField(fields, "Home Phone");
+    
+    // Direct = Other Phone, fallback to Work Direct, fallback to Home
+    const directPhone = otherPhone || workDirectPhone || homePhone;
+    
+    const row: ParsedCSVRow = {
+      firstName: getField(fields, "First Name"),
+      lastName: getField(fields, "Last Name"),
+      company: getField(fields, "Company Name", "Company"),
+      linkedinUrl: getField(fields, "Person Linkedin Url", "LinkedIn URL", "Linkedin Url"),
+      type: getField(fields, "Industry"),
+      companyInfo: getField(fields, "State"), // State goes into companyInfo for compatibility
+      companyHeadcount: getField(fields, "# Employees", "Employees", "Company Headcount"),
+      timeZone: "", // Apollo doesn't have timezone - leave empty, don't default
+      mobile: mobilePhone,
+      direct: directPhone,
+      email: getField(fields, "Email"),
+      position: getField(fields, "Title", "Position"),
+      personalConnector: "", // Apollo doesn't have this
+      answered: "", // Apollo doesn't have this
+      notes: "", // Apollo doesn't have notes
+      city: getField(fields, "City"),
+      _rowIndex: rowIndex,
+      _template: "apollo",
+    };
+    
+    // Only add rows that have at least a name
+    if (row.firstName || row.lastName) {
+      rows.push(row);
+    }
+  }
+  
+  console.log(`[Apollo CSV Parser] Parsed ${rows.length} valid contacts`);
+  if (rows.length > 0) {
+    console.log("[Apollo CSV Parser] First contact:", rows[0]);
+  }
+  
+  return rows;
+}
+
+/**
+ * Parse CSV by template type
+ */
+export function parseCSVByTemplate(csvText: string, template: CSVTemplate): ParsedCSVRow[] {
+  if (template === "apollo") {
+    return parseApolloCSV(csvText);
+  }
+  return parseCSV(csvText);
+}
+
+/**
  * Parse a single CSV line into fields
  * Handles quoted fields with commas and escaped quotes
  */
@@ -225,6 +371,104 @@ export function dedupeByLink(rows: ParsedCSVRow[]): ParsedCSVRow[] {
   }
   
   return dedupedRows;
+}
+
+/**
+ * Statistics from state inference
+ */
+export interface InferenceStats {
+  fromCompany: number;
+  fromPhone: number;
+  noInference: number;
+}
+
+/**
+ * Infer missing state data for contacts to enable timezone derivation
+ * Strategy:
+ * 1. For contacts missing state, use the most common state from other contacts at the same company
+ * 2. If no company data available, try to derive state from phone area code
+ */
+export function inferMissingStates(rows: ParsedCSVRow[]): {
+  rows: ParsedCSVRow[];
+  stats: InferenceStats;
+} {
+  const stats: InferenceStats = { fromCompany: 0, fromPhone: 0, noInference: 0 };
+  
+  // Step 1: Build a map of company -> most common state
+  const companyStateFrequency = new Map<string, Map<string, number>>();
+  
+  for (const row of rows) {
+    if (!row.company || !row.companyInfo) continue; // Need both company and state
+    
+    const companyKey = row.company.toLowerCase().trim();
+    const state = row.companyInfo.trim();
+    
+    if (!companyStateFrequency.has(companyKey)) {
+      companyStateFrequency.set(companyKey, new Map());
+    }
+    
+    const stateMap = companyStateFrequency.get(companyKey)!;
+    stateMap.set(state, (stateMap.get(state) || 0) + 1);
+  }
+  
+  // Step 2: For each company, determine the most common state
+  const mostCommonStateByCompany = new Map<string, string>();
+  
+  for (const [companyKey, stateMap] of companyStateFrequency.entries()) {
+    let maxCount = 0;
+    let mostCommonState = "";
+    
+    for (const [state, count] of stateMap.entries()) {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonState = state;
+      }
+    }
+    
+    if (mostCommonState) {
+      mostCommonStateByCompany.set(companyKey, mostCommonState);
+    }
+  }
+  
+  console.log(`[State Inference] Found states for ${mostCommonStateByCompany.size} companies`);
+  
+  // Step 3: For each contact missing state, try to infer it
+  for (const row of rows) {
+    // Skip if already has state
+    if (row.companyInfo && row.companyInfo.trim()) {
+      continue;
+    }
+    
+    // Try 1: Use most common state from same company
+    if (row.company) {
+      const companyKey = row.company.toLowerCase().trim();
+      const companyState = mostCommonStateByCompany.get(companyKey);
+      
+      if (companyState) {
+        row.companyInfo = companyState;
+        stats.fromCompany++;
+        continue;
+      }
+    }
+    
+    // Try 2: Derive state from phone area code
+    const phone = row.mobile || row.direct;
+    if (phone) {
+      const phoneState = getStateFromPhone(phone);
+      if (phoneState) {
+        row.companyInfo = phoneState;
+        stats.fromPhone++;
+        continue;
+      }
+    }
+    
+    // No inference possible
+    stats.noInference++;
+  }
+  
+  console.log(`[State Inference] Inferred: ${stats.fromCompany} from company, ${stats.fromPhone} from phone, ${stats.noInference} no inference`);
+  
+  return { rows, stats };
 }
 
 /**
@@ -320,6 +564,7 @@ export function mapToContact(
   companyId?: string
 ): InsertTables<"contacts"> {
   const domain = extractDomain(row.email);
+  const isApollo = row._template === "apollo";
   
   return {
     user_id: userId,
@@ -327,17 +572,18 @@ export function mapToContact(
     first_name: row.firstName,
     last_name: row.lastName || null,
     email: row.email || null,
-    phone: row.direct || null, // Direct → contacts.phone (primary dial number)
-    mobile: row.mobile || null, // Mobile → contacts.mobile
+    phone: row.direct || null, // Direct/Other → contacts.phone (secondary dial number)
+    mobile: row.mobile || null, // Mobile → contacts.mobile (primary dial number)
     linkedin_url: row.linkedinUrl || null,
     title: row.position || null,
     company_name: row.company || null,
     company_domain: domain,
     industry: row.type || null,
-    state: row.companyInfo || null, // Company Info contains state
+    city: row.city || null, // City for Apollo imports
+    state: row.companyInfo || null, // Company Info / State
     employee_range: normalizeEmployeeRange(row.companyHeadcount),
-    source: "csv_import",
-    source_list: "CX Call List",
+    source: isApollo ? "apollo_import" : "csv_import",
+    source_list: isApollo ? "Apollo Export" : "CX Call List",
     stage: "fresh",
     status: "active",
     direct_referral_note: row.personalConnector || null,
@@ -350,6 +596,7 @@ export function mapToContact(
 
 /**
  * Map parsed CSV row to company insert data
+ * Sets timezone from CSV timeZone field (legacy) or derives from location (city/state)
  */
 export function mapToCompany(
   row: ParsedCSVRow,
@@ -358,14 +605,26 @@ export function mapToCompany(
 ): InsertTables<"companies"> | null {
   if (!row.company) return null;
   
+  // For legacy imports, use the timezone from the CSV if provided
+  const csvTimezone = row.timeZone ? mapTimezone(row.timeZone) : null;
+  
+  // Derive timezone from location when city or state is present
+  const locationTimezone = (row.city || row.companyInfo) 
+    ? getTimezoneFromLocation(row.city || null, row.companyInfo || null, "USA") 
+    : null;
+  
+  // Use CSV timezone if provided, otherwise use location-derived timezone
+  const timezone = csvTimezone ?? locationTimezone;
+  
   return {
     user_id: userId,
     name: row.company,
     domain: domain,
     industry: row.type || null,
+    city: row.city || null,
     state: row.companyInfo || null,
     employee_range: normalizeEmployeeRange(row.companyHeadcount),
-    timezone: mapTimezone(row.timeZone),
+    timezone: timezone,
     country: "USA",
   };
 }

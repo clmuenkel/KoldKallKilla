@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTasks, useCompleteTask, useDeleteTask } from "@/hooks/use-tasks";
+import { useTasks, useCompleteTask, useDeleteTask, useCreateTask } from "@/hooks/use-tasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,12 +13,29 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { TASK_TYPES, TASK_PRIORITIES } from "@/lib/constants";
 import { format, isPast, isToday, isTomorrow, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { MoreHorizontal, Trash2, Calendar, Clock, User } from "lucide-react";
+import { MoreHorizontal, Trash2, Calendar, Clock, User, CheckSquare } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface TaskListProps {
   filter?: "all" | "today" | "upcoming" | "completed";
@@ -30,6 +47,7 @@ export function TaskList({ filter = "all" }: TaskListProps) {
   });
   const completeTask = useCompleteTask();
   const deleteTask = useDeleteTask();
+  const createTask = useCreateTask();
 
   const handleComplete = async (taskId: string) => {
     try {
@@ -41,13 +59,35 @@ export function TaskList({ filter = "all" }: TaskListProps) {
   };
 
   const handleDelete = async (taskId: string) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      try {
-        await deleteTask.mutateAsync(taskId);
-        toast.success("Task deleted");
-      } catch (error) {
-        toast.error("Failed to delete task");
-      }
+    // Find the task data before deleting for undo functionality
+    const taskToDelete = tasks?.find(t => t.id === taskId);
+    
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast.success("Task deleted", {
+        action: taskToDelete ? {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await createTask.mutateAsync({
+                user_id: taskToDelete.user_id,
+                title: taskToDelete.title,
+                description: taskToDelete.description,
+                type: taskToDelete.type,
+                priority: taskToDelete.priority,
+                due_date: taskToDelete.due_date,
+                contact_id: taskToDelete.contact_id,
+                status: taskToDelete.status,
+              });
+              toast.success("Task restored");
+            } catch {
+              toast.error("Failed to restore task");
+            }
+          },
+        } : undefined,
+      });
+    } catch (error) {
+      toast.error("Failed to delete task");
     }
   };
 
@@ -87,9 +127,11 @@ export function TaskList({ filter = "all" }: TaskListProps) {
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">No tasks found</p>
-      </div>
+      <EmptyState
+        icon={CheckSquare}
+        title="No tasks found"
+        description={filter === "completed" ? "Complete some tasks to see them here" : "Create a task to get started"}
+      />
     );
   }
 
@@ -151,8 +193,8 @@ function TaskGroup({
       <h3
         className={cn(
           "text-sm font-semibold mb-3",
-          variant === "destructive" && "text-red-600",
-          variant === "warning" && "text-yellow-600"
+          variant === "destructive" && "text-destructive",
+          variant === "warning" && "text-amber-600 dark:text-amber-500"
         )}
       >
         {title} ({tasks.length})
@@ -190,8 +232,8 @@ function TaskItem({
   return (
     <Card
       className={cn(
-        variant === "destructive" && "border-red-200 bg-red-50",
-        variant === "warning" && "border-yellow-200 bg-yellow-50"
+        variant === "destructive" && "border-destructive/30 bg-destructive/5 dark:bg-destructive/10",
+        variant === "warning" && "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10"
       )}
     >
       <CardContent className="p-4">
@@ -239,19 +281,45 @@ function TaskItem({
               )}
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onDelete(task.id)} className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AlertDialog>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Task actions</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end">
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem 
+                    className="text-destructive"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this task? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onDelete(task.id)}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

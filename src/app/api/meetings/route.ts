@@ -61,5 +61,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const contactId = data?.contact_id ?? body.contact_id;
+  if (contactId) {
+    await supabase.from("contacts").update({ stage: "meeting" }).eq("id", contactId);
+  }
+
   return NextResponse.json(data, { status: 201 });
 }

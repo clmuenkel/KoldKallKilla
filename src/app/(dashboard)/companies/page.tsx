@@ -1,32 +1,50 @@
+"use client";
+
+import { useState } from "react";
+import { Header } from "@/components/layout/header";
+import { PageHeader } from "@/components/layout/page-header";
 import { CompanyList } from "@/components/companies/company-list";
+import { CompanyForm } from "@/components/companies/company-form";
 import { Button } from "@/components/ui/button";
-import { Building2, Upload } from "lucide-react";
+import { Upload, Plus } from "lucide-react";
 import Link from "next/link";
 
 export default function CompaniesPage() {
+  const [companyFormOpen, setCompanyFormOpen] = useState(false);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-6 w-6" />
-            Companies
-          </h1>
-          <p className="text-muted-foreground">
-            View and manage all your target companies and their contacts
-          </p>
+    <div className="flex flex-col h-full">
+      <Header title="Companies" />
+
+      <div className="flex-1 p-6 space-y-6 overflow-auto">
+        <PageHeader
+          title="All Companies"
+          description="View and manage all your target companies and their contacts"
+          actions={
+            <>
+              <Button onClick={() => setCompanyFormOpen(true)} className="press-scale">
+                <Plus className="h-4 w-4 mr-2" />
+                New Company
+              </Button>
+              <Link href="/import">
+                <Button variant="outline" className="press-scale">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
+              </Link>
+            </>
+          }
+        />
+
+        <div 
+          className="opacity-0 animate-fade-in"
+          style={{ animationDelay: "50ms", animationFillMode: "forwards" }}
+        >
+          <CompanyList />
         </div>
-        <Link href="/import">
-          <Button>
-            <Upload className="h-4 w-4 mr-2" />
-            Import from Apollo
-          </Button>
-        </Link>
       </div>
 
-      {/* Company List */}
-      <CompanyList />
+      <CompanyForm open={companyFormOpen} onOpenChange={setCompanyFormOpen} />
     </div>
   );
 }

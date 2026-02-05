@@ -35,7 +35,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { addDays, addHours, format } from "date-fns";
+import { format } from "date-fns";
+import { addBusinessDays } from "@/lib/utils";
 import type { Contact } from "@/types/database";
 
 interface QuickTasksProps {
@@ -74,7 +75,7 @@ export function QuickTasks({
     }
 
     const dueDate = daysFromNow 
-      ? format(addDays(new Date(), daysFromNow), "yyyy-MM-dd")
+      ? format(addBusinessDays(new Date(), daysFromNow), "yyyy-MM-dd")
       : undefined;
 
     const taskTitles: Record<string, string> = {

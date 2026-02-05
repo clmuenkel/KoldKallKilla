@@ -30,7 +30,7 @@ export interface UserTargetUpdate {
   voicemails_target?: number;
 }
 
-// Dialer Sessions - auto-detected calling sessions
+// Dialer Sessions - explicit calling sessions with event tracking
 export interface DialerSession {
   id: string;
   user_id: string;
@@ -45,9 +45,15 @@ export interface DialerSession {
   no_answers: number;
   gatekeepers: number;
   wrong_numbers: number;
-  busy: number;
+  ai_screener: number;
   total_talk_time_seconds: number;
   avg_call_duration_seconds: number | null;
+  // Session event tracking
+  first_pickup_at: string | null;
+  first_meeting_set_at: string | null;
+  paused_at: string[];
+  resumed_at: string[];
+  total_pause_duration_seconds: number;
   created_at: string;
 }
 
@@ -64,8 +70,14 @@ export interface DialerSessionInsert {
   no_answers?: number;
   gatekeepers?: number;
   wrong_numbers?: number;
-  busy?: number;
+  ai_screener?: number;
   total_talk_time_seconds?: number;
+  // Session event tracking
+  first_pickup_at?: string | null;
+  first_meeting_set_at?: string | null;
+  paused_at?: string[];
+  resumed_at?: string[];
+  total_pause_duration_seconds?: number;
 }
 
 export interface DialerSessionUpdate {
@@ -78,8 +90,14 @@ export interface DialerSessionUpdate {
   no_answers?: number;
   gatekeepers?: number;
   wrong_numbers?: number;
-  busy?: number;
+  ai_screener?: number;
   total_talk_time_seconds?: number;
+  // Session event tracking
+  first_pickup_at?: string | null;
+  first_meeting_set_at?: string | null;
+  paused_at?: string[];
+  resumed_at?: string[];
+  total_pause_duration_seconds?: number;
 }
 
 // Daily Call Stats - aggregated by day
@@ -93,7 +111,7 @@ export interface DailyCallStats {
   skipped: number;
   gatekeepers: number;
   wrong_numbers: number;
-  busy: number;
+  ai_screener: number;
   total_talk_time: number;
   avg_call_duration: number;
   first_call_at: string | null;

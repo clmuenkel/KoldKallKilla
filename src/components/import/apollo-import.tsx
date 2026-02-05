@@ -52,6 +52,11 @@ import {
   Sparkles,
   Save,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ApolloPerson } from "@/types/apollo";
 import type { PersonaSet } from "@/types/database";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
@@ -456,11 +461,16 @@ export function ApolloImport() {
                   </SelectContent>
                 </Select>
                 <Dialog open={showCreatePersona} onOpenChange={setShowCreatePersona}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="icon" aria-label="Create persona set">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Create persona set</TooltipContent>
+                  </Tooltip>
                   <DialogContent className="max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Create Persona Set</DialogTitle>

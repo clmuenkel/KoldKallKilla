@@ -6,6 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Plus, Trash2, Edit2, Check, X, Building2, ListTodo } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { TimestampedNote } from "@/types/database";
 import { parseNote, hasAtSyntax, type ParsedSection } from "@/lib/parse-note";
 import { TaskPopup } from "./task-popup";
@@ -233,14 +238,20 @@ export function TimestampedNotesCompact({
               className="min-h-[50px] resize-none text-sm"
               rows={2}
             />
-            <Button
-              size="icon"
-              onClick={handleAddNote}
-              disabled={!newNote.trim()}
-              className="shrink-0 self-end h-8 w-8"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim()}
+                  className="shrink-0 self-end h-8 w-8"
+                  aria-label="Add note"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Add note</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}
@@ -295,12 +306,22 @@ function NoteItem({
             autoFocus
           />
           <div className="flex gap-1 justify-end">
-            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={onCancelEdit}>
-              <X className="h-3 w-3" />
-            </Button>
-            <Button size="icon" className="h-5 w-5" onClick={onSaveEdit}>
-              <Check className="h-3 w-3" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-5 w-5" onClick={onCancelEdit} aria-label="Cancel">
+                  <X className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Cancel</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" className="h-5 w-5" onClick={onSaveEdit} aria-label="Save">
+                  <Check className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Save</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -338,17 +359,28 @@ function NoteItem({
         )}
       </div>
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <Button size="icon" variant="ghost" className="h-5 w-5" onClick={onStartEdit}>
-          <Edit2 className="h-2.5 w-2.5" />
-        </Button>
-        <Button 
-          size="icon" 
-          variant="ghost" 
-          className="h-5 w-5 text-destructive hover:text-destructive" 
-          onClick={onDelete}
-        >
-          <Trash2 className="h-2.5 w-2.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-5 w-5" onClick={onStartEdit} aria-label="Edit note">
+              <Edit2 className="h-2.5 w-2.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-5 w-5 text-destructive hover:text-destructive" 
+              onClick={onDelete}
+              aria-label="Delete note"
+            >
+              <Trash2 className="h-2.5 w-2.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

@@ -17,7 +17,8 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, addDays, isToday, isTomorrow, isPast } from "date-fns";
+import { format, isToday, isTomorrow, isPast } from "date-fns";
+import { addBusinessDays } from "@/lib/utils";
 import type { Contact, Task } from "@/types/database";
 
 interface ContactTasksProps {
@@ -41,7 +42,7 @@ export function ContactTasks({ contact, colleagues = [], userId }: ContactTasksP
       return;
     }
 
-    const dueDate = format(addDays(new Date(), daysFromNow), "yyyy-MM-dd");
+    const dueDate = format(addBusinessDays(new Date(), daysFromNow), "yyyy-MM-dd");
     const taskTitles: Record<string, string> = {
       call: `Follow up call with ${contact.first_name}`,
       email: `Send email to ${contact.first_name}`,

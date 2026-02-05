@@ -5,6 +5,7 @@ import { useMeeting, useUpdateMeeting, useCancelMeeting, useCompleteMeeting } fr
 import { MeetingNotes } from "./meeting-notes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -34,7 +35,11 @@ import {
   CheckCircle,
   Loader2,
   ExternalLink,
+  Pencil,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format, isPast } from "date-fns";
 import Link from "next/link";
@@ -54,12 +59,33 @@ export function MeetingDetailDialog({
   onOpenChange,
 }: MeetingDetailProps) {
   const { data: meeting, isLoading } = useMeeting(meetingId);
+  const updateMeeting = useUpdateMeeting();
   const cancelMeeting = useCancelMeeting();
   const completeMeeting = useCompleteMeeting();
   
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completionOutcome, setCompletionOutcome] = useState("successful");
   const [completionNotes, setCompletionNotes] = useState("");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleSaveTitle = async () => {
+    const trimmed = editTitleValue.trim();
+    if (!trimmed || trimmed === meeting.title) {
+      setIsEditingTitle(false);
+      setEditTitleValue("");
+      return;
+    }
+    try {
+      await updateMeeting.mutateAsync({ id: meetingId, updates: { title: trimmed } });
+      toast.success("Meeting name updated");
+      setIsEditingTitle(false);
+      setEditTitleValue("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update meeting name");
+    }
+  };
 
   const handleCancel = async () => {
     try {
@@ -103,34 +129,89 @@ export function MeetingDetailDialog({
   return (
     <>
       <Dialog open={open && !showCompleteDialog} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className={cn(
+          "max-h-[90vh] overflow-y-auto transition-all duration-200",
+          isFullscreen 
+            ? "sm:max-w-[95vw] h-[95vh]" 
+            : "sm:max-w-[600px]"
+        )}>
           <DialogHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <DialogTitle className="text-xl">{meeting.title}</DialogTitle>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0 pr-2">
+                {isEditingTitle ? (
+                  <div className="space-y-1">
+                    <Input
+                      value={editTitleValue}
+                      onChange={(e) => setEditTitleValue(e.target.value)}
+                      onBlur={handleSaveTitle}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveTitle();
+                        if (e.key === "Escape") {
+                          setIsEditingTitle(false);
+                          setEditTitleValue("");
+                        }
+                      }}
+                      placeholder="Meeting name"
+                      className="text-xl font-semibold h-9"
+                      autoFocus
+                    />
+                    <p className="text-xs text-muted-foreground">Press Enter to save, Escape to cancel</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 group">
+                    <DialogTitle className="text-xl truncate">{meeting.title}</DialogTitle>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setEditTitleValue(meeting.title);
+                        setIsEditingTitle(true);
+                      }}
+                      aria-label="Edit meeting name"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
                 <DialogDescription className="mt-1">
                   {format(new Date(meeting.scheduled_at), "EEEE, MMMM d, yyyy 'at' h:mm a")}
                 </DialogDescription>
               </div>
-              <Badge
-                variant={
-                  meeting.status === "completed"
-                    ? "default"
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge
+                  variant={
+                    meeting.status === "completed"
+                      ? "default"
+                      : meeting.status === "cancelled"
+                      ? "destructive"
+                      : isPastMeeting
+                      ? "secondary"
+                      : "outline"
+                  }
+                >
+                  {meeting.status === "completed"
+                    ? "Completed"
                     : meeting.status === "cancelled"
-                    ? "destructive"
+                    ? "Cancelled"
                     : isPastMeeting
-                    ? "secondary"
-                    : "outline"
-                }
-              >
-                {meeting.status === "completed"
-                  ? "Completed"
-                  : meeting.status === "cancelled"
-                  ? "Cancelled"
-                  : isPastMeeting
-                  ? "Past Due"
-                  : "Scheduled"}
-              </Badge>
+                    ? "Past Due"
+                    : "Scheduled"}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 

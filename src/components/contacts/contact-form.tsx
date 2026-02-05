@@ -32,17 +32,41 @@ const contactSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   stage: z.string().default("fresh"),
+  note: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
 
 interface ContactFormProps {
   contact?: Contact;
+  defaultCompany?: {
+    name: string;
+    industry?: string | null;
+    employee_range?: string | null;
+    city?: string | null;
+    state?: string | null;
+  };
   onSubmit: (data: ContactFormValues) => Promise<void>;
   isLoading?: boolean;
 }
 
-export function ContactForm({ contact, onSubmit, isLoading }: ContactFormProps) {
+export function ContactForm({ contact, defaultCompany, onSubmit, isLoading }: ContactFormProps) {
+  const defaultValues = {
+    first_name: contact?.first_name || "",
+    last_name: contact?.last_name || "",
+    email: contact?.email || "",
+    phone: contact?.phone || "",
+    mobile: contact?.mobile || "",
+    linkedin_url: contact?.linkedin_url || "",
+    title: contact?.title || "",
+    company_name: contact?.company_name || defaultCompany?.name || "",
+    industry: contact?.industry || defaultCompany?.industry || "",
+    employee_range: contact?.employee_range || defaultCompany?.employee_range || "",
+    city: contact?.city || defaultCompany?.city || "",
+    state: contact?.state || defaultCompany?.state || "",
+    stage: contact?.stage || "fresh",
+    note: "",
+  };
   const {
     register,
     handleSubmit,
@@ -51,21 +75,7 @@ export function ContactForm({ contact, onSubmit, isLoading }: ContactFormProps) 
     formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
-    defaultValues: {
-      first_name: contact?.first_name || "",
-      last_name: contact?.last_name || "",
-      email: contact?.email || "",
-      phone: contact?.phone || "",
-      mobile: contact?.mobile || "",
-      linkedin_url: contact?.linkedin_url || "",
-      title: contact?.title || "",
-      company_name: contact?.company_name || "",
-      industry: contact?.industry || "",
-      employee_range: contact?.employee_range || "",
-      city: contact?.city || "",
-      state: contact?.state || "",
-      stage: contact?.stage || "fresh",
-    },
+    defaultValues,
   });
 
   const stage = watch("stage");
@@ -189,6 +199,22 @@ export function ContactForm({ contact, onSubmit, isLoading }: ContactFormProps) 
           </div>
         </div>
       </div>
+
+      {/* Optional note (create only) */}
+      {!contact && (
+        <div className="space-y-4">
+          <h3 className="font-semibold">Note (optional)</h3>
+          <div className="space-y-2">
+            <Label htmlFor="note">Add a note about this contact</Label>
+            <Textarea
+              id="note"
+              placeholder="e.g. Met at conference, interested in Q2 rollout..."
+              rows={3}
+              {...register("note")}
+            />
+          </div>
+        </div>
+      )}
 
       {/* CRM Status */}
       <div className="space-y-4">

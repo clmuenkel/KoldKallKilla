@@ -2,6 +2,7 @@
 
 import { useCompany, useCompanyColleagues, useCompanyTalkedTo } from "@/hooks/use-companies";
 import { useContactContext, formatReferralContext, formatOpenerSuggestion } from "@/hooks/use-referrals";
+import { useCompanyNotes, useDeleteNote, useRecentNotes, useToggleNotePin } from "@/hooks/use-notes";
 import { CompanyCard } from "@/components/companies/company-card";
 import { CompanyContactsMini } from "@/components/companies/company-contacts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,18 @@ import {
   Check,
   Edit2,
   ChevronRight,
+  StickyNote,
+  Trash2,
+  Pin,
+  PinOff,
+  Phone,
+  History,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -38,6 +50,10 @@ export function ContextPanel({ contact, onSelectContact }: ContextPanelProps) {
     contact.company_id
   );
   const { data: colleagues } = useCompanyColleagues(contact.id, contact.company_id);
+  const { data: companyNotes } = useCompanyNotes(contact.company_id);
+  const { data: recentNotes } = useRecentNotes(contact.id, contact.company_id, 8);
+  const deleteNote = useDeleteNote();
+  const togglePin = useToggleNotePin();
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [manualReference, setManualReference] = useState("");
@@ -183,6 +199,120 @@ export function ContextPanel({ contact, onSelectContact }: ContextPanelProps) {
         </CardContent>
       </Card>
 
+      {/* Personal Connector / Bio */}
+      {contact.direct_referral_note && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Personal Connector
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{contact.direct_referral_note}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Notes Card */}
+      {recentNotes && (recentNotes.pinned.length > 0 || recentNotes.recent.length > 0) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Recent Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {/* Pinned Notes */}
+            {recentNotes.pinned.map((note) => (
+              <div
+                key={note.id}
+                className="group flex items-start gap-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"
+              >
+                <Pin className="h-3 w-3 text-amber-600 shrink-0 mt-1" />
+                <div className="flex-1 min-w-0">
+                  {note.call_timestamp && (
+                    <Badge variant="secondary" className="font-mono text-[10px] mb-1">
+                      {note.call_timestamp}
+                    </Badge>
+                  )}
+                  <p className="text-xs whitespace-pre-wrap">{note.content}</p>
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => {
+                          togglePin.mutate({ id: note.id, isPinned: false }, {
+                            onSuccess: () => toast.success("Note unpinned"),
+                            onError: () => toast.error("Failed to unpin"),
+                          });
+                        }}
+                      >
+                        <PinOff className="h-3 w-3 text-amber-600" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Unpin</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            ))}
+            
+            {/* Recent Notes */}
+            {recentNotes.recent.slice(0, 5).map((note) => (
+              <div
+                key={note.id}
+                className="group flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+              >
+                {note.source === "call" ? (
+                  <Phone className="h-3 w-3 text-muted-foreground shrink-0 mt-1" />
+                ) : (
+                  <StickyNote className="h-3 w-3 text-muted-foreground shrink-0 mt-1" />
+                )}
+                <div className="flex-1 min-w-0">
+                  {note.call_timestamp && (
+                    <Badge variant="secondary" className="font-mono text-[10px] mb-1">
+                      {note.call_timestamp}
+                    </Badge>
+                  )}
+                  <p className="text-xs whitespace-pre-wrap line-clamp-2">{note.content}</p>
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => {
+                          togglePin.mutate({ id: note.id, isPinned: true }, {
+                            onSuccess: () => toast.success("Note pinned"),
+                            onError: () => toast.error("Failed to pin"),
+                          });
+                        }}
+                      >
+                        <Pin className="h-3 w-3" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Pin</TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
+            ))}
+            
+            {recentNotes.pinned.length === 0 && recentNotes.recent.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                No notes yet for this contact
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Company Info Card */}
       {company && (
         <Card>
@@ -192,14 +322,19 @@ export function ContextPanel({ contact, onSelectContact }: ContextPanelProps) {
                 <Building2 className="h-4 w-4" />
                 {company.name}
               </span>
-              <Link href={`/companies/${company.id}`}>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={`/companies/${company.id}`}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>View company</TooltipContent>
+              </Tooltip>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               {company.industry && (
                 <Badge variant="outline">{company.industry}</Badge>
@@ -208,6 +343,42 @@ export function ContextPanel({ contact, onSelectContact }: ContextPanelProps) {
                 <span>{company.employee_range} employees</span>
               )}
             </div>
+            {/* Company Notes */}
+            {companyNotes && companyNotes.length > 0 && (
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-1 mb-2">
+                  <StickyNote className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Company Notes</span>
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {companyNotes.map((note) => (
+                    <div key={note.id} className="text-xs p-2 bg-muted/50 rounded group">
+                      <div className="flex justify-between items-start gap-1">
+                        <p className="whitespace-pre-wrap flex-1">{note.content}</p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 -mr-1 -mt-1"
+                              onClick={() => {
+                                deleteNote.mutate(note.id, {
+                                  onSuccess: () => toast.success("Note deleted"),
+                                  onError: () => toast.error("Failed to delete note"),
+                                });
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete note</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

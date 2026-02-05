@@ -26,6 +26,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Meeting, MeetingNote } from "@/types/database";
 
 interface MeetingNotesProps {
@@ -132,18 +137,24 @@ export function MeetingNotes({ meeting, userId }: MeetingNotesProps) {
           className="min-h-[60px] resize-none text-sm"
           rows={2}
         />
-        <Button
-          size="icon"
-          onClick={handleAddNote}
-          disabled={!newNote.trim() || createNote.isPending}
-          className="shrink-0 self-end h-9 w-9"
-        >
-          {createNote.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" />
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              onClick={handleAddNote}
+              disabled={!newNote.trim() || createNote.isPending}
+              className="shrink-0 self-end h-9 w-9"
+              aria-label="Add note"
+            >
+              {createNote.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Add note</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Notes List */}
@@ -279,17 +290,28 @@ function NoteItem({
 
         {/* Actions */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onStartEdit}>
-            <Edit2 className="h-3 w-3" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-destructive hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onStartEdit} aria-label="Edit note">
+                <Edit2 className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                aria-label="Delete note"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </div>

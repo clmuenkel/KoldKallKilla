@@ -21,7 +21,7 @@ export function TodayTasks() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card variant="elevated">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckSquare className="h-5 w-5" />
@@ -44,7 +44,7 @@ export function TodayTasks() {
   );
 
   return (
-    <Card>
+    <Card variant="elevated">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <CheckSquare className="h-5 w-5" />
@@ -78,7 +78,7 @@ export function TodayTasks() {
                   key={task.id}
                   className={cn(
                     "flex items-center gap-3 rounded-lg border p-3 transition-colors",
-                    isOverdue ? "border-red-200 bg-red-50" : "hover:bg-muted/50"
+                    isOverdue ? "border-destructive/30 bg-destructive/5 dark:bg-destructive/10" : "hover:bg-muted/50"
                   )}
                 >
                   <Checkbox
@@ -98,7 +98,7 @@ export function TodayTasks() {
                     {task.due_date && (
                       <p className={cn(
                         "text-xs",
-                        isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"
+                        isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
                       )}>
                         {isOverdue ? "Overdue" : format(new Date(task.due_date), "h:mm a")}
                       </p>

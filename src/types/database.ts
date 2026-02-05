@@ -78,6 +78,10 @@ export interface Database {
           annual_revenue: string | null;
           intent_score: number | null;
           intent_topics: string[];
+          dialer_paused_until: string | null;
+          dialer_pause_reason_code: string | null;
+          dialer_pause_reason_notes: string | null;
+          dialer_paused_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -98,6 +102,10 @@ export interface Database {
           annual_revenue?: string | null;
           intent_score?: number | null;
           intent_topics?: string[];
+          dialer_paused_until?: string | null;
+          dialer_pause_reason_code?: string | null;
+          dialer_pause_reason_notes?: string | null;
+          dialer_paused_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -118,6 +126,10 @@ export interface Database {
           annual_revenue?: string | null;
           intent_score?: number | null;
           intent_topics?: string[];
+          dialer_paused_until?: string | null;
+          dialer_pause_reason_code?: string | null;
+          dialer_pause_reason_notes?: string | null;
+          dialer_paused_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -160,6 +172,7 @@ export interface Database {
           is_authority: boolean;
           has_need: boolean;
           has_timeline: boolean;
+          is_aaa: boolean;
           tags: string[];
           last_contacted_at: string | null;
           next_follow_up: string | null;
@@ -167,6 +180,13 @@ export interface Database {
           total_emails: number;
           direct_referral_contact_id: string | null;
           direct_referral_note: string | null;
+          next_call_date: string | null;
+          cadence_days: number | null;
+          dialer_status: string;
+          dialer_paused_until: string | null;
+          dialer_pause_reason_code: string | null;
+          dialer_pause_reason_notes: string | null;
+          dialer_paused_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -206,6 +226,7 @@ export interface Database {
           is_authority?: boolean;
           has_need?: boolean;
           has_timeline?: boolean;
+          is_aaa?: boolean;
           tags?: string[];
           last_contacted_at?: string | null;
           next_follow_up?: string | null;
@@ -213,6 +234,13 @@ export interface Database {
           total_emails?: number;
           direct_referral_contact_id?: string | null;
           direct_referral_note?: string | null;
+          next_call_date?: string | null;
+          cadence_days?: number | null;
+          dialer_status?: string;
+          dialer_paused_until?: string | null;
+          dialer_pause_reason_code?: string | null;
+          dialer_pause_reason_notes?: string | null;
+          dialer_paused_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,6 +280,7 @@ export interface Database {
           is_authority?: boolean;
           has_need?: boolean;
           has_timeline?: boolean;
+          is_aaa?: boolean;
           tags?: string[];
           last_contacted_at?: string | null;
           next_follow_up?: string | null;
@@ -259,6 +288,13 @@ export interface Database {
           total_emails?: number;
           direct_referral_contact_id?: string | null;
           direct_referral_note?: string | null;
+          next_call_date?: string | null;
+          cadence_days?: number | null;
+          dialer_status?: string;
+          dialer_paused_until?: string | null;
+          dialer_pause_reason_code?: string | null;
+          dialer_pause_reason_notes?: string | null;
+          dialer_paused_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -308,6 +344,8 @@ export interface Database {
           id: string;
           user_id: string;
           contact_id: string;
+          company_id: string | null;
+          session_id: string | null;
           started_at: string;
           ended_at: string | null;
           duration_seconds: number | null;
@@ -329,6 +367,8 @@ export interface Database {
           id?: string;
           user_id: string;
           contact_id: string;
+          company_id?: string | null;
+          session_id?: string | null;
           started_at: string;
           ended_at?: string | null;
           duration_seconds?: number | null;
@@ -350,6 +390,8 @@ export interface Database {
           id?: string;
           user_id?: string;
           contact_id?: string;
+          company_id?: string | null;
+          session_id?: string | null;
           started_at?: string;
           ended_at?: string | null;
           duration_seconds?: number | null;
@@ -469,10 +511,12 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          contact_id: string;
+          contact_id: string | null;
           call_id: string | null;
           company_id: string | null;
           content: string;
+          source: "manual" | "call";
+          call_timestamp: string | null;
           is_pinned: boolean;
           is_company_wide: boolean;
           created_at: string;
@@ -481,10 +525,12 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          contact_id: string;
+          contact_id?: string | null;
           call_id?: string | null;
           company_id?: string | null;
           content: string;
+          source?: "manual" | "call";
+          call_timestamp?: string | null;
           is_pinned?: boolean;
           is_company_wide?: boolean;
           created_at?: string;
@@ -493,10 +539,12 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          contact_id?: string;
+          contact_id?: string | null;
           call_id?: string | null;
           company_id?: string | null;
           content?: string;
+          source?: "manual" | "call";
+          call_timestamp?: string | null;
           is_pinned?: boolean;
           is_company_wide?: boolean;
           created_at?: string;
@@ -834,6 +882,81 @@ export interface Database {
         };
         Relationships: [];
       };
+      dialer_pool_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          entity_type: "company" | "contact";
+          company_id: string | null;
+          contact_id: string | null;
+          entity_name: string;
+          action: "paused" | "unpaused" | "deleted";
+          paused_until: string | null;
+          duration_months: number | null;
+          reason_code: string | null;
+          reason_notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          entity_type: "company" | "contact";
+          company_id?: string | null;
+          contact_id?: string | null;
+          entity_name: string;
+          action: "paused" | "unpaused" | "deleted";
+          paused_until?: string | null;
+          duration_months?: number | null;
+          reason_code?: string | null;
+          reason_notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          entity_type?: "company" | "contact";
+          company_id?: string | null;
+          contact_id?: string | null;
+          entity_name?: string;
+          action?: "paused" | "unpaused" | "deleted";
+          paused_until?: string | null;
+          duration_months?: number | null;
+          reason_code?: string | null;
+          reason_notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      capacity_settings: {
+        Row: {
+          user_id: string;
+          target_per_day: number;
+          new_quota_per_day: number;
+          schedule_window_days: number;
+          bloat_threshold: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          target_per_day?: number;
+          new_quota_per_day?: number;
+          schedule_window_days?: number;
+          bloat_threshold?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          target_per_day?: number;
+          new_quota_per_day?: number;
+          schedule_window_days?: number;
+          bloat_threshold?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_settings: {
         Row: {
           user_id: string;
@@ -927,6 +1050,8 @@ export type CallScript = Tables<"call_scripts">;
 export type UserSettings = Tables<"user_settings">;
 export type Profile = Tables<"profiles">;
 export type DialerDraft = Tables<"dialer_drafts">;
+export type DialerPoolEvent = Tables<"dialer_pool_events">;
+export type CapacitySettings = Tables<"capacity_settings">;
 
 // Extended types with relations
 export interface ContactWithCompany extends Contact {

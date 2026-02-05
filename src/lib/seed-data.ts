@@ -4,6 +4,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { getTimezoneFromLocation } from "@/lib/timezone";
+import { addBusinessDays, formatDateForDB } from "@/lib/utils";
 
 // Dummy companies
 const DUMMY_COMPANIES = [
@@ -394,8 +395,8 @@ export async function seedDummyData() {
         // 4. Add tasks for some contacts
         if (Math.random() > 0.6) {
           const taskTypes = ["call", "email", "follow_up"];
-          const dueDate = new Date();
-          dueDate.setDate(dueDate.getDate() + Math.floor(Math.random() * 7) + 1);
+          // Random 1-5 business days from today
+          const dueDate = addBusinessDays(new Date(), 1 + Math.floor(Math.random() * 5));
 
           const { error: taskError } = await supabase
             .from("tasks")
@@ -406,7 +407,7 @@ export async function seedDummyData() {
               type: taskTypes[Math.floor(Math.random() * taskTypes.length)],
               priority: "medium",
               status: "pending",
-              due_date: dueDate.toISOString().split("T")[0],
+              due_date: formatDateForDB(dueDate),
             });
 
           if (!taskError) {

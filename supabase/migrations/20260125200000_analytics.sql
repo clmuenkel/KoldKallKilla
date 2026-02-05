@@ -171,7 +171,7 @@ GROUP BY user_id, EXTRACT(DOW FROM started_at), EXTRACT(HOUR FROM started_at);
 CREATE OR REPLACE VIEW timezone_performance AS
 SELECT 
   c.user_id,
-  COALESCE(co.timezone, 'Unknown') as timezone,
+  COALESCE(comp.timezone, 'Unknown') as timezone,
   COUNT(*) as total_calls,
   COUNT(*) FILTER (WHERE c.outcome = 'connected') as connected,
   ROUND(
@@ -181,8 +181,9 @@ SELECT
   ) as answer_rate
 FROM calls c
 LEFT JOIN contacts co ON c.contact_id = co.id
+LEFT JOIN companies comp ON co.company_id = comp.id
 WHERE c.outcome != 'skipped'
-GROUP BY c.user_id, COALESCE(co.timezone, 'Unknown');
+GROUP BY c.user_id, COALESCE(comp.timezone, 'Unknown');
 
 -- Done!
 SELECT 'Analytics tables and views created!' as result;

@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light Mode */
+  /* Light Mode - Clean & Professional */
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 99%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -13,11 +13,11 @@
     --popover-foreground: 222 47% 11%;
     --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --secondary: 220 14% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
@@ -25,29 +25,38 @@
     --success-foreground: 355 100% 97%;
     --warning: 38 92% 50%;
     --warning-foreground: 48 96% 89%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 221 83% 53%;
-    --radius: 0.5rem;
+    --radius: 0.625rem;
     --sidebar: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
+
+    /* Pipedrive-inspired Stage Colors */
+    --stage-fresh: 215 20% 65%;
+    --stage-contacted: 217 91% 60%;
+    --stage-qualified: 45 93% 47%;
+    --stage-meeting: 263 70% 50%;
+    --stage-proposal: 25 95% 53%;
+    --stage-won: 142 71% 45%;
+    --stage-lost: 0 84% 60%;
   }
 
   /* Dark Mode - "Midnight Operator" Theme */
   .dark {
-    --background: 222 47% 6%;
+    --background: 222 47% 7%;
     --foreground: 210 40% 96%;
-    --card: 217 33% 12%;
+    --card: 222 47% 10%;
     --card-foreground: 210 40% 96%;
-    --popover: 217 33% 12%;
+    --popover: 222 47% 10%;
     --popover-foreground: 210 40% 96%;
     --primary: 38 92% 50%;
     --primary-foreground: 0 0% 0%;
-    --secondary: 217 33% 17%;
+    --secondary: 222 47% 14%;
     --secondary-foreground: 210 40% 96%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --muted: 222 47% 14%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 222 47% 14%;
     --accent-foreground: 210 40% 96%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
@@ -55,11 +64,20 @@
     --success-foreground: 144 80% 10%;
     --warning: 48 96% 53%;
     --warning-foreground: 36 45% 15%;
-    --border: 217 33% 20%;
-    --input: 217 33% 17%;
+    --border: 222 47% 18%;
+    --input: 222 47% 14%;
     --ring: 38 92% 50%;
     --sidebar: 222 47% 8%;
     --sidebar-foreground: 210 40% 96%;
+
+    /* Stage Colors - Dark Mode (slightly brighter) */
+    --stage-fresh: 215 25% 55%;
+    --stage-contacted: 217 91% 65%;
+    --stage-qualified: 45 93% 55%;
+    --stage-meeting: 263 70% 60%;
+    --stage-proposal: 25 95% 58%;
+    --stage-won: 142 71% 50%;
+    --stage-lost: 0 72% 55%;
   }
 }
 
@@ -73,10 +91,10 @@
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Refined */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -84,18 +102,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.4);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
 }
 
 /* Focus visible styles */
@@ -156,6 +174,17 @@
   }
 }
 
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes scaleIn {
   from {
     opacity: 0;
@@ -164,6 +193,35 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes countUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -179,11 +237,27 @@
   animation: slideInFromRight 0.3s ease-out forwards;
 }
 
+.animate-slide-in-top {
+  animation: slideInFromTop 0.2s ease-out forwards;
+}
+
 .animate-scale-in {
   animation: scaleIn 0.2s ease-out forwards;
 }
 
-/* Staggered fade in for lists */
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-count-up {
+  animation: countUp 0.4s ease-out forwards;
+}
+
+/* Staggered fade in for lists - Extended */
 .stagger-fade-in > * {
   opacity: 0;
   animation: fadeIn 0.3s ease-out forwards;
@@ -197,6 +271,8 @@
 .stagger-fade-in > *:nth-child(6) { animation-delay: 250ms; }
 .stagger-fade-in > *:nth-child(7) { animation-delay: 300ms; }
 .stagger-fade-in > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-fade-in > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-fade-in > *:nth-child(10) { animation-delay: 450ms; }
 
 /* Smooth transitions for interactive elements */
 @layer utilities {
@@ -205,7 +281,7 @@
   }
   
   .hover-lift {
-    @apply transition-transform duration-200 hover:-translate-y-0.5;
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
   }
   
   .hover-scale {
@@ -214,6 +290,58 @@
   
   .press-scale {
     @apply transition-transform duration-150 active:scale-[0.98];
+  }
+  
+  .interactive {
+    @apply transition-all duration-200 ease-out hover:shadow-md active:scale-[0.98];
+  }
+
+  /* Gradient backgrounds */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary/80;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-r from-emerald-500 to-emerald-600;
+  }
+
+  .gradient-danger {
+    @apply bg-gradient-to-r from-red-500 to-red-600;
+  }
+
+  .gradient-card {
+    @apply bg-gradient-to-br from-card to-muted/30;
+  }
+
+  .gradient-sidebar {
+    @apply bg-gradient-to-b from-sidebar to-sidebar/95;
+  }
+
+  /* Subtle surface variations */
+  .surface-elevated {
+    @apply bg-card shadow-lg shadow-black/5 dark:shadow-black/20;
+  }
+
+  .surface-inset {
+    @apply bg-muted/50 shadow-inner;
+  }
+
+  /* Border glow effects */
+  .border-glow-primary {
+    @apply border border-primary/30 shadow-[0_0_10px_-3px_hsl(var(--primary)/0.3)];
+  }
+
+  .border-glow-success {
+    @apply border border-emerald-500/30 shadow-[0_0_10px_-3px_rgb(16_185_129/0.3)];
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-md border border-border/50;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-md border border-border/50;
   }
 }
 
@@ -232,11 +360,95 @@
 
 /* Better text selection */
 ::selection {
-  background: hsl(var(--primary) / 0.3);
+  background: hsl(var(--primary) / 0.2);
   color: hsl(var(--foreground));
 }
 
 /* Smooth page transitions */
 main {
   view-transition-name: main-content;
+}
+
+/* Data table row hover */
+.data-row {
+  @apply transition-colors duration-150;
+}
+
+.data-row:hover {
+  @apply bg-muted/50;
+}
+
+/* Card hover border effect */
+.card-interactive {
+  @apply border-transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-interactive:hover {
+  @apply border-border shadow-md;
+}
+
+/* Stage color utilities */
+.stage-fresh { color: hsl(var(--stage-fresh)); }
+.stage-contacted { color: hsl(var(--stage-contacted)); }
+.stage-qualified { color: hsl(var(--stage-qualified)); }
+.stage-meeting { color: hsl(var(--stage-meeting)); }
+.stage-proposal { color: hsl(var(--stage-proposal)); }
+.stage-won { color: hsl(var(--stage-won)); }
+.stage-lost { color: hsl(var(--stage-lost)); }
+
+.bg-stage-fresh { background-color: hsl(var(--stage-fresh)); }
+.bg-stage-contacted { background-color: hsl(var(--stage-contacted)); }
+.bg-stage-qualified { background-color: hsl(var(--stage-qualified)); }
+.bg-stage-meeting { background-color: hsl(var(--stage-meeting)); }
+.bg-stage-proposal { background-color: hsl(var(--stage-proposal)); }
+.bg-stage-won { background-color: hsl(var(--stage-won)); }
+.bg-stage-lost { background-color: hsl(var(--stage-lost)); }
+
+/* Number animations for dashboard stats */
+.number-scroll {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.number-scroll > span {
+  display: inline-block;
+  animation: countUp 0.4s ease-out forwards;
+}
+
+/* Progress bar enhancements */
+.progress-glow {
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Tooltip improvements */
+[data-state="delayed-open"][data-side="top"] {
+  animation-name: slideInFromTop;
+  animation-duration: 0.15s;
+  animation-timing-function: ease-out;
+}
+
+[data-state="delayed-open"][data-side="bottom"] {
+  animation-name: fadeIn;
+  animation-duration: 0.15s;
+  animation-timing-function: ease-out;
+}
+
+/* Smooth icon transitions */
+.icon-interactive {
+  @apply transition-all duration-200;
+}
+
+.icon-interactive:hover {
+  @apply scale-110;
+}
+
+/* Activity timeline connector */
+.timeline-connector {
+  @apply absolute left-4 top-8 bottom-0 w-px bg-border;
+}
+
+/* Empty state illustration placeholder */
+.empty-state-bg {
+  @apply bg-gradient-to-b from-muted/50 to-transparent;
 }

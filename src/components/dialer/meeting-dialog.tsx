@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Calendar, Clock, MapPin, Link as LinkIcon, Bell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, addMinutes, setHours, setMinutes, addDays } from "date-fns";
+import { format, addMinutes, setHours, setMinutes } from "date-fns";
+import { addBusinessDays } from "@/lib/utils";
 import type { Contact } from "@/types/database";
 
 interface MeetingDialogProps {
@@ -71,8 +72,8 @@ const TIME_SLOTS = generateTimeSlots();
 export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDialogProps) {
   const createMeeting = useCreateMeeting();
   
-  // Default to tomorrow at 10 AM
-  const tomorrow = addDays(new Date(), 1);
+  // Default to next business day at 10 AM
+  const tomorrow = addBusinessDays(new Date(), 1);
   const defaultDate = format(tomorrow, "yyyy-MM-dd");
   
   const [title, setTitle] = useState(`Meeting with ${contact.first_name} ${contact.last_name || ""}`);

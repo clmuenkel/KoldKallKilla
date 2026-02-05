@@ -3,7 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { MeetingNote, InsertTables, UpdateTables } from "@/types/database";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
+import { addBusinessDays } from "@/lib/utils";
 
 // Extended type for meeting notes with linked tasks
 export interface MeetingNoteWithTask extends MeetingNote {
@@ -131,8 +132,8 @@ export function useToggleActionItem() {
           ? noteContent.substring(0, 60) + "..." 
           : noteContent;
         
-        // Due date is day after the meeting
-        const dueDate = format(addDays(new Date(meetingDate), 1), "yyyy-MM-dd");
+        // Due date is next business day after the meeting
+        const dueDate = format(addBusinessDays(new Date(meetingDate), 1), "yyyy-MM-dd");
 
         const { data: taskData, error: taskError } = await supabase
           .from("tasks")

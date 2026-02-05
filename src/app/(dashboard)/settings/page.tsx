@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
+import { PageHeader } from "@/components/layout/page-header";
 import { createClient } from "@/lib/supabase/client";
 import { seedDummyData, clearDummyData } from "@/lib/seed-data";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Save, User, Key, Bell, Database, Trash2, Download, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
 import type { Profile } from "@/types/database";
 
@@ -130,10 +142,6 @@ export default function SettingsPage() {
   };
 
   const handleClearData = async () => {
-    if (!confirm("Are you sure you want to delete ALL data? This cannot be undone.")) {
-      return;
-    }
-    
     setIsClearing(true);
     try {
       await clearDummyData();
@@ -150,7 +158,11 @@ export default function SettingsPage() {
       <div className="flex flex-col h-full">
         <Header title="Settings" />
         <div className="flex-1 p-6 overflow-auto">
-          <div className="max-w-2xl space-y-6">
+          <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-1">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-5 w-64" />
+            </div>
             {[1, 2, 3].map((i) => (
               <Card key={i}>
                 <CardHeader>
@@ -176,11 +188,16 @@ export default function SettingsPage() {
       <Header title="Settings" />
       
       <div className="flex-1 p-6 overflow-auto">
-        <div className="max-w-2xl space-y-6">
+        <div className="max-w-3xl mx-auto space-y-6">
+          <PageHeader
+            title="Settings"
+            description="Manage your profile, API keys, and daily goals"
+          />
+
           {/* Profile */}
           <Card
             className="opacity-0 animate-fade-in"
-            style={{ animationDelay: "0ms", animationFillMode: "forwards" }}
+            style={{ animationDelay: "50ms", animationFillMode: "forwards" }}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -234,7 +251,7 @@ export default function SettingsPage() {
           <Card 
             id="api"
             className="opacity-0 animate-fade-in"
-            style={{ animationDelay: "50ms", animationFillMode: "forwards" }}
+            style={{ animationDelay: "100ms", animationFillMode: "forwards" }}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -265,7 +282,7 @@ export default function SettingsPage() {
           {/* Goals */}
           <Card
             className="opacity-0 animate-fade-in"
-            style={{ animationDelay: "100ms", animationFillMode: "forwards" }}
+            style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -307,7 +324,7 @@ export default function SettingsPage() {
           {/* Data Management */}
           <Card
             className="opacity-0 animate-fade-in border-amber-500/50"
-            style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
+            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -336,19 +353,36 @@ export default function SettingsPage() {
                   )}
                   Seed Dummy Data
                 </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={handleClearData} 
-                  disabled={isClearing}
-                  className="gap-2"
-                >
-                  {isClearing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  Clear All Data
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      disabled={isClearing}
+                      className="gap-2"
+                    >
+                      {isClearing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      Clear All Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Data</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete ALL data? This includes all contacts, companies, calls, tasks, and notes. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearData}>
+                        Yes, Clear All Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg text-sm text-amber-800 dark:text-amber-200">
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />

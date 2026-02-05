@@ -38,6 +38,12 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { 
   format, 
   startOfMonth, 
@@ -54,6 +60,7 @@ import {
 } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { MeetingWithContact } from "@/types/database";
 
 export default function CalendarPage() {
@@ -157,12 +164,22 @@ export default function CalendarPage() {
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Previous month</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleNextMonth} aria-label="Next month">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Next month</TooltipContent>
+                </Tooltip>
                 <Button variant="outline" size="sm" onClick={handleToday}>
                   Today
                 </Button>
@@ -198,38 +215,34 @@ export default function CalendarPage() {
                   <button
                     key={calDay.toISOString()}
                     onClick={() => setSelectedDate(calDay)}
-                    className={`
-                      relative flex flex-col items-center p-1 rounded-lg border transition-all min-h-[60px]
-                      ${isCurrentMonth ? "bg-card" : "bg-muted/30 opacity-50"}
-                      ${isCurrentDay ? "border-primary ring-1 ring-primary/50" : "border-transparent hover:border-border"}
-                      ${isSelected ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}
-                    `}
+                    className={cn(
+                      "relative flex flex-col items-center p-1 rounded-lg border transition-all min-h-[60px]",
+                      isCurrentMonth ? "bg-card" : "bg-muted/30 opacity-50",
+                      isCurrentDay ? "border-primary ring-1 ring-primary/50" : "border-transparent hover:border-border",
+                      isSelected ? "bg-primary/10 border-primary" : "hover:bg-muted/50"
+                    )}
                   >
                     {/* Day Number */}
-                    <span className={`
-                      text-sm font-medium
-                      ${isCurrentDay ? "text-primary" : isCurrentMonth ? "" : "text-muted-foreground"}
-                    `}>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      isCurrentDay ? "text-primary" : isCurrentMonth ? "" : "text-muted-foreground"
+                    )}>
                       {format(calDay, "d")}
                     </span>
 
                     {/* Meeting Indicators */}
                     {hasMeetings && (
                       <div className="flex flex-wrap gap-0.5 justify-center mt-1 max-w-full">
-                        {dayMeetings.slice(0, 3).map((meeting, idx) => (
+                        {dayMeetings.slice(0, 3).map((meeting) => (
                           <div
                             key={meeting.id}
-                            className={`
-                              w-1.5 h-1.5 rounded-full
-                              ${meeting.status === "cancelled" 
-                                ? "bg-muted-foreground" 
-                                : meeting.status === "completed"
-                                  ? "bg-green-500"
-                                  : isPast(new Date(meeting.scheduled_at))
-                                    ? "bg-amber-500"
-                                    : "bg-primary"
-                              }
-                            `}
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              meeting.status === "cancelled" && "bg-muted-foreground",
+                              meeting.status === "completed" && "bg-green-500",
+                              meeting.status !== "cancelled" && meeting.status !== "completed" && isPast(new Date(meeting.scheduled_at)) && "bg-amber-500",
+                              meeting.status !== "cancelled" && meeting.status !== "completed" && !isPast(new Date(meeting.scheduled_at)) && "bg-primary"
+                            )}
                             title={meeting.title}
                           />
                         ))}
@@ -280,15 +293,14 @@ export default function CalendarPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-muted-foreground">
-                        {selectedDate 
-                          ? `No meetings on ${format(selectedDate, "MMM d")}`
-                          : "No meetings today"
-                        }
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon={Calendar}
+                      title={selectedDate 
+                        ? `No meetings on ${format(selectedDate, "MMM d")}`
+                        : "No meetings today"
+                      }
+                      className="py-8"
+                    />
                   )}
                 </ScrollArea>
               </CardContent>
@@ -488,15 +500,13 @@ function MeetingCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-        meeting.status === "cancelled" 
-          ? "opacity-50 line-through" 
-          : meeting.status === "completed"
-            ? "border-green-200 bg-green-50 dark:bg-green-900/10"
-            : isPastMeeting && meeting.status === "scheduled"
-              ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10"
-              : "bg-card hover:bg-muted"
-      }`}
+      className={cn(
+        "w-full text-left p-3 rounded-lg border transition-colors",
+        meeting.status === "cancelled" && "opacity-50 line-through",
+        meeting.status === "completed" && "border-green-500/30 bg-green-500/5 dark:bg-green-500/10",
+        meeting.status !== "cancelled" && meeting.status !== "completed" && isPastMeeting && "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10",
+        meeting.status !== "cancelled" && meeting.status !== "completed" && !isPastMeeting && "bg-card hover:bg-muted"
+      )}
     >
       <div className="flex items-center justify-between mb-1">
         <p className="font-medium text-sm truncate">{meeting.title}</p>

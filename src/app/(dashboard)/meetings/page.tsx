@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Header } from "@/components/layout/header";
+import { PageHeader } from "@/components/layout/page-header";
 import { useAllMeetings } from "@/hooks/use-meetings";
 import { MeetingDetailDialog } from "@/components/meetings/meeting-detail";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge, MeetingStatusBadge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -15,11 +16,12 @@ import {
   Building2,
   ChevronRight,
   Search,
-  Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { MeetingWithContact } from "@/types/database";
 
 type FilterTab = "all" | "upcoming" | "past" | "completed";
@@ -77,18 +79,21 @@ export default function MeetingsPage() {
       <Header title="Meetings" />
 
       <div className="flex-1 p-6 space-y-6 overflow-auto">
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search meetings..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="All Meetings"
+          description="View and manage your scheduled meetings"
+          actions={
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search meetings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-64"
+              />
+            </div>
+          }
+        />
 
         {/* Filter Tabs */}
         <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as FilterTab)}>
@@ -130,12 +135,11 @@ export default function MeetingsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              {searchQuery ? "No meetings match your search" : "No meetings found"}
-            </p>
-          </div>
+          <EmptyState
+            icon={Calendar}
+            title={searchQuery ? "No meetings match your search" : "No meetings found"}
+            description={searchQuery ? "Try adjusting your search terms" : "Schedule a meeting from the dialer or contact page"}
+          />
         )}
       </div>
 
@@ -163,28 +167,13 @@ function MeetingRow({ meeting, onClick }: MeetingRowProps) {
   const isPastMeeting = isPast(meetingDate);
   const isTodayMeeting = isToday(meetingDate);
 
-  const getStatusBadge = () => {
-    if (meeting.status === "completed") {
-      return <Badge className="bg-green-500 text-white">Completed</Badge>;
-    }
-    if (meeting.status === "cancelled") {
-      return <Badge variant="destructive">Cancelled</Badge>;
-    }
-    if (isTodayMeeting) {
-      return <Badge className="bg-blue-500 text-white">Today</Badge>;
-    }
-    if (isPastMeeting) {
-      return <Badge variant="secondary">Past Due</Badge>;
-    }
-    return <Badge variant="outline">Scheduled</Badge>;
-  };
-
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-lg border bg-card transition-colors hover:bg-muted group ${
-        meeting.status === "cancelled" ? "opacity-50" : ""
-      }`}
+      className={cn(
+        "w-full text-left p-4 rounded-lg border bg-card transition-colors hover:bg-muted group",
+        meeting.status === "cancelled" && "opacity-50"
+      )}
     >
       <div className="flex items-center gap-4">
         {/* Date Column */}
@@ -202,7 +191,11 @@ function MeetingRow({ meeting, onClick }: MeetingRowProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <p className="font-semibold truncate">{meeting.title}</p>
-            {getStatusBadge()}
+            <MeetingStatusBadge 
+              status={meeting.status as "scheduled" | "completed" | "cancelled"} 
+              isToday={isTodayMeeting}
+              isPast={isPastMeeting}
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

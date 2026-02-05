@@ -24,7 +24,12 @@ import {
 import { Loader2, Sparkles } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { useCreateTask } from "@/hooks/use-tasks";
+import { addBusinessDays } from "@/lib/utils";
 import { toast } from "sonner";
+
+// Helper to determine if task type uses calendar days (any day) vs business days
+const isCalendarDayType = (type: string): boolean => 
+  type === "custom" || type === "other";
 
 interface TaskPopupProps {
   open: boolean;
@@ -51,7 +56,18 @@ const IMPORTANCE_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
   label: `${i + 1}${i === 0 ? " (Low)" : i === 9 ? " (Critical)" : ""}`,
 }));
 
-const QUICK_DATES = [
+// Quick dates using business days (skips weekends) - for call, email, follow_up, meeting
+const QUICK_DATES_BUSINESS = [
+  { label: "Today", days: 0 },
+  { label: "Tomorrow", days: 1 },
+  { label: "In 3 days", days: 3 },
+  { label: "In 1 week", days: 5 },
+  { label: "In 2 weeks", days: 10 },
+  { label: "In 1 month", days: 22 },
+];
+
+// Quick dates using calendar days (any day) - for custom, other
+const QUICK_DATES_CALENDAR = [
   { label: "Today", days: 0 },
   { label: "Tomorrow", days: 1 },
   { label: "In 3 days", days: 3 },
@@ -75,7 +91,7 @@ export function TaskPopup({
   const [description, setDescription] = useState("");
   const [taskType, setTaskType] = useState("follow_up");
   const [importance, setImportance] = useState("5");
-  const [dueDate, setDueDate] = useState<string>(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+  const [dueDate, setDueDate] = useState<string>(format(addBusinessDays(new Date(), 1), "yyyy-MM-dd"));
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiSuggested, setAiSuggested] = useState(false);
   
@@ -119,9 +135,21 @@ export function TaskPopup({
       });
   }, [open, taskContent, contactName, contactTitle, contactCompany]);
 
-  const handleQuickDate = (days: number) => {
-    setDueDate(format(addDays(new Date(), days), "yyyy-MM-dd"));
+  // Helper to compute due date based on task type
+  const getDateForQuickOption = (days: number, type: string): Date => {
+    if (days === 0) return new Date();
+    return isCalendarDayType(type) 
+      ? addDays(new Date(), days) 
+      : addBusinessDays(new Date(), days);
   };
+
+  const handleQuickDate = (days: number) => {
+    const date = getDateForQuickOption(days, taskType);
+    setDueDate(format(date, "yyyy-MM-dd"));
+  };
+
+  // Get the appropriate quick dates based on current task type
+  const quickDates = isCalendarDayType(taskType) ? QUICK_DATES_CALENDAR : QUICK_DATES_BUSINESS;
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -159,7 +187,7 @@ export function TaskPopup({
       setDescription("");
       setTaskType("follow_up");
       setImportance("5");
-      setDueDate(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+      setDueDate(format(addBusinessDays(new Date(), 1), "yyyy-MM-dd"));
     } catch (error: any) {
       toast.error(error.message || "Failed to create task");
     }
@@ -252,12 +280,12 @@ export function TaskPopup({
           <div className="space-y-2">
             <Label>Due Date</Label>
             <div className="flex flex-wrap gap-1 mb-2">
-              {QUICK_DATES.map((qd) => (
+              {quickDates.map((qd) => (
                 <Button
-                  key={qd.days}
+                  key={qd.label}
                   type="button"
                   variant={
-                    dueDate === format(addDays(new Date(), qd.days), "yyyy-MM-dd")
+                    dueDate === format(getDateForQuickOption(qd.days, taskType), "yyyy-MM-dd")
                       ? "default"
                       : "outline"
                   }
