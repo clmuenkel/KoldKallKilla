@@ -193,6 +193,7 @@ export function useCreateMeeting() {
       // Invalidate all meetings queries including booked-today for dashboard stats
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
     },
   });
 }

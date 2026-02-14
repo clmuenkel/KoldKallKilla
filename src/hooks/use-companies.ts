@@ -670,6 +670,7 @@ export function useDeleteCompany() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["notes"] });

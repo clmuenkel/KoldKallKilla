@@ -51,6 +51,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { STAGES, INDUSTRIES } from "@/lib/constants";
 import { formatPhone, copyToClipboard, getInitials, cn } from "@/lib/utils";
+import { DialerPoolDialog, isEntityPaused, INDEFINITE_PAUSE_DATE, PAUSE_DURATION_OPTIONS } from "@/components/dialer/dialer-pool-dialog";
+import { createClient } from "@/lib/supabase/client";
+import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { 
   Search, 
   Phone, 
@@ -61,6 +64,7 @@ import {
   ExternalLink,
   MoreHorizontal,
   UserPlus,
+  Users,
   Download,
   Filter,
   X,
@@ -77,6 +81,8 @@ import {
   Calendar,
   Repeat,
   Loader2,
+  PauseCircle,
+  PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -114,6 +120,7 @@ export function ContactList() {
   const [stageFilter, setStageFilter] = useState("all");
   const [industryFilter, setIndustryFilter] = useState("all");
   const [lastContactedFilter, setLastContactedFilter] = useState<ContactFilters["lastContacted"] | "all">("all");
+  const [dialerPoolFilter, setDialerPoolFilter] = useState<"all" | "in_pool" | "removed">("all");
   const [bantFilter, setBantFilter] = useState("-1");
   const [hasPhoneFilter, setHasPhoneFilter] = useState(false);
   const [hasEmailFilter, setHasEmailFilter] = useState(false);
@@ -122,6 +129,7 @@ export function ContactList() {
   const [sortOrder, setSortOrder] = useState<ContactFilters["sortOrder"]>("desc");
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [pauseDialogContact, setPauseDialogContact] = useState<Contact | null>(null);
   const pageSize = 50;
   const router = useRouter();
 
@@ -130,6 +138,7 @@ export function ContactList() {
     stage: stageFilter !== "all" ? stageFilter : undefined,
     industry: industryFilter !== "all" ? industryFilter : undefined,
     lastContacted: lastContactedFilter !== "all" ? lastContactedFilter : undefined,
+    dialerPool: dialerPoolFilter !== "all" ? dialerPoolFilter : undefined,
     bantScore: bantFilter !== "-1" ? parseInt(bantFilter) : undefined,
     hasPhone: hasPhoneFilter || undefined,
     hasEmail: hasEmailFilter || undefined,
@@ -149,6 +158,7 @@ export function ContactList() {
     stageFilter !== "all",
     industryFilter !== "all",
     lastContactedFilter !== "all",
+    dialerPoolFilter !== "all",
     bantFilter !== "-1",
     hasPhoneFilter,
     hasEmailFilter,
@@ -160,6 +170,7 @@ export function ContactList() {
     setStageFilter("all");
     setIndustryFilter("all");
     setLastContactedFilter("all");
+    setDialerPoolFilter("all");
     setBantFilter("-1");
     setHasPhoneFilter(false);
     setHasEmailFilter(false);
@@ -331,6 +342,42 @@ export function ContactList() {
                         </div>
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Dialer pool */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Dialer pool</Label>
+                <Select
+                  value={dialerPoolFilter}
+                  onValueChange={(v) => {
+                    setDialerPoolFilter(v as "all" | "in_pool" | "removed");
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        All
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="in_pool">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        In pool
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="removed">
+                      <div className="flex items-center gap-2">
+                        <PauseCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        Removed from pool
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -542,6 +589,7 @@ export function ContactList() {
                     onCopyEmail={(e) => contact.email && handleCopyEmail(contact.email, e)}
                     onDelete={() => handleDelete(contact.id)}
                     onToggleAAA={(e) => handleToggleAAA(contact, e)}
+                    onRemoveFromPool={() => setPauseDialogContact(contact)}
                     onRowClick={() => router.push(`/contacts/${contact.id}`)}
                     isEven={index % 2 === 0}
                   />
@@ -606,6 +654,20 @@ export function ContactList() {
           </div>
         </div>
       )}
+
+      {/* Single-contact Remove from dialer pool dialog */}
+      {pauseDialogContact && (
+        <DialerPoolDialog
+          open={!!pauseDialogContact}
+          onOpenChange={(open) => !open && setPauseDialogContact(null)}
+          entityType="contact"
+          entityId={pauseDialogContact.id}
+          entityName={`${pauseDialogContact.first_name} ${pauseDialogContact.last_name || ""}`.trim() || "Contact"}
+          isPaused={isEntityPaused(pauseDialogContact.dialer_paused_until)}
+          pausedUntil={pauseDialogContact.dialer_paused_until}
+          onSuccess={() => setPauseDialogContact(null)}
+        />
+      )}
     </div>
   );
 }
@@ -631,13 +693,17 @@ function BulkActionsBar({
 }) {
   const [bulkStage, setBulkStage] = useState("");
   const [bulkCadence, setBulkCadence] = useState("");
+  const [bulkRemoveValue, setBulkRemoveValue] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
+  const [isReAdding, setIsReAdding] = useState(false);
   const updateContact = useUpdateContact();
   const bulkDeleteContacts = useBulkDeleteContacts();
   const { removeContactFromQueue } = useDialerStore();
   const queryClient = useQueryClient();
+  const supabase = createClient();
 
   const handleBulkStageChange = async (newStage: string) => {
     if (!newStage || selected.length === 0) return;
@@ -680,6 +746,7 @@ function BulkActionsBar({
       onClearSelection();
       setBulkCadence("");
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
     } catch (error) {
       toast.error("Failed to update some contacts");
     } finally {
@@ -706,6 +773,7 @@ function BulkActionsBar({
       );
       onClearSelection();
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
     } catch (error) {
       toast.error("Failed to distribute contacts");
     } finally {
@@ -730,6 +798,129 @@ function BulkActionsBar({
     }
   };
 
+  const handleBulkRemoveFromPool = async (months: number) => {
+    if (selected.length === 0) return;
+    setIsPausing(true);
+    try {
+      const pauseUntilDate = months === -1
+        ? INDEFINITE_PAUSE_DATE
+        : (() => {
+            const d = new Date();
+            d.setMonth(d.getMonth() + months);
+            return d.toISOString().split("T")[0];
+          })();
+      const now = new Date().toISOString();
+
+      const { data: nameRows } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name")
+        .in("id", selected);
+      const names = (nameRows || []).map((r) => ({
+        id: r.id,
+        entity_name: `${(r.first_name || "").trim()} ${(r.last_name || "").trim()}`.trim() || "Contact",
+      }));
+
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({
+          dialer_status: "paused",
+          dialer_paused_until: pauseUntilDate,
+          dialer_pause_reason_code: "bulk_action",
+          dialer_pause_reason_notes: null,
+          dialer_paused_at: now,
+        })
+        .in("id", selected);
+
+      if (updateError) throw updateError;
+
+      await supabase.from("dialer_pool_events").insert(
+        names.map((n) => ({
+          user_id: DEFAULT_USER_ID,
+          entity_type: "contact" as const,
+          contact_id: n.id,
+          company_id: null,
+          entity_name: n.entity_name,
+          action: "paused" as const,
+          paused_until: pauseUntilDate,
+          duration_months: months === -1 ? null : months,
+          reason_code: "bulk_action",
+        }))
+      );
+
+      selected.forEach((id) => removeContactFromQueue(id));
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
+
+      toast.success(
+        `${selected.length} contact${selected.length !== 1 ? "s" : ""} removed from dialer pool${months === -1 ? " indefinitely" : ` until ${pauseUntilDate}`}`
+      );
+      setBulkRemoveValue("");
+      onClearSelection();
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to remove from dialer pool";
+      toast.error(msg);
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
+  const handleBulkReAddToPool = async () => {
+    if (selected.length === 0) return;
+    setIsReAdding(true);
+    try {
+      const { data: rows } = await supabase
+        .from("contacts")
+        .select("id, first_name, last_name, dialer_status, dialer_paused_until")
+        .in("id", selected);
+
+      const paused = (rows || []).filter((r) =>
+        isEntityPaused(r.dialer_paused_until)
+      );
+      if (paused.length === 0) {
+        toast.info("No selected contacts are currently paused");
+        setIsReAdding(false);
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("contacts")
+        .update({
+          dialer_status: "active",
+          dialer_paused_until: null,
+          dialer_pause_reason_code: null,
+          dialer_pause_reason_notes: null,
+          dialer_paused_at: null,
+        })
+        .in("id", paused.map((p) => p.id));
+
+      if (updateError) throw updateError;
+
+      await supabase.from("dialer_pool_events").insert(
+        paused.map((p) => ({
+          user_id: DEFAULT_USER_ID,
+          entity_type: "contact" as const,
+          contact_id: p.id,
+          company_id: null,
+          entity_name: `${(p.first_name || "").trim()} ${(p.last_name || "").trim()}`.trim() || "Contact",
+          action: "unpaused" as const,
+        }))
+      );
+
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
+
+      toast.success(`${paused.length} contact${paused.length !== 1 ? "s" : ""} re-added to dialer pool`);
+      onClearSelection();
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to re-add to dialer pool";
+      toast.error(msg);
+    } finally {
+      setIsReAdding(false);
+    }
+  };
+
+  const isBulkBusy = isUpdating || isScheduling || isDeleting || isPausing || isReAdding;
+
   return (
     <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg animate-in slide-in-from-top-2 duration-200">
       <Badge variant="secondary" className="font-semibold">
@@ -744,7 +935,7 @@ function BulkActionsBar({
             setBulkStage(v);
             handleBulkStageChange(v);
           }}
-          disabled={isUpdating || isScheduling}
+          disabled={isBulkBusy}
         >
           <SelectTrigger className="w-[160px] h-8 text-sm">
             <Kanban className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -769,7 +960,7 @@ function BulkActionsBar({
             setBulkCadence(v);
             handleBulkCadenceChange(v);
           }}
-          disabled={isUpdating || isScheduling}
+          disabled={isBulkBusy}
         >
           <SelectTrigger className="w-[150px] h-8 text-sm">
             <Repeat className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -790,7 +981,7 @@ function BulkActionsBar({
           size="sm" 
           className="h-8"
           onClick={handleDistributeStartDates}
-          disabled={isUpdating || isScheduling}
+          disabled={isBulkBusy}
         >
           {isScheduling ? (
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -800,27 +991,78 @@ function BulkActionsBar({
           Distribute
         </Button>
 
+        {/* Remove from dialer pool */}
+        <Select
+          value={bulkRemoveValue}
+          onValueChange={(v) => {
+            setBulkRemoveValue(v);
+            handleBulkRemoveFromPool(parseInt(v, 10));
+          }}
+          disabled={isBulkBusy}
+        >
+          <SelectTrigger className="w-[180px] h-8 text-sm">
+            {isPausing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin text-amber-500" />
+            ) : (
+              <PauseCircle className="h-4 w-4 mr-2 text-amber-500" />
+            )}
+            <SelectValue placeholder="Remove from pool" />
+          </SelectTrigger>
+          <SelectContent>
+            {PAUSE_DURATION_OPTIONS.map((opt) => (
+              <SelectItem key={opt.months} value={opt.months.toString()}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={handleBulkReAddToPool}
+              disabled={isBulkBusy}
+            >
+              {isReAdding ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <PlayCircle className="h-4 w-4 mr-1 text-emerald-600" />
+              )}
+              Re-add to pool
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Re-add selected paused contacts to dialer pool</TooltipContent>
+        </Tooltip>
+
         <Button variant="outline" size="sm" className="h-8">
           <Download className="h-4 w-4 mr-1" />
           Export
         </Button>
         
         <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 text-destructive hover:bg-destructive/10"
-              disabled={isDeleting || isUpdating || isScheduling}
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-1" />
-              )}
-              Delete
-            </Button>
-          </AlertDialogTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-destructive hover:bg-destructive/10"
+                  disabled={isBulkBusy}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-1" />
+                  )}
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="top">Delete selected contacts</TooltipContent>
+          </Tooltip>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {selected.length} contact{selected.length !== 1 ? "s" : ""}?</AlertDialogTitle>
@@ -858,6 +1100,7 @@ function ContactRow({
   onCopyEmail,
   onDelete,
   onToggleAAA,
+  onRemoveFromPool,
   onRowClick,
   isEven,
 }: {
@@ -868,11 +1111,13 @@ function ContactRow({
   onCopyEmail: (e: React.MouseEvent) => void;
   onDelete: () => void;
   onToggleAAA: (e: React.MouseEvent) => void;
+  onRemoveFromPool: (contact: Contact) => void;
   onRowClick: () => void;
   isEven: boolean;
 }) {
   const stage = STAGES.find((s) => s.value === contact.stage);
   const contactName = `${contact.first_name} ${contact.last_name || ''}`.trim();
+  const isPaused = isEntityPaused(contact.dialer_paused_until);
 
   return (
     <TableRow 
@@ -880,7 +1125,8 @@ function ContactRow({
         "group cursor-pointer transition-all duration-150",
         "hover:bg-primary/5",
         selected && "bg-primary/10",
-        contact.is_aaa && "bg-amber-500/5"
+        contact.is_aaa && "bg-amber-500/5",
+        isPaused && "bg-amber-500/5"
       )}
       onClick={onRowClick}
     >
@@ -910,7 +1156,14 @@ function ContactRow({
             </button>
           </div>
           <div className="min-w-0">
-            <p className="font-medium truncate">{contactName}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium truncate">{contactName}</p>
+              {isPaused && (
+                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400 shrink-0">
+                  Paused
+                </Badge>
+              )}
+            </div>
             {contact.title && (
               <p className="text-xs text-muted-foreground truncate">{contact.title}</p>
             )}
@@ -983,6 +1236,27 @@ function ContactRow({
               <TooltipContent side="top">Call</TooltipContent>
             </Tooltip>
           )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveFromPool(contact);
+                }}
+              >
+                {isPaused ? (
+                  <PlayCircle className="h-4 w-4" />
+                ) : (
+                  <PauseCircle className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">{isPaused ? "Re-add to dialer pool" : "Remove from dialer pool"}</TooltipContent>
+          </Tooltip>
 
           {contact.email && (
             <Tooltip>

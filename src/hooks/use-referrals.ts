@@ -122,6 +122,7 @@ export function useSetDirectReferral() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contact-context", data.id] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
@@ -152,6 +153,7 @@ export function useRemoveDirectReferral() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contact-context", data.id] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
@@ -187,6 +189,7 @@ export function useUpdateReferralNote() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contact-context", data.id] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
@@ -222,6 +225,7 @@ export function useSetCustomOpener() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contact-context", data.id] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
@@ -264,6 +268,7 @@ export function useSetReferralFromCall() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contact-context"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["company-contacts"] });
     },
   });

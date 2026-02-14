@@ -14,6 +14,8 @@ export interface ContactFilters {
   aaaOnly?: boolean;
   bantScore?: number; // 0-4
   lastContacted?: "never" | "today" | "week" | "month" | "older";
+  /** Dialer pool: "in_pool" = active/eligible, "removed" = paused/removed from pool */
+  dialerPool?: "all" | "in_pool" | "removed";
   sortBy?: "name" | "created" | "last_contacted" | "bant";
   sortOrder?: "asc" | "desc";
   // Pagination
@@ -71,6 +73,15 @@ export function useContacts(filters?: ContactFilters) {
         // AAA filter
         if (filters?.aaaOnly === true) {
           q = q.eq("is_aaa", true);
+        }
+
+        // Dialer pool filter
+        if (filters?.dialerPool && filters.dialerPool !== "all") {
+          if (filters.dialerPool === "removed") {
+            q = q.eq("dialer_status", "paused");
+          } else {
+            q = q.or("dialer_status.is.null,dialer_status.neq.paused");
+          }
         }
 
         // Last contacted filter
@@ -222,14 +233,17 @@ export function usePaginatedContacts(filters?: ContactFilters) {
       if (filters?.aaaOnly === true) {
         countQuery = countQuery.eq("is_aaa", true);
       }
+      if (filters?.dialerPool && filters.dialerPool !== "all") {
+        if (filters.dialerPool === "removed") {
+          countQuery = countQuery.eq("dialer_status", "paused");
+        } else {
+          countQuery = countQuery.or("dialer_status.is.null,dialer_status.neq.paused");
+        }
+      }
 
       const { count, error: countError } = await countQuery;
       if (countError) throw countError;
       const totalCount = count || 0;
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-contacts.ts:230',message:'usePaginatedContacts query start',data:{filters,totalCount},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,E'})}).catch(()=>{});
-      // #endregion
 
       // Now get paginated data
       let query = supabase
@@ -257,6 +271,13 @@ export function usePaginatedContacts(filters?: ContactFilters) {
       if (filters?.aaaOnly === true) {
         query = query.eq("is_aaa", true);
       }
+      if (filters?.dialerPool && filters.dialerPool !== "all") {
+        if (filters.dialerPool === "removed") {
+          query = query.eq("dialer_status", "paused");
+        } else {
+          query = query.or("dialer_status.is.null,dialer_status.neq.paused");
+        }
+      }
 
       // Sorting
       const sortOrder = filters?.sortOrder === "asc" ? true : false;
@@ -280,12 +301,6 @@ export function usePaginatedContacts(filters?: ContactFilters) {
       if (error) throw error;
 
       let contacts = data as Contact[];
-
-      // #region agent log
-      const orphanedContacts = contacts.filter(c => c.company_name && !c.company_id);
-      const mesirowContacts = contacts.filter(c => c.company_name?.toLowerCase().includes('mesirow'));
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-contacts.ts:282',message:'Contacts fetched - checking for orphans',data:{totalFetched:contacts.length,orphanedCount:orphanedContacts.length,mesirowCount:mesirowContacts.length,mesirowSample:mesirowContacts.slice(0,3).map(c=>({id:c.id,first_name:c.first_name,company_id:c.company_id,company_name:c.company_name}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,B,D'})}).catch(()=>{});
-      // #endregion
 
       // BANT score filter (client-side)
       if (filters?.bantScore !== undefined && filters.bantScore >= 0) {
@@ -349,6 +364,7 @@ export function useCreateContact() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
     },
   });
 }
@@ -376,6 +392,7 @@ export function useUpdateContact() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
@@ -394,6 +411,7 @@ export function useDeleteContact() {
     onSuccess: (deletedId) => {
       // Invalidate all queries that reference contacts
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["contact", deletedId] });
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -419,6 +437,7 @@ export function useBulkCreateContacts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
     },
   });
 }
@@ -436,6 +455,7 @@ export function useBulkDeleteContacts() {
     onSuccess: () => {
       // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["notes"] });

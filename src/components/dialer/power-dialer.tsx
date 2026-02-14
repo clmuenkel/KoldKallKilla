@@ -168,8 +168,8 @@ export function PowerDialer() {
   // Keyboard shortcuts help
   const { showHelp, setShowHelp } = useShortcutsHelp();
 
-  // Fetch all contacts to show counts
-  const { data: allContacts, isLoading: loadingContacts } = useContacts();
+  // Fetch only in-pool contacts so dialer counts and queue match "In pool" on contacts page
+  const { data: allContacts, isLoading: loadingContacts } = useContacts({ dialerPool: "in_pool" });
   
   // Fetch companies for company filter
   const { data: companies, isLoading: loadingCompanies } = useCompanies({});

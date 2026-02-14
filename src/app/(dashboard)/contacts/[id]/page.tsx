@@ -837,6 +837,7 @@ export default function ContactDetailPage() {
         onSuccess={() => {
           refetchContact();
           queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
         }}
       />
     </div>

@@ -113,6 +113,7 @@ export function useCreateCall() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
     },
   });
@@ -457,6 +458,7 @@ export function useLogCall() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });
       queryClient.invalidateQueries({ queryKey: ["notes"] }); // Invalidate notes since we save call notes

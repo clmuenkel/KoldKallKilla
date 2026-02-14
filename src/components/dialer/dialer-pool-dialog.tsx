@@ -166,6 +166,7 @@ export function DialerPoolDialog({
 
       // Invalidate queries so dialer lists refresh with updated pause status
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["companies"] });
 
       const displayDate = durationMonths === -1 ? "indefinitely" : formatPauseDate(pauseUntilDate);
@@ -224,6 +225,7 @@ export function DialerPoolDialog({
 
       // Invalidate queries so dialer lists refresh with updated pause status
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["companies"] });
 
       toast.success(`${entityType === "company" ? "Company" : "Contact"} re-added to dialer pool`);
