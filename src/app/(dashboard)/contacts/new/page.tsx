@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { ContactForm } from "@/components/contacts/contact-form";
@@ -13,6 +14,27 @@ import { formatDateForDB } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function NewContactPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col h-full">
+        <Header title="New Contact" />
+        <div className="flex-1 p-6">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="pt-6 space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <NewContactContent />
+    </Suspense>
+  );
+}
+
+function NewContactContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const companyId = searchParams.get("company");
