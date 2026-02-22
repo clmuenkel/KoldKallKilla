@@ -1,9 +1,10 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 interface TaskSuggestRequest {
   text: string;
@@ -64,7 +65,7 @@ Guidelines:
 - Type "call" for phone follow-ups, "email" for email tasks, "meeting" for scheduling meetings, "follow_up" for general follow-ups
 - Importance: 8-10 for urgent/time-sensitive, 5-7 for standard follow-ups, 1-4 for low priority/long-term`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {

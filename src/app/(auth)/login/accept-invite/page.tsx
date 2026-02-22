@@ -30,10 +30,7 @@ export default function AcceptInvitePage() {
       const refreshToken = params.get("refresh_token") ?? "";
       if (accessToken) {
         supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-          .then(({ data, error }) => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'accept-invite:setSession',message:'setSession result',data:{hasSession:!!data.session,userId:data.session?.user?.id?.slice(0,8),hasError:!!error,errorMsg:error?.message},runId:'post-fix-v2',hypothesisId:'H5',timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
+          .then(({ data }) => {
             if (data.session) setIsReady(true);
           });
       }
@@ -65,14 +62,7 @@ export default function AcceptInvitePage() {
     }
     setIsLoading(true);
     try {
-      const { data: sessionCheck } = await supabase.auth.getSession();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'accept-invite:submit',message:'Before updateUser',data:{hasSession:!!sessionCheck.session,userId:sessionCheck.session?.user?.id?.slice(0,8)},runId:'post-fix',hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const { error } = await supabase.auth.updateUser({ password });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'accept-invite:updateUser',message:'updateUser result',data:{hasError:!!error,errorMsg:error?.message},runId:'post-fix',hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (error) throw error;
       setIsDone(true);
       toast.success("Account set up successfully. Welcome!");

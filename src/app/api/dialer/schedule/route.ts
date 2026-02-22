@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { scheduleContacts, getCapacitySettings } from "@/lib/capacity-scheduler";
 import { createClient } from "@/lib/supabase/server";
