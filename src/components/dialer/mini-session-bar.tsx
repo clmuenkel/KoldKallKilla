@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useDialerStore } from "@/stores/dialer-store";
 import { useSessionCallStats } from "@/hooks/use-calls";
+import { useSessionDuration } from "@/hooks/use-session-duration";
+import { useResumeSession, useEndSession, useCreateSession } from "@/hooks/use-sessions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -30,34 +32,24 @@ export function GlobalSessionBar() {
     isActive,
     isViewingHome,
     sessionStartTime,
+    sessionDbId,
     queue,
     currentIndex,
     currentContact,
     resumeSession,
+    replaceSessionWithNew,
   } = useDialerStore();
 
-  const [sessionDuration, setSessionDuration] = useState(0);
+  // Pause-aware session duration (frozen when paused)
+  const sessionDuration = useSessionDuration();
+
+  // DB persistence for resume
+  const resumeSessionDb = useResumeSession();
+  const endSessionDb = useEndSession();
+  const createSession = useCreateSession();
 
   // Fetch session call stats
   const { data: callStats } = useSessionCallStats(sessionStartTime);
-
-  // Update session duration every second
-  useEffect(() => {
-    if (!sessionStartTime) {
-      setSessionDuration(0);
-      return;
-    }
-
-    const updateDuration = () => {
-      const now = new Date();
-      const elapsed = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
-      setSessionDuration(elapsed);
-    };
-
-    updateDuration();
-    const interval = setInterval(updateDuration, 1000);
-    return () => clearInterval(interval);
-  }, [sessionStartTime]);
 
   // Don't show if no active session
   if (!isActive) {
@@ -70,7 +62,33 @@ export function GlobalSessionBar() {
     return null;
   }
 
-  const handleResume = () => {
+  const SESSION_STALE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  const handleResume = async () => {
+    const sessionStale = sessionStartTime && (Date.now() - sessionStartTime.getTime() > SESSION_STALE_MS);
+    if (sessionStale && sessionDbId) {
+      try {
+        await endSessionDb.mutateAsync(sessionDbId);
+        const newSession = await createSession.mutateAsync({
+          started_at: new Date().toISOString(),
+          total_calls: 0,
+          connected_calls: 0,
+          meetings_booked: 0,
+          voicemails: 0,
+          skipped: 0,
+          no_answers: 0,
+          gatekeepers: 0,
+          wrong_numbers: 0,
+          ai_screener: 0,
+          total_talk_time_seconds: 0,
+        });
+        replaceSessionWithNew(newSession.id);
+      } catch {
+        // fallback: just resume
+      }
+    } else {
+      if (sessionDbId) resumeSessionDb.mutate(sessionDbId);
+    }
     resumeSession();
     if (!isOnDialerPage) {
       router.push("/dialer");

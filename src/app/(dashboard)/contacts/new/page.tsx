@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCreateContact } from "@/hooks/use-contacts";
 import { useCreateNote } from "@/hooks/use-notes";
 import { useCompany } from "@/hooks/use-companies";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
+import { formatDateForDB } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function NewContactPage() {
@@ -20,7 +21,9 @@ export default function NewContactPage() {
   const createNote = useCreateNote();
   const { data: company, isLoading: loadingCompany } = useCompany(companyId || "");
 
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId();
+
+  if (!userId) return null;
 
   const handleSubmit = async (data: any) => {
     try {
@@ -29,6 +32,9 @@ export default function NewContactPage() {
         ...contactData,
         user_id: userId,
         company_id: companyId || undefined,
+        next_call_date: formatDateForDB(new Date()),
+        cadence_days: 2,
+        dialer_status: "active",
       });
       if (note?.trim()) {
         await createNote.mutateAsync({

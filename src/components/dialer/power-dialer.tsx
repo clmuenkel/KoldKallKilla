@@ -60,7 +60,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import type { Contact } from "@/types/database";
 
 type FilterMode = "stage" | "company" | "all";
@@ -110,7 +110,7 @@ function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }
 }
 
 export function PowerDialer() {
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
   const notesInputRef = useRef<HTMLTextAreaElement>(null);
   
   // Session setup state
@@ -391,6 +391,9 @@ export function PowerDialer() {
     }
   }, [setOutcome]);
 
+  // Block advancing without logging when call ended but outcome not yet saved
+  const callEndedAwaitingOutcome = !isCallActive && callDuration > 0;
+
   // Wire up keyboard shortcuts (only when session is active)
   useDialerShortcuts({
     onDial: handleDial,
@@ -400,7 +403,13 @@ export function PowerDialer() {
     onFocusNotes: handleFocusNotes,
     onOutcome: handleOutcome,
     onPrevious: previousContact,
-    onNext: nextContact,
+    onNext: () => {
+      if (callEndedAwaitingOutcome) {
+        toast.info("Select an outcome below to save and continue");
+        return;
+      }
+      nextContact();
+    },
     isCallActive,
     canSave: !!outcome,
   });
@@ -542,30 +551,28 @@ export function PowerDialer() {
         return isDueOrNew(c.next_call_date);
       });
 
-      // Sort: AAA first, then due contacts, then new contacts
+      // Sort: AAA first, then due date, then group by company (same company back-to-back), then id
       filtered.sort((a, b) => {
-        // AAA contacts always first
         if (a.is_aaa && !b.is_aaa) return -1;
         if (!a.is_aaa && b.is_aaa) return 1;
-        
-        // Contacts with a due date come before contacts never called
         if (a.next_call_date && !b.next_call_date) return -1;
         if (!a.next_call_date && b.next_call_date) return 1;
-        
-        // If both have dates, sort by date (earlier first)
         if (a.next_call_date && b.next_call_date) {
-          return new Date(a.next_call_date).getTime() - new Date(b.next_call_date).getTime();
+          const byDate = new Date(a.next_call_date).getTime() - new Date(b.next_call_date).getTime();
+          if (byDate !== 0) return byDate;
         }
-        
-        // Both null - maintain original order
-        return 0;
+        const byCompany = (a.company_id || "").localeCompare(b.company_id || "");
+        if (byCompany !== 0) return byCompany;
+        return a.id.localeCompare(b.id);
       });
     } else {
-      // Even without cadence, sort AAA contacts first
+      // Even without cadence: AAA first, then group by company, then id
       filtered.sort((a, b) => {
         if (a.is_aaa && !b.is_aaa) return -1;
         if (!a.is_aaa && b.is_aaa) return 1;
-        return 0;
+        const byCompany = (a.company_id || "").localeCompare(b.company_id || "");
+        if (byCompany !== 0) return byCompany;
+        return a.id.localeCompare(b.id);
       });
     }
     
@@ -621,7 +628,15 @@ export function PowerDialer() {
       toast.error("No contacts match your filters. Adjust your selection.");
       return;
     }
-    
+
+    // Dedupe by contact id so the same person never appears 2–3x in one session
+    const seenIds = new Set<string>();
+    const dedupedContacts = filteredContacts.filter((c) => {
+      if (seenIds.has(c.id)) return false;
+      seenIds.add(c.id);
+      return true;
+    });
+
     try {
       // Create explicit database session first
       const session = await createSession.mutateAsync({
@@ -637,15 +652,15 @@ export function PowerDialer() {
         ai_screener: 0,
         total_talk_time_seconds: 0,
       });
-      
+
       // Start session in store with the database session ID
-      startSession(filteredContacts, session.id);
-      toast.success(`Starting session with ${filteredContacts.length} contacts`);
+      startSession(dedupedContacts, session.id);
+      toast.success(`Starting session with ${dedupedContacts.length} contacts`);
     } catch (error) {
       console.error("Failed to create session:", error);
       // Fall back to starting session without database tracking
-      startSession(filteredContacts);
-      toast.success(`Starting session with ${filteredContacts.length} contacts`);
+      startSession(dedupedContacts);
+      toast.success(`Starting session with ${dedupedContacts.length} contacts`);
     }
   };
 

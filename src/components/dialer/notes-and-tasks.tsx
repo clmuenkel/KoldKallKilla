@@ -180,22 +180,34 @@ export function NotesAndTasks({
     };
 
     // Save company-wide notes to database
-    if (parsed.hasCompanyNote && contact.company_id) {
-      for (const section of parsed.companySections) {
-        try {
-          await createCompanyNote.mutateAsync({
-            user_id: userId,
-            contact_id: contact.id,
-            company_id: contact.company_id,
-            content: section.content,
+    if (parsed.hasCompanyNote) {
+      if (!contact.company_id) {
+        toast.warning("Contact has no company; company note not saved.", {
+          description: "Personal note will still be saved.",
+        });
+      } else {
+        let companySaveFailed = false;
+        for (const section of parsed.companySections) {
+          try {
+            await createCompanyNote.mutateAsync({
+              user_id: userId,
+              contact_id: contact.id,
+              company_id: contact.company_id,
+              content: section.content,
+            });
+          } catch (error) {
+            console.error("Failed to save company note:", error);
+            companySaveFailed = true;
+          }
+        }
+        if (companySaveFailed) {
+          toast.error("Failed to save company note. Check console or try again.");
+        } else {
+          toast.success("Company note saved!", {
+            description: "Note will appear on all contacts at this company",
           });
-        } catch (error) {
-          console.error("Failed to save company note:", error);
         }
       }
-      toast.success("Company note saved!", {
-        description: "Note will appear on all contacts at this company",
-      });
     }
 
     // If there are @task sections, show popup for each
@@ -391,8 +403,8 @@ export function NotesAndTasks({
               </div>
             </div>
 
-            {/* Notes List */}
-            <ScrollArea className="flex-1 min-h-0" ref={notesScrollRef}>
+            {/* Notes List - fixed max height so long notes scroll inside the box */}
+            <ScrollArea className="flex-1 min-h-0 max-h-[280px]" ref={notesScrollRef}>
               <div className="space-y-1.5 pr-1">
                 {notes.length > 0 && (
                   <div>

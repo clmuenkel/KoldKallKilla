@@ -6,7 +6,7 @@ import { TodayTasks } from "@/components/dashboard/today-tasks";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { PipelineOverview } from "@/components/dashboard/pipeline-overview";
 import { MeetingsWidget } from "@/components/dashboard/meetings-widget";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { AbuButton } from "@/components/ui/abu-button";
 import { Zap, Download, Target, BarChart3 } from "lucide-react";
@@ -22,6 +22,7 @@ function getGreeting(): string {
 }
 
 export default function DashboardPage() {
+  const userId = useAuthId();
   const greeting = getGreeting();
   const { data: targets } = useDailyTargets();
   const updateTarget = useUpdateTarget();
@@ -101,7 +102,7 @@ export default function DashboardPage() {
           style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
         >
           <TodayTasks />
-          <MeetingsWidget userId={DEFAULT_USER_ID} />
+          <MeetingsWidget userId={userId!} />
           <RecentActivity />
         </div>
       </div>

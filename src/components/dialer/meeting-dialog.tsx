@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreateMeeting } from "@/hooks/use-meetings";
+import { useContacts } from "@/hooks/use-contacts";
+import { useIncrementSessionMeetings } from "@/hooks/use-sessions";
+import { useDialerStore } from "@/stores/dialer-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Clock, MapPin, Link as LinkIcon, Bell, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Link as LinkIcon, Bell, Loader2, Users } from "lucide-react";
+import { ContactMultiSelect } from "@/components/ui/contact-multi-select";
 import { toast } from "sonner";
 import { format, addMinutes, setHours, setMinutes } from "date-fns";
 import { addBusinessDays } from "@/lib/utils";
@@ -71,11 +75,13 @@ const TIME_SLOTS = generateTimeSlots();
 
 export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDialogProps) {
   const createMeeting = useCreateMeeting();
-  
-  // Default to next business day at 10 AM
+  const incrementSessionMeetings = useIncrementSessionMeetings();
+  const sessionStartTime = useDialerStore((s) => s.sessionStartTime);
+  const { data: contacts } = useContacts();
+
   const tomorrow = addBusinessDays(new Date(), 1);
   const defaultDate = format(tomorrow, "yyyy-MM-dd");
-  
+
   const [title, setTitle] = useState(`Meeting with ${contact.first_name} ${contact.last_name || ""}`);
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("10:00");
@@ -84,6 +90,14 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
   const [meetingLink, setMeetingLink] = useState("");
   const [reminder, setReminder] = useState("15");
   const [description, setDescription] = useState("");
+  const [additionalAttendeeIds, setAdditionalAttendeeIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setTitle(`Meeting with ${contact.first_name} ${contact.last_name || ""}`);
+      setAdditionalAttendeeIds([]);
+    }
+  }, [open, contact.first_name, contact.last_name]);
 
   const handleSubmit = async () => {
     if (!title.trim() || !date || !time) {
@@ -91,10 +105,10 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
       return;
     }
 
-    // Parse the date and time
+    // Parse the date and time in local timezone so the stored UTC matches the intended calendar day
     const [hours, minutes] = time.split(":").map(Number);
-    const scheduledDate = new Date(date);
-    scheduledDate.setHours(hours, minutes, 0, 0);
+    const [y, mo, d] = date.split("-").map(Number);
+    const scheduledDate = new Date(y, mo - 1, d, hours, minutes, 0, 0);
 
     // Calculate reminder time
     const reminderMinutes = parseInt(reminder);
@@ -115,7 +129,16 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
         meeting_link: meetingLink.trim() || undefined,
         reminder_at: reminderAt,
         status: "scheduled",
+        attendee_ids: additionalAttendeeIds.length > 0 ? additionalAttendeeIds : undefined,
       });
+
+      if (sessionStartTime) {
+        try {
+          await incrementSessionMeetings.mutateAsync();
+        } catch {
+          // Non-blocking: session history may not update
+        }
+      }
 
       toast.success("Meeting scheduled!");
       onOpenChange(false);
@@ -129,7 +152,8 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
       setMeetingLink("");
       setReminder("15");
       setDescription("");
-    } catch (error: any) {
+      setAdditionalAttendeeIds([]);
+    } catch (error: unknown) {
       toast.error(error.message || "Failed to schedule meeting");
     }
   };
@@ -254,6 +278,21 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
               value={meetingLink}
               onChange={(e) => setMeetingLink(e.target.value)}
               placeholder="https://zoom.us/j/..."
+            />
+          </div>
+
+          {/* Add attendees */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              Add attendees (optional)
+            </Label>
+            <ContactMultiSelect
+              contacts={contacts}
+              value={additionalAttendeeIds}
+              onValueChange={setAdditionalAttendeeIds}
+              placeholder="Add other people to this meeting..."
+              excludeIds={[contact.id]}
             />
           </div>
 

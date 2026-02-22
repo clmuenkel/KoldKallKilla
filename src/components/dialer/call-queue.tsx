@@ -49,8 +49,8 @@ export function CallQueue({ companiesById }: CallQueueProps) {
     skipContact,
   } = useDialerStore();
 
-  // Get IDs for the database query
-  const queueContactIds = useMemo(() => queue.map((c) => c.id), [queue]);
+  // Stable sorted IDs for session-completion query (same set = same key for all timezones)
+  const queueContactIds = useMemo(() => [...queue].map((c) => c.id).sort(), [queue]);
 
   // Query actual completed contacts from database (not position-based)
   const { data: completedIds } = useSessionCompletedContacts(sessionStartTime, queueContactIds);

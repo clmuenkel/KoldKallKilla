@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import type { 
   DialerSession, 
   DialerSessionInsert, 
@@ -19,14 +19,15 @@ export function useSessions(options?: {
   limit?: number;
 }) {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["dialer-sessions", DEFAULT_USER_ID, options],
+    queryKey: ["dialer-sessions", userId, options],
     queryFn: async () => {
       let query = (supabase as any)
         .from("dialer_sessions")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .order("started_at", { ascending: false });
 
       if (options?.startDate) {
@@ -60,6 +61,7 @@ export function useSessions(options?: {
           : 0,
       }));
     },
+    enabled: !!userId,
   });
 }
 
@@ -75,15 +77,16 @@ export function useTodaySessions() {
 // Get the current active session (or most recent)
 export function useCurrentSession() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["current-session", DEFAULT_USER_ID],
+    queryKey: ["current-session", userId],
     queryFn: async () => {
       // Get the most recent session that hasn't ended (or ended recently)
       const { data, error } = await (supabase as any)
         .from("dialer_sessions")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .order("started_at", { ascending: false })
         .limit(1)
         .single();
@@ -95,21 +98,47 @@ export function useCurrentSession() {
 
       return data as DialerSession;
     },
+    enabled: !!userId,
   });
 }
 
-// Create a new session
+// Create a new session (auto-ends any previous open session for this user)
 export function useCreateSession() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const userId = useAuthId();
 
   return useMutation({
     mutationFn: async (session: Omit<DialerSessionInsert, "user_id">) => {
+      const now = new Date();
+
+      // End all previous open sessions so they no longer show "In progress"
+      const { data: openSessions } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("id, started_at, total_pause_duration_seconds")
+        .eq("user_id", userId!)
+        .is("ended_at", null);
+
+      if (openSessions?.length) {
+        let firstUpdateError: string | null = null;
+        let firstUpdateId: string | null = null;
+        for (const open of openSessions) {
+          const { error: updateError } = await (supabase as any)
+            .from("dialer_sessions")
+            .update({ ended_at: now.toISOString() })
+            .eq("id", open.id);
+          if (updateError && !firstUpdateError) {
+            firstUpdateError = updateError.message || String(updateError);
+            firstUpdateId = open.id;
+          }
+        }
+      }
+
       const { data, error } = await (supabase as any)
         .from("dialer_sessions")
         .insert({
           ...session,
-          user_id: DEFAULT_USER_ID,
+          user_id: userId!,
         })
         .select()
         .single();
@@ -161,27 +190,11 @@ export function useEndSession() {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      // Fetch the session to get started_at and total_pause_duration_seconds
-      const { data: session, error: fetchError } = await (supabase as any)
-        .from("dialer_sessions")
-        .select("started_at, total_pause_duration_seconds")
-        .eq("id", sessionId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
       const now = new Date();
-      const startedAt = new Date(session.started_at);
-      const totalSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
-      const pauseSeconds = session.total_pause_duration_seconds || 0;
-      const effectiveDuration = Math.max(0, totalSeconds - pauseSeconds);
-
+      // duration_seconds is a GENERATED column (computed from ended_at - started_at); only set ended_at
       const { data, error } = await (supabase as any)
         .from("dialer_sessions")
-        .update({
-          ended_at: now.toISOString(),
-          duration_seconds: effectiveDuration,
-        })
+        .update({ ended_at: now.toISOString() })
         .eq("id", sessionId)
         .select()
         .single();
@@ -192,6 +205,41 @@ export function useEndSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["current-session"] });
+    },
+  });
+}
+
+// End all open sessions for the current user (set ended_at so they no longer show "In progress")
+export function useEndAllOpenSessions() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const userId = useAuthId();
+
+  return useMutation({
+    mutationFn: async () => {
+      const now = new Date().toISOString();
+      const { data: openSessions, error: fetchError } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("id")
+        .eq("user_id", userId!)
+        .is("ended_at", null);
+
+      if (fetchError) throw fetchError;
+      if (!openSessions?.length) return { count: 0 };
+
+      for (const row of openSessions) {
+        const { error: updateError } = await (supabase as any)
+          .from("dialer_sessions")
+          .update({ ended_at: now })
+          .eq("id", row.id);
+        if (updateError) throw updateError;
+      }
+      return { count: openSessions.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["current-session"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics-summary"] });
     },
   });
 }
@@ -288,6 +336,7 @@ export function useResumeSession() {
 export function useSessionTracker() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const userId = useAuthId();
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
 
@@ -303,7 +352,7 @@ export function useSessionTracker() {
       const { data: recentSession } = await (supabase as any)
         .from("dialer_sessions")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", gapThreshold.toISOString())
         .order("started_at", { ascending: false })
         .limit(1)
@@ -351,7 +400,7 @@ export function useSessionTracker() {
       } else {
         // Create new session
         const initialCounts: DialerSessionInsert = {
-          user_id: DEFAULT_USER_ID,
+          user_id: userId!,
           started_at: now.toISOString(),
           total_calls: 1,
           connected_calls: callData.outcome === "connected" ? 1 : 0,
@@ -381,6 +430,7 @@ export function useSessionTracker() {
 export function useIncrementSessionMeetings() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const userId = useAuthId();
 
   return useMutation({
     mutationFn: async () => {
@@ -391,7 +441,7 @@ export function useIncrementSessionMeetings() {
       const { data: currentSession } = await (supabase as any)
         .from("dialer_sessions")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", gapThreshold.toISOString())
         .order("started_at", { ascending: false })
         .limit(1)

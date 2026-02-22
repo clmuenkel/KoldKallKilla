@@ -31,10 +31,6 @@ export async function GET() {
       .map(([name, count]) => ({ company_name: name, count }))
       .sort((a, b) => b.count - a.count);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'orphaned-contacts/route.ts:GET',message:'Preview orphaned contacts',data:{totalOrphaned:orphanedContacts?.length||0,uniqueCompanies:byCompany.size},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'fix-verify'})}).catch(()=>{});
-    // #endregion
-
     return NextResponse.json({
       totalOrphaned: orphanedContacts?.length || 0,
       uniqueCompanyNames: byCompany.size,
@@ -90,10 +86,6 @@ export async function POST(request: Request) {
     }
 
     const deletedCount = deletedRows?.length || 0;
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/73fcbc11-1ac2-44b8-a6d3-3c6d8d6ac42d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'orphaned-contacts/route.ts:POST',message:'Deleted orphaned contacts',data:{deletedCount,companyNameFilter},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'fix-verify'})}).catch(()=>{});
-    // #endregion
 
     return NextResponse.json({
       message: "Orphaned contacts deleted",

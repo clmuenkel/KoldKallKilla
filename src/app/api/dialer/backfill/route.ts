@@ -6,7 +6,7 @@ import {
   getCapacitySettings,
   DEFAULT_TARGET_PER_DAY,
 } from "@/lib/capacity-scheduler";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/dialer/backfill
@@ -14,7 +14,12 @@ import { DEFAULT_USER_ID } from "@/lib/default-user";
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = user.id;
     const preview = await getBackfillPreview(userId);
     
     return NextResponse.json(preview);
@@ -33,7 +38,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = user.id;
     const body = await request.json().catch(() => ({}));
     const { includeOverdue = true, dryRun = false } = body;
     

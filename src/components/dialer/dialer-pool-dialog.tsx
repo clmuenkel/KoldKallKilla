@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { useDialerStore } from "@/stores/dialer-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,7 +84,7 @@ export function DialerPoolDialog({
   
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
   
   // Get dialer store actions for immediate queue updates
   const { removeContactFromQueue, removeCompanyContactsFromQueue } = useDialerStore();

@@ -474,6 +474,12 @@ export interface Database {
         };
         Relationships: [];
       };
+      task_contacts: {
+        Row: { task_id: string; contact_id: string };
+        Insert: { task_id: string; contact_id: string };
+        Update: { task_id?: string; contact_id?: string };
+        Relationships: [];
+      };
       meeting_notes: {
         Row: {
           id: string;
@@ -610,6 +616,12 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
+      };
+      meeting_attendees: {
+        Row: { meeting_id: string; contact_id: string };
+        Insert: { meeting_id: string; contact_id: string };
+        Update: { meeting_id?: string; contact_id?: string };
         Relationships: [];
       };
       email_templates: {
@@ -1082,10 +1094,12 @@ export interface ContactRelation {
 // Extended types for joined queries
 export interface MeetingWithContact extends Meeting {
   contacts: ContactRelation | null;
+  meeting_attendees?: { contact_id: string; contacts: ContactRelation | null }[];
 }
 
 export interface TaskWithContact extends Task {
   contacts: ContactRelation | null;
+  task_contacts?: { contact_id: string; contacts: ContactRelation | null }[];
 }
 
 export interface CallWithContact extends Call {

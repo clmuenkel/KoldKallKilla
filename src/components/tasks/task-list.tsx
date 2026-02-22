@@ -270,14 +270,23 @@ function TaskItem({
                   {format(parseISO(task.due_date), "MMM d, yyyy")}
                 </div>
               )}
-              {contact && (
-                <Link
-                  href={`/contacts/${task.contact_id}`}
-                  className="flex items-center gap-1 hover:text-primary"
-                >
-                  <User className="h-3 w-3" />
-                  {contact.first_name} {contact.last_name}
-                </Link>
+              {(contact || (task.task_contacts?.length ?? 0) > 0) && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {contact && (
+                    <Link
+                      href={`/contacts/${task.contact_id}`}
+                      className="flex items-center gap-1 hover:text-primary"
+                    >
+                      <User className="h-3 w-3" />
+                      {contact.first_name} {contact.last_name}
+                    </Link>
+                  )}
+                  {task.task_contacts?.length ? (
+                    <span className="text-muted-foreground">
+                      {contact ? ", " : ""}and {task.task_contacts.length} more
+                    </span>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>

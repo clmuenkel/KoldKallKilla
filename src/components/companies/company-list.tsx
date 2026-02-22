@@ -38,7 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DialerPoolDialog, isEntityPaused } from "@/components/dialer/dialer-pool-dialog";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { getFriendlyTimezoneName } from "@/lib/timezone";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -336,7 +336,7 @@ function BulkActionsBar({
 }) {
   const [isPausing, setIsPausing] = useState(false);
   const supabase = createClient();
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
 
   const handleBulkPause = async (months: number) => {
     setIsPausing(true);

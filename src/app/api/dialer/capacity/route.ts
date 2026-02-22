@@ -7,7 +7,7 @@ import {
   getUnreachableTodayCount,
 } from "@/lib/capacity-scheduler";
 import { detectBloat } from "@/lib/bloat-detector";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/dialer/capacity
@@ -15,7 +15,12 @@ import { DEFAULT_USER_ID } from "@/lib/default-user";
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = user.id;
     
     // Get all capacity data in parallel
     const [settings, dueStats, buckets, bloatStatus, unscheduledCounts] = await Promise.all([

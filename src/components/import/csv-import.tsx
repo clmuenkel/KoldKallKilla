@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import {
   parseCSVByTemplate,
   dedupeByLink,
@@ -121,7 +121,7 @@ export function CSVImport() {
   } | null>(null);
   
   const supabase = createClient();
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.name.endsWith(".csv")) {

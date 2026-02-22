@@ -16,10 +16,12 @@ import {
   Building2,
   ChevronRight,
   Search,
+  Plus,
 } from "lucide-react";
+import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
 import { Input } from "@/components/ui/input";
 import { format, isPast, isFuture, isToday } from "date-fns";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { MeetingWithContact } from "@/types/database";
@@ -27,12 +29,15 @@ import type { MeetingWithContact } from "@/types/database";
 type FilterTab = "all" | "upcoming" | "past" | "completed";
 
 export default function MeetingsPage() {
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId();
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [createMeetingOpen, setCreateMeetingOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: allMeetings, isLoading } = useAllMeetings();
+
+  if (!userId) return null;
 
   // Filter meetings based on active tab
   const filteredMeetings = (allMeetings ?? []).filter((meeting) => {
@@ -83,14 +88,20 @@ export default function MeetingsPage() {
           title="All Meetings"
           description="View and manage your scheduled meetings"
           actions={
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search meetings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-64"
-              />
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setCreateMeetingOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Schedule meeting
+              </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search meetings..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-64"
+                />
+              </div>
             </div>
           }
         />
@@ -138,7 +149,7 @@ export default function MeetingsPage() {
           <EmptyState
             icon={Calendar}
             title={searchQuery ? "No meetings match your search" : "No meetings found"}
-            description={searchQuery ? "Try adjusting your search terms" : "Schedule a meeting from the dialer or contact page"}
+            description={searchQuery ? "Try adjusting your search terms" : "Schedule a meeting using the button above, or from the dialer or contact page"}
           />
         )}
       </div>
@@ -152,6 +163,13 @@ export default function MeetingsPage() {
           onOpenChange={(open) => !open && setSelectedMeetingId(null)}
         />
       )}
+
+      {/* Create Meeting Dialog */}
+      <CreateMeetingDialog
+        open={createMeetingOpen}
+        onOpenChange={setCreateMeetingOpen}
+        userId={userId}
+      />
     </div>
   );
 }

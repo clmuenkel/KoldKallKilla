@@ -50,10 +50,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
+  const { attendee_ids, ...meetingPayload } = body;
 
   const { data, error } = await supabase
     .from("meetings")
-    .insert(body)
+    .insert(meetingPayload)
     .select()
     .single();
 
@@ -61,9 +62,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const contactId = data?.contact_id ?? body.contact_id;
-  if (contactId) {
-    await supabase.from("contacts").update({ stage: "meeting" }).eq("id", contactId);
+  const primaryId = data?.contact_id ?? body.contact_id;
+  if (primaryId) {
+    await supabase.from("contacts").update({ stage: "meeting" }).eq("id", primaryId);
+  }
+
+  const extraIds = (attendee_ids ?? []).filter((id: string) => id && id !== primaryId);
+  if (extraIds.length > 0) {
+    await supabase.from("meeting_attendees").insert(
+      extraIds.map((contact_id: string) => ({ meeting_id: data.id, contact_id }))
+    );
   }
 
   return NextResponse.json(data, { status: 201 });

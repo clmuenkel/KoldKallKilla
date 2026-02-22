@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, User, Key, Bell, Database, Trash2, Download, AlertTriangle } from "lucide-react";
+import { Loader2, Save, User, Key, Bell, Database, Trash2, Download, AlertTriangle, Lock, UserPlus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,24 +25,34 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import type { Profile } from "@/types/database";
 
 export default function SettingsPage() {
+  const userId = useAuthId();
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
 
   // Profile
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("user@pezcrm.local");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [calendarLink, setCalendarLink] = useState("");
 
   // API Keys
   const [apolloApiKey, setApolloApiKey] = useState("");
+
+  // Password change
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  // Invite
+  const [inviteEmail, setInviteEmail] = useState("");
 
   // Goals
   const [dailyCallGoal, setDailyCallGoal] = useState(50);
@@ -51,11 +61,15 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
+        // Load auth email
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.email) setEmail(authUser.email);
+
         // Load profile
         const { data: profileData } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", DEFAULT_USER_ID)
+          .eq("id", userId!)
           .single();
         
         const profile = profileData as Profile | null;
@@ -72,7 +86,7 @@ export default function SettingsPage() {
         const { data: settingsData } = await supabase
           .from("user_settings")
           .select("*")
-          .eq("user_id", DEFAULT_USER_ID)
+          .eq("user_id", userId!)
           .single();
         
         const settings = settingsData as { apollo_api_key?: string } | null;
@@ -97,7 +111,7 @@ export default function SettingsPage() {
       await supabase
         .from("profiles")
         .upsert({
-          id: DEFAULT_USER_ID,
+          id: userId!,
           full_name: fullName,
           email,
           phone,
@@ -110,7 +124,7 @@ export default function SettingsPage() {
       await supabase
         .from("user_settings")
         .upsert({
-          user_id: DEFAULT_USER_ID,
+          user_id: userId!,
           apollo_api_key: apolloApiKey,
         } as any);
 
@@ -122,10 +136,56 @@ export default function SettingsPage() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword("");
+      setConfirmNewPassword("");
+      toast.success("Password updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail) {
+      toast.error("Enter an email address");
+      return;
+    }
+    setIsSendingInvite(true);
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send invite");
+      setInviteEmail("");
+      toast.success(`Invite sent to ${inviteEmail}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send invite");
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
   const handleSeedData = async () => {
     setIsSeeding(true);
     try {
-      const results = await seedDummyData();
+      const results = await seedDummyData(userId!);
       
       if (results.errors.length > 0) {
         console.error("Seed errors:", results.errors);
@@ -144,7 +204,7 @@ export default function SettingsPage() {
   const handleClearData = async () => {
     setIsClearing(true);
     try {
-      await clearDummyData();
+      await clearDummyData(userId!);
       toast.success("All data cleared!");
     } catch (error: any) {
       toast.error(error.message || "Failed to clear data");
@@ -316,6 +376,101 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Change Password */}
+          <Card
+            className="opacity-0 animate-fade-in"
+            style={{ animationDelay: "150ms", animationFillMode: "forwards" }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+              <CardDescription>Update your account password</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmNewPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    minLength={6}
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword || !newPassword || !confirmNewPassword}
+                variant="outline"
+                className="gap-2"
+              >
+                {isChangingPassword ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Lock className="h-4 w-4" />
+                )}
+                Update Password
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Invite Team Member */}
+          <Card
+            className="opacity-0 animate-fade-in"
+            style={{ animationDelay: "175ms", animationFillMode: "forwards" }}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Invite Team Member
+              </CardTitle>
+              <CardDescription>
+                Send an invite link to a new user — they will set their own password
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-3">
+                <Input
+                  type="email"
+                  placeholder="colleague@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="max-w-sm"
+                />
+                <Button
+                  onClick={handleSendInvite}
+                  disabled={isSendingInvite || !inviteEmail}
+                  className="gap-2 shrink-0"
+                >
+                  {isSendingInvite ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" />
+                  )}
+                  Send Invite
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Invited users will receive an email to activate their account. Their data will be fully separate from yours.
+              </p>
             </CardContent>
           </Card>
 

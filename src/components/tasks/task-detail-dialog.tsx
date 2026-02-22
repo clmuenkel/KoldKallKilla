@@ -42,6 +42,10 @@ interface TaskDetailDialogProps {
       last_name?: string;
       company_name?: string;
     } | null;
+    task_contacts?: {
+      contact_id: string;
+      contacts: { id: string; first_name: string; last_name?: string; company_name?: string } | null;
+    }[];
   };
 }
 
@@ -133,6 +137,9 @@ export function TaskDetailDialog({
                 {task.contacts && (
                   <> for {task.contacts.first_name} {task.contacts.last_name}</>
                 )}
+                {task.task_contacts?.length ? (
+                  <> (+{task.task_contacts.length} more)</>
+                ) : null}
               </DialogDescription>
             </div>
           </div>
@@ -199,25 +206,49 @@ export function TaskDetailDialog({
           )}
 
           {/* Contact Info */}
-          {task.contacts && (
+          {(task.contacts || (task.task_contacts?.length ?? 0) > 0) && (
             <>
               <Separator />
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <User className="h-5 w-5 text-muted-foreground" />
-                <div className="flex-1">
-                  <Link 
-                    href={`/contacts/${task.contacts.id}`}
-                    className="font-medium hover:underline text-primary"
-                  >
-                    {task.contacts.first_name} {task.contacts.last_name}
-                  </Link>
-                  {task.contacts.company_name && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Building2 className="h-3 w-3" />
-                      {task.contacts.company_name}
-                    </p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Contacts</h4>
+                {task.contacts && (
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <Link 
+                        href={`/contacts/${task.contacts.id}`}
+                        className="font-medium hover:underline text-primary"
+                      >
+                        {task.contacts.first_name} {task.contacts.last_name}
+                      </Link>
+                      {task.contacts.company_name && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Building2 className="h-3 w-3" />
+                          {task.contacts.company_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {task.task_contacts?.map((tc) => tc.contacts && (
+                  <div key={tc.contact_id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <Link 
+                        href={`/contacts/${tc.contact_id}`}
+                        className="font-medium hover:underline text-primary"
+                      >
+                        {tc.contacts.first_name} {tc.contacts.last_name}
+                      </Link>
+                      {tc.contacts.company_name && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Building2 className="h-3 w-3" />
+                          {tc.contacts.company_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           )}

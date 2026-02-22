@@ -38,6 +38,8 @@ interface DialerState {
   isViewingHome: boolean; // True when user pauses session to view home
   sessionStartTime: Date | null;
   sessionDbId: string | null; // Database session ID for linking calls to sessions
+  pausedAt: Date | null;
+  totalPausedSeconds: number;
   queue: Contact[];
   currentIndex: number;
 
@@ -73,10 +75,12 @@ interface DialerState {
   // Actions
   startSession: (contacts: Contact[], sessionDbId?: string) => void;
   setSessionDbId: (sessionDbId: string | null) => void;
+  replaceSessionWithNew: (newSessionDbId: string) => void;
   endSession: () => void;
   pauseSession: () => void;
   resumeSession: () => void;
   setQueue: (contacts: Contact[]) => void;
+  updateCurrentContact: (updates: Partial<Contact>) => void;
   pruneQueue: (predicate: (contact: Contact) => boolean) => void;
   removeContactFromQueue: (contactId: string) => void;
   removeCompanyContactsFromQueue: (companyId: string) => void;
@@ -123,6 +127,8 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   isViewingHome: false,
   sessionStartTime: null,
   sessionDbId: null,
+  pausedAt: null,
+  totalPausedSeconds: 0,
   queue: [],
   currentIndex: 0,
   currentContact: null,
@@ -149,6 +155,8 @@ export const useDialerStore = create<DialerState>((set, get) => ({
       isViewingHome: false,
       sessionStartTime: new Date(),
       sessionDbId: sessionDbId || null,
+      pausedAt: null,
+      totalPausedSeconds: 0,
       queue: contacts,
       currentIndex: 0,
       currentContact: contacts[0] || null,
@@ -159,12 +167,23 @@ export const useDialerStore = create<DialerState>((set, get) => ({
     set({ sessionDbId });
   },
 
+  replaceSessionWithNew: (newSessionDbId) => {
+    set({
+      sessionDbId: newSessionDbId,
+      sessionStartTime: new Date(),
+      pausedAt: null,
+      totalPausedSeconds: 0,
+    });
+  },
+
   endSession: () => {
     set({
       isActive: false,
       isViewingHome: false,
       sessionStartTime: null,
       sessionDbId: null,
+      pausedAt: null,
+      totalPausedSeconds: 0,
       queue: [],
       currentIndex: 0,
       currentContact: null,
@@ -185,11 +204,13 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   },
 
   pauseSession: () => {
-    set({ isViewingHome: true });
+    set({ isViewingHome: true, pausedAt: new Date() });
   },
 
   resumeSession: () => {
-    set({ isViewingHome: false });
+    const { pausedAt, totalPausedSeconds } = get();
+    const added = pausedAt ? (Date.now() - pausedAt.getTime()) / 1000 : 0;
+    set({ isViewingHome: false, pausedAt: null, totalPausedSeconds: totalPausedSeconds + added });
   },
 
   setQueue: (contacts) => {
@@ -197,6 +218,16 @@ export const useDialerStore = create<DialerState>((set, get) => ({
       queue: contacts,
       currentContact: contacts[get().currentIndex] || null,
     });
+  },
+
+  updateCurrentContact: (updates) => {
+    const { queue, currentIndex, currentContact } = get();
+    if (!currentContact) return;
+    const updated = { ...currentContact, ...updates };
+    const newQueue = queue.map((c) =>
+      c.id === currentContact.id ? updated : c
+    );
+    set({ queue: newQueue, currentContact: updated });
   },
 
   // Remove contacts from queue that match predicate

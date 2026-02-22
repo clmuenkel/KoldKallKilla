@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import type { UserTarget, UserTargetUpdate } from "@/types/analytics";
 
 // Default targets if none exist
@@ -23,14 +23,15 @@ const DEFAULT_WEEKLY_TARGETS = {
 // Fetch user targets (daily and weekly)
 export function useTargets() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["user-targets", DEFAULT_USER_ID],
+    queryKey: ["user-targets", userId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("user_targets")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID);
+        .eq("user_id", userId!);
 
       if (error) {
         // If table doesn't exist yet, return defaults
@@ -51,20 +52,22 @@ export function useTargets() {
         weekly: weekly || { ...DEFAULT_WEEKLY_TARGETS, target_type: "weekly" as const },
       };
     },
+    enabled: !!userId,
   });
 }
 
 // Fetch just daily targets
 export function useDailyTargets() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["user-targets", DEFAULT_USER_ID, "daily"],
+    queryKey: ["user-targets", userId, "daily"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("user_targets")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .eq("target_type", "daily")
         .single();
 
@@ -84,14 +87,15 @@ export function useDailyTargets() {
 // Fetch just weekly targets
 export function useWeeklyTargets() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["user-targets", DEFAULT_USER_ID, "weekly"],
+    queryKey: ["user-targets", userId, "weekly"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("user_targets")
         .select("*")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .eq("target_type", "weekly")
         .single();
 
@@ -111,6 +115,7 @@ export function useWeeklyTargets() {
 export function useUpdateTarget() {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const userId = useAuthId();
 
   return useMutation({
     mutationFn: async ({
@@ -124,7 +129,7 @@ export function useUpdateTarget() {
         .from("user_targets")
         .upsert(
           {
-            user_id: DEFAULT_USER_ID,
+            user_id: userId!,
             target_type: targetType,
             ...updates,
           },

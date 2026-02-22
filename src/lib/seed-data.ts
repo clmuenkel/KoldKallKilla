@@ -2,7 +2,6 @@
 // This file can be imported and run to seed the database with test data
 
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
 import { getTimezoneFromLocation } from "@/lib/timezone";
 import { addBusinessDays, formatDateForDB } from "@/lib/utils";
 
@@ -273,9 +272,8 @@ const DUMMY_CONTACTS_BY_COMPANY: Record<string, Array<{
   ],
 };
 
-export async function seedDummyData() {
+export async function seedDummyData(userId: string) {
   const supabase = createClient();
-  const userId = DEFAULT_USER_ID;
   
   const results = {
     companies: 0,
@@ -450,9 +448,8 @@ export async function seedDummyData() {
   }
 }
 
-export async function clearDummyData() {
+export async function clearDummyData(userId: string) {
   const supabase = createClient();
-  const userId = DEFAULT_USER_ID;
 
   // Delete in order to avoid FK constraints
   await supabase.from("tasks").delete().eq("user_id", userId);

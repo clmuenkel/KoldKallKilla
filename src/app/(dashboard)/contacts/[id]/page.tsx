@@ -20,7 +20,7 @@ import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
 import { TaskForm } from "@/components/tasks/task-form";
 import { STAGES } from "@/lib/constants";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { formatPhone, copyToClipboard, getInitials } from "@/lib/utils";
 import {
   Phone,
@@ -46,7 +46,7 @@ import { useDialerStore } from "@/stores/dialer-store";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AbuButton } from "@/components/ui/abu-button";
 import {
   Dialog,
@@ -81,6 +81,42 @@ import {
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
 
+function PersonalConnectorField({
+  value,
+  onSave,
+  disabled,
+}: {
+  value: string;
+  onSave: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const [local, setLocal] = useState(value);
+  const [isDirty, setIsDirty] = useState(false);
+  useEffect(() => {
+    if (!isDirty) setLocal(value);
+  }, [value, isDirty]);
+  const handleBlur = () => {
+    if (isDirty) {
+      onSave(local.trim());
+      setIsDirty(false);
+    }
+  };
+  return (
+    <Textarea
+      placeholder="Add a personal connector note (e.g. referral, opener context)..."
+      value={local}
+      onChange={(e) => {
+        setLocal(e.target.value);
+        setIsDirty(true);
+      }}
+      onBlur={handleBlur}
+      disabled={disabled}
+      className="min-h-[80px] resize-y text-sm"
+      rows={3}
+    />
+  );
+}
+
 export default function ContactDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -101,8 +137,10 @@ export default function ContactDetailPage() {
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [newNoteText, setNewNoteText] = useState("");
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
-  const userId = DEFAULT_USER_ID;
-  
+  const userId = useAuthId();
+
+  if (!userId) return null;
+
   // Check if contact is paused via the structured pause feature
   const contactIsPaused = contact ? isEntityPaused(contact.dialer_paused_until) : false;
 
@@ -547,17 +585,27 @@ export default function ContactDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Personal Connector */}
-            {contact.direct_referral_note && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Personal Connector</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{contact.direct_referral_note}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Personal Connector - always visible, editable */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Personal Connector</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PersonalConnectorField
+                  value={contact.direct_referral_note ?? ""}
+                  onSave={(value) =>
+                    updateContact.mutate(
+                      { id: contactId, updates: { direct_referral_note: value || null } },
+                      {
+                        onSuccess: () => toast.success("Personal connector saved"),
+                        onError: () => toast.error("Failed to save"),
+                      }
+                    )
+                  }
+                  disabled={updateContact.isPending}
+                />
+              </CardContent>
+            </Card>
 
             {/* Tasks */}
             <Card>
@@ -722,14 +770,25 @@ export default function ContactDetailPage() {
                   </div>
                 )}
 
-                {/* Next Call Date */}
+                {/* Next Call Date - editable */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Next Call Date</label>
-                  <div className="text-sm font-medium">
-                    {contact.next_call_date 
-                      ? new Date(contact.next_call_date).toLocaleDateString()
-                      : "Never called"}
-                  </div>
+                  <input
+                    type="date"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={contact.next_call_date ? contact.next_call_date : ""}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      updateContact.mutate(
+                        { id: contactId, updates: { next_call_date: value } },
+                        {
+                          onSuccess: () => toast.success("Next call date updated"),
+                          onError: () => toast.error("Failed to update"),
+                        }
+                      );
+                    }}
+                    disabled={updateContact.isPending}
+                  />
                 </div>
 
                 {/* Cadence */}

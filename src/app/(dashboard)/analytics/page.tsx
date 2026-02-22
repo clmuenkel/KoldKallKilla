@@ -42,11 +42,12 @@ import {
   useCallingStreak,
   useWeekComparison,
 } from "@/hooks/use-analytics";
-import { useSessions } from "@/hooks/use-sessions";
+import { useSessions, useEndAllOpenSessions } from "@/hooks/use-sessions";
 import { useTargets } from "@/hooks/use-targets";
 import type { DateRange, TrendDataPoint, SessionWithStats } from "@/types/analytics";
 import { cn } from "@/lib/utils";
 import { DISPOSITION_LABEL_MAP } from "@/lib/constants";
+import { toast } from "sonner";
 
 const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "today", label: "Today" },
@@ -69,6 +70,7 @@ export default function AnalyticsPage() {
   const { data: weekComparison } = useWeekComparison();
   const { data: sessions } = useSessions({ limit: 10 });
   const { data: targets } = useTargets();
+  const endAllOpenSessions = useEndAllOpenSessions();
 
   return (
     <div className="flex flex-col h-full">
@@ -155,8 +157,8 @@ export default function AnalyticsPage() {
               comparison={weekComparison?.changes.setRate}
             />
             <MetricCard
-              title="Talk Time"
-              value={Math.round((summary?.totalTalkTime || 0) / 60)}
+              title="Session Time"
+              value={Math.round((summary?.totalSessionTime || 0) / 60)}
               suffix=" min"
               icon={<Clock className="h-4 w-4" />}
               loading={loadingSummary}
@@ -307,13 +309,33 @@ export default function AnalyticsPage() {
           {/* Sessions History */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Recent Sessions
-              </CardTitle>
-              <CardDescription>
-                Auto-detected calling sessions (30+ min gap = new session)
-              </CardDescription>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Recent Sessions
+                  </CardTitle>
+                  <CardDescription>
+                    Auto-detected calling sessions (30+ min gap = new session)
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={endAllOpenSessions.isPending}
+                  onClick={() => {
+                    endAllOpenSessions.mutate(undefined, {
+                      onSuccess: (result) => {
+                        if (result?.count) toast.success(`Ended ${result.count} open session(s).`);
+                        else toast.info("No open sessions to end.");
+                      },
+                      onError: () => toast.error("Failed to end sessions."),
+                    });
+                  }}
+                >
+                  {endAllOpenSessions.isPending ? "Ending…" : "End all open sessions"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {sessions && sessions.length > 0 ? (

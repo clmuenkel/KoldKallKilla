@@ -613,8 +613,8 @@ export function mapToCompany(
     ? getTimezoneFromLocation(row.city || null, row.companyInfo || null, "USA") 
     : null;
   
-  // Use CSV timezone if provided, otherwise use location-derived timezone
-  const timezone = csvTimezone ?? locationTimezone;
+  // Prefer location-derived timezone when available so EST (e.g. Connecticut "CT") is not mis-mapped to CST
+  const timezone = locationTimezone ?? csvTimezone;
   
   return {
     user_id: userId,

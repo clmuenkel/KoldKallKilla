@@ -37,6 +37,7 @@ import {
   X,
   CheckCircle,
   Loader2,
+  Plus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -61,20 +62,26 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
+import { useAuthId } from "@/hooks/use-auth";
 import type { MeetingWithContact } from "@/types/database";
 
 export default function CalendarPage() {
+  const userId = useAuthId();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<MeetingWithContact | null>(null);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completionOutcome, setCompletionOutcome] = useState("successful");
   const [completionNotes, setCompletionNotes] = useState("");
+  const [createMeetingOpen, setCreateMeetingOpen] = useState(false);
 
   const { data: upcomingMeetings, isLoading } = useUpcomingMeetings(60); // Get 60 days of meetings
   const { data: todaysMeetings } = useTodaysMeetings();
   const cancelMeeting = useCancelMeeting();
   const completeMeeting = useCompleteMeeting();
+
+  if (!userId) return null;
 
   // Generate calendar days for the month view
   const monthStart = startOfMonth(currentMonth);
@@ -270,10 +277,16 @@ export default function CalendarPage() {
           <div className="w-80 shrink-0">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-3 shrink-0">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {sidebarTitle}
-                </CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {sidebarTitle}
+                  </CardTitle>
+                  <Button size="sm" variant="outline" onClick={() => setCreateMeetingOpen(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Schedule
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full">
@@ -483,6 +496,12 @@ export default function CalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreateMeetingDialog
+        open={createMeetingOpen}
+        onOpenChange={setCreateMeetingOpen}
+        userId={userId}
+      />
     </div>
   );
 }

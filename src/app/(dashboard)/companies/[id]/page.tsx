@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { useCompany, useCompanyCallHistory, useDeleteCompany } from "@/hooks/use-companies";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCompanyNotes, useCreateNote, useDeleteNote } from "@/hooks/use-notes";
+import { useBulkSetOpenerForCompany } from "@/hooks/use-referrals";
 import { CompanyCard, CompanyCardSkeleton } from "@/components/companies/company-card";
 import { CompanyContacts } from "@/components/companies/company-contacts";
 import { CompanyCallHistory } from "@/components/companies/company-call-history";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { DialerPoolDialog, isEntityPaused, isIndefinitePause } from "@/components/dialer/dialer-pool-dialog";
 import { useDialerStore } from "@/stores/dialer-store";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +50,7 @@ import {
   Star,
   PauseCircle,
   PlayCircle,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -56,13 +66,14 @@ export default function CompanyDetailPage() {
   const queryClient = useQueryClient();
   const companyId = params.id as string;
 
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId();
   const { data: company, isLoading: loadingCompany, refetch: refetchCompany } = useCompany(companyId);
   const { data: callHistory, isLoading: loadingCalls } = useCompanyCallHistory(companyId);
   const { data: companyNotes } = useCompanyNotes(companyId);
   const createNote = useCreateNote();
   const deleteNote = useDeleteNote();
   const deleteCompany = useDeleteCompany();
+  const bulkSetOpener = useBulkSetOpenerForCompany();
   const { removeCompanyContactsFromQueue } = useDialerStore();
   const [newNoteText, setNewNoteText] = useState("");
   
@@ -70,6 +81,10 @@ export default function CompanyDetailPage() {
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [openerDialogOpen, setOpenerDialogOpen] = useState(false);
+  const [bulkOpenerText, setBulkOpenerText] = useState("");
+
+  if (!userId) return null;
 
   const handleStartCall = (contactId: string) => {
     router.push(`/dialer?contact=${contactId}`);
@@ -175,6 +190,16 @@ export default function CompanyDetailPage() {
               }
             </TooltipContent>
           </Tooltip>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOpenerDialogOpen(true)}
+            disabled={!company.contacts?.length}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Set opener for everyone
+          </Button>
 
           <Link href={`/import?company=${company.domain}`}>
             <Button variant="outline" size="sm">
@@ -431,6 +456,48 @@ export default function CompanyDetailPage() {
           queryClient.invalidateQueries({ queryKey: ["companies"] });
         }}
       />
+
+      {/* Bulk set opener for company */}
+      <Dialog open={openerDialogOpen} onOpenChange={setOpenerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set opener for everyone at this company</DialogTitle>
+            <DialogDescription>
+              This will set the same opener text for all {company.contacts?.length ?? 0} contacts at {company.name}. They can still have an extra line per contact in the dialer.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={bulkOpenerText}
+            onChange={(e) => setBulkOpenerText(e.target.value)}
+            placeholder="e.g., John Smith told me to reach out..."
+            rows={4}
+            className="mt-2"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenerDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const { count } = await bulkSetOpener.mutateAsync({
+                    companyId,
+                    openerText: bulkOpenerText,
+                  });
+                  toast.success(`Opener set for ${count} contact${count === 1 ? "" : "s"}`);
+                  setOpenerDialogOpen(false);
+                  setBulkOpenerText("");
+                } catch (error: any) {
+                  toast.error(error.message || "Failed to set opener");
+                }
+              }}
+              disabled={bulkSetOpener.isPending}
+            >
+              {bulkSetOpener.isPending ? "Saving..." : "Save for everyone"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Company Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

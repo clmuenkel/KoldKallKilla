@@ -165,6 +165,7 @@ export interface AnalyticsSummary {
   setRate: number;
   totalTalkTime: number;
   avgCallDuration: number;
+  totalSessionTime: number;
 }
 
 // Period comparison (this week vs last week, etc.)

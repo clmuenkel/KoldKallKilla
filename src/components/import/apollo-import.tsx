@@ -59,7 +59,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { ApolloPerson } from "@/types/apollo";
 import type { PersonaSet } from "@/types/database";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 
 // Industry options for search
 const INDUSTRY_OPTIONS = [
@@ -73,7 +73,7 @@ const INDUSTRY_OPTIONS = [
 export function ApolloImport() {
   const [step, setStep] = useState<"search" | "preview" | "importing" | "done">("search");
   const [apiKey, setApiKey] = useState("");
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
   
   // Persona set selection
   const [selectedPersonaSetId, setSelectedPersonaSetId] = useState<string>("");

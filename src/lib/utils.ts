@@ -63,13 +63,17 @@ export function formatDateForDB(date: Date): string {
 }
 
 /**
- * Check if a date is today or in the past (for "due" contacts)
+ * Check if a date is today or in the past (for "due" contacts).
+ * Parses YYYY-MM-DD as local date so "due today" is correct in all timezones.
  */
 export function isDueOrNew(dateStr: string | null): boolean {
   if (!dateStr) return true; // null = never called, can call
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const callDate = new Date(dateStr);
+  const parts = dateStr.split("-").map(Number);
+  const callDate = parts.length === 3
+    ? new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0)
+    : new Date(dateStr);
   return callDate <= today;
 }
 

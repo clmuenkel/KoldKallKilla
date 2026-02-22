@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { 
   startOfDay, 
   endOfDay, 
@@ -65,16 +65,18 @@ export function useAnalyticsSummary(
   customEnd?: string
 ) {
   const supabase = createClient();
+  const userId = useAuthId();
   const { start, end } = getDateBounds(range, customStart, customEnd);
 
   return useQuery({
-    queryKey: ["analytics-summary", DEFAULT_USER_ID, range, customStart, customEnd],
+    queryKey: ["analytics-summary", userId, range, customStart, customEnd],
+    enabled: !!userId,
     queryFn: async (): Promise<AnalyticsSummary> => {
       // Get call stats
       const { data: calls, error: callsError } = await supabase
         .from("calls")
         .select("outcome, duration_seconds, disposition")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString());
 
@@ -84,11 +86,22 @@ export function useAnalyticsSummary(
       const { data: meetings, error: meetingsError } = await supabase
         .from("meetings")
         .select("id")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
       if (meetingsError && meetingsError.code !== "42P01") throw meetingsError;
+
+      const { data: sessions } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("duration_seconds")
+        .eq("user_id", userId!)
+        .gte("started_at", start.toISOString())
+        .lte("started_at", end.toISOString())
+        .not("duration_seconds", "is", null);
+
+      const totalSessionTime = ((sessions as any[]) || [])
+        .reduce((sum: number, s: { duration_seconds: number | null }) => sum + (s.duration_seconds || 0), 0);
 
       const callsList = calls || [];
       const meetingsList = meetings || [];
@@ -115,6 +128,7 @@ export function useAnalyticsSummary(
         setRate: connectedCalls > 0 ? Math.round((meetingsList.length / connectedCalls) * 100) : 0,
         totalTalkTime,
         avgCallDuration: connectedCalls > 0 ? Math.round(totalTalkTime / connectedCalls) : 0,
+        totalSessionTime,
       };
     },
   });
@@ -123,16 +137,18 @@ export function useAnalyticsSummary(
 // Daily stats for trend charts
 export function useDailyStats(days: number = 14) {
   const supabase = createClient();
+  const userId = useAuthId();
   const end = new Date();
   const start = subDays(end, days);
 
   return useQuery({
-    queryKey: ["daily-stats", DEFAULT_USER_ID, days],
+    queryKey: ["daily-stats", userId, days],
+    enabled: !!userId,
     queryFn: async (): Promise<TrendDataPoint[]> => {
       const { data: calls, error } = await supabase
         .from("calls")
         .select("started_at, outcome")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString())
         .order("started_at", { ascending: true });
@@ -142,7 +158,7 @@ export function useDailyStats(days: number = 14) {
       const { data: meetings } = await supabase
         .from("meetings")
         .select("created_at")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
 
@@ -188,15 +204,17 @@ export function useDailyStats(days: number = 14) {
 // Outcome breakdown for pie chart
 export function useOutcomeBreakdown(range: DateRange = "this_week") {
   const supabase = createClient();
+  const userId = useAuthId();
   const { start, end } = getDateBounds(range);
 
   return useQuery({
-    queryKey: ["outcome-breakdown", DEFAULT_USER_ID, range],
+    queryKey: ["outcome-breakdown", userId!, range],
+    enabled: !!userId,
     queryFn: async (): Promise<OutcomeBreakdown[]> => {
       const { data: calls, error } = await supabase
         .from("calls")
         .select("outcome")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString())
         .neq("outcome", "skipped");
@@ -231,9 +249,11 @@ export function useOutcomeBreakdown(range: DateRange = "this_week") {
 // Hourly performance for heatmap
 export function useHourlyPerformance() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["hourly-performance", DEFAULT_USER_ID],
+    queryKey: ["hourly-performance", userId],
+    enabled: !!userId,
     queryFn: async (): Promise<HourlyPerformance[]> => {
       // Query calls from the last 30 days
       const thirtyDaysAgo = subDays(new Date(), 30);
@@ -241,7 +261,7 @@ export function useHourlyPerformance() {
       const { data: calls, error } = await supabase
         .from("calls")
         .select("started_at, outcome")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", thirtyDaysAgo.toISOString())
         .neq("outcome", "skipped");
 
@@ -268,7 +288,7 @@ export function useHourlyPerformance() {
           const key = `${day}-${hour}`;
           const stats = grid[key] || { total: 0, connected: 0 };
           result.push({
-            user_id: DEFAULT_USER_ID,
+            user_id: userId!,
             day_of_week: day,
             hour_of_day: hour,
             total_calls: stats.total,
@@ -288,9 +308,11 @@ export function useHourlyPerformance() {
 // Timezone performance
 export function useTimezonePerformance() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["timezone-performance", DEFAULT_USER_ID],
+    queryKey: ["timezone-performance", userId],
+    enabled: !!userId,
     queryFn: async (): Promise<TimezonePerformance[]> => {
       const thirtyDaysAgo = subDays(new Date(), 30);
 
@@ -300,7 +322,7 @@ export function useTimezonePerformance() {
           outcome,
           contacts!inner(timezone)
         `)
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", thirtyDaysAgo.toISOString())
         .neq("outcome", "skipped");
 
@@ -318,7 +340,7 @@ export function useTimezonePerformance() {
 
       return Object.entries(byTimezone)
         .map(([timezone, stats]) => ({
-          user_id: DEFAULT_USER_ID,
+          user_id: userId!,
           timezone,
           total_calls: stats.total,
           connected: stats.connected,
@@ -334,15 +356,17 @@ export function useTimezonePerformance() {
 // Disposition breakdown for connected calls
 export function useDispositionBreakdown(range: DateRange = "this_week") {
   const supabase = createClient();
+  const userId = useAuthId();
   const { start, end } = getDateBounds(range);
 
   return useQuery({
-    queryKey: ["disposition-breakdown", DEFAULT_USER_ID, range],
+    queryKey: ["disposition-breakdown", userId, range],
+    enabled: !!userId,
     queryFn: async (): Promise<DispositionBreakdown[]> => {
       const { data: calls, error } = await supabase
         .from("calls")
         .select("disposition")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .eq("outcome", "connected")
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString())
@@ -371,9 +395,11 @@ export function useDispositionBreakdown(range: DateRange = "this_week") {
 // Calling streak
 export function useCallingStreak() {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery({
-    queryKey: ["calling-streak", DEFAULT_USER_ID],
+    queryKey: ["calling-streak", userId],
+    enabled: !!userId,
     queryFn: async (): Promise<CallingStreak> => {
       // Get all unique calling dates in the last 90 days
       const ninetyDaysAgo = subDays(new Date(), 90);
@@ -381,7 +407,7 @@ export function useCallingStreak() {
       const { data: calls, error } = await supabase
         .from("calls")
         .select("started_at")
-        .eq("user_id", DEFAULT_USER_ID)
+        .eq("user_id", userId!)
         .gte("started_at", ninetyDaysAgo.toISOString())
         .neq("outcome", "skipped")
         .order("started_at", { ascending: false });

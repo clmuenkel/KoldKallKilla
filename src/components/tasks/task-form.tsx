@@ -23,11 +23,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ContactCombobox } from "@/components/ui/contact-combobox";
+import { ContactMultiSelect } from "@/components/ui/contact-multi-select";
 import { TASK_TYPES, TASK_PRIORITIES } from "@/lib/constants";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 
 const taskSchema = z.object({
@@ -48,18 +49,11 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps) {
-  const [userId, setUserId] = useState<string | null>(DEFAULT_USER_ID);
+  const userId = useAuthId()!;
+  const [additionalContactIds, setAdditionalContactIds] = useState<string[]>([]);
   const supabase = createClient();
   const createTask = useCreateTask();
   const { data: contacts } = useContacts();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id ?? DEFAULT_USER_ID);
-    };
-    getUser();
-  }, [supabase]);
 
   const {
     register,
@@ -80,10 +74,11 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
     },
   });
 
-  // When dialog opens from contact page, sync contact_id so the Related Contact select shows the right value
+  // When dialog opens from contact page, sync contact_id and reset additional contacts
   useEffect(() => {
     if (open) {
       setValue("contact_id", defaultContactId || "");
+      setAdditionalContactIds([]);
     }
   }, [open, defaultContactId, setValue]);
 
@@ -99,8 +94,10 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
         user_id: userId,
         due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
         contact_id: data.contact_id || null,
+        additional_contact_ids: additionalContactIds.length > 0 ? additionalContactIds : undefined,
       });
       toast.success("Task created!");
+      setAdditionalContactIds([]);
       reset();
       onOpenChange(false);
     } catch (error: any) {
@@ -189,6 +186,17 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
               value={watch("contact_id")}
               onValueChange={(v) => setValue("contact_id", v)}
               placeholder="Search contacts (optional)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Also for (optional)</Label>
+            <ContactMultiSelect
+              contacts={contacts}
+              value={additionalContactIds}
+              onValueChange={setAdditionalContactIds}
+              placeholder="Add other contacts..."
+              excludeIds={watch("contact_id") ? [watch("contact_id")] : []}
             />
           </div>
 

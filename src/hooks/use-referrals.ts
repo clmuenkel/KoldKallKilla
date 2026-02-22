@@ -232,6 +232,40 @@ export function useSetCustomOpener() {
 }
 
 /**
+ * Set the same opener text for all contacts at a company (bulk)
+ */
+export function useBulkSetOpenerForCompany() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      companyId,
+      openerText,
+    }: {
+      companyId: string;
+      openerText: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .update({ direct_referral_note: openerText.trim() || null })
+        .eq("company_id", companyId)
+        .select("id");
+
+      if (error) throw error;
+      return { count: data?.length ?? 0 };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["company-contacts", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["company", variables.companyId] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-context"] });
+    },
+  });
+}
+
+/**
  * After calling someone, automatically set them as a referral for another contact
  * Used when contact says "talk to X instead"
  */

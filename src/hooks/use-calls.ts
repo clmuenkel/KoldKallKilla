@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { addBusinessDays, formatDateForDB, INDEFINITE_PAUSE_DATE } from "@/lib/utils";
 import type { Call, CallWithContact, InsertTables } from "@/types/database";
 
@@ -136,14 +136,17 @@ export function useLogCall() {
         user_id: string;
       };
     }) => {
-      // Insert the call
+      // Insert the call first - this is the single source of truth for "call logged"
       const { data: callData, error: callError } = await supabase
         .from("calls")
         .insert(call as any)
         .select()
         .single();
-      
-      if (callError) throw callError;
+
+      if (callError) {
+        console.error("[logCall] Call insert failed:", callError.message, { contact_id: call.contact_id, outcome: call.outcome });
+        throw callError;
+      }
 
       const savedCall = callData as { id: string };
 
@@ -305,8 +308,8 @@ export function useLogCall() {
 
       if (contactError) throw contactError;
 
-      // Log activity
-      await supabase.from("activity_log").insert({
+      // Log activity (non-blocking: call is already saved)
+      const { error: activityError } = await supabase.from("activity_log").insert({
         user_id: call.user_id,
         contact_id: call.contact_id,
         activity_type: "call",
@@ -319,6 +322,9 @@ export function useLogCall() {
           duration: call.duration_seconds,
         },
       } as any);
+      if (activityError) {
+        console.error("[logCall] Activity log failed (call was saved):", activityError.message);
+      }
 
       // Update dialer session stats
       // If explicit session_id provided, use that session
@@ -457,6 +463,9 @@ export function useLogCall() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calls"] });
+      queryClient.invalidateQueries({ queryKey: ["calls", "session-completed"] });
+      queryClient.invalidateQueries({ queryKey: ["calls", "session-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["calls", "today-stats"] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -464,7 +473,6 @@ export function useLogCall() {
       queryClient.invalidateQueries({ queryKey: ["notes"] }); // Invalidate notes since we save call notes
       queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
-      // Invalidate same-day recall query when new call is logged
       queryClient.invalidateQueries({ queryKey: ["calls", "called-today"] });
     },
   });

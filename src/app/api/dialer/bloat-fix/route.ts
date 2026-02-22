@@ -6,7 +6,7 @@ import {
   detectBloat,
   type SuggestedAction 
 } from "@/lib/bloat-detector";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/dialer/bloat-fix
@@ -14,7 +14,12 @@ import { DEFAULT_USER_ID } from "@/lib/default-user";
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = user.id;
     const { searchParams } = new URL(request.url);
     const excludeAaa = searchParams.get("excludeAaa") !== "false";
     const limit = parseInt(searchParams.get("limit") || "100");
@@ -40,7 +45,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userId = DEFAULT_USER_ID;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = user.id;
     const body = await request.json();
     const { candidates, autoFix } = body;
 

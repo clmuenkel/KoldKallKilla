@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useDialerStore, type PhoneType } from "@/stores/dialer-store";
 import { useLogCall, useSessionCallStats } from "@/hooks/use-calls";
 import { useUpdateContact, useDeleteContact } from "@/hooks/use-contacts";
+import type { Contact } from "@/types/database";
+import { useSessionDuration } from "@/hooks/use-session-duration";
+import { usePauseSession } from "@/hooks/use-sessions";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import {
   AlertDialog,
@@ -72,7 +75,7 @@ import {
   Bot,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { AbuButton } from "@/components/ui/abu-button";
 import { PICKUP_DISPOSITIONS } from "@/lib/constants";
 
@@ -107,9 +110,10 @@ interface CallControlsHeaderProps {
 }
 
 export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps = {}) {
-  const userId = DEFAULT_USER_ID;
+  const userId = useAuthId()!;
   const [copied, setCopied] = useState(false);
   const [showMeetingDialog, setShowMeetingDialog] = useState(false);
+  const [meetingDialogContact, setMeetingDialogContact] = useState<Contact | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   
@@ -171,10 +175,11 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
   // Fetch session call stats for summary dialog
   const { data: callStats } = useSessionCallStats(sessionStartTime);
   
-  // Calculate session duration
-  const sessionDuration = sessionStartTime 
-    ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000)
-    : 0;
+  // Pause-aware session duration (freezes when paused)
+  const sessionDuration = useSessionDuration();
+
+  // DB persistence for pause
+  const pauseSessionDb = usePauseSession();
 
   // Get available phone numbers
   const mobileNumber = currentContact?.mobile;
@@ -237,7 +242,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
         },
       });
       toast.info("Contact skipped");
-      nextContact();
+      removeContactFromQueue(currentContact.id);
     } catch (error: any) {
       // If logging fails, still skip to next contact
       console.error("Failed to log skip:", error);
@@ -332,7 +337,11 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
 
       toast.success(`Call saved: ${selectedOutcome.replace("_", " ")}${selectedDisposition ? ` - ${selectedDisposition.replace(/_/g, " ")}` : ""}`);
       setAwaitingPickup(false);
-      nextContact();
+      if (selectedDisposition === "meeting") {
+        setMeetingDialogContact(currentContact);
+        setShowMeetingDialog(true);
+      }
+      removeContactFromQueue(currentContact.id);
     } catch (error: any) {
       toast.error(error.message || "Failed to save call");
       // Keep the outcome selected so user can retry
@@ -384,6 +393,8 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
   const contactName = currentContact 
     ? `${currentContact.first_name} ${currentContact.last_name || ''}`.trim()
     : '';
+  // Block advancing without logging: if call ended and not yet saved, require outcome selection first
+  const callEndedAwaitingOutcome = !isCallActive && callDuration > 0;
 
   return (
     <>
@@ -513,7 +524,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
                     size="icon"
                     className="h-9 w-9 rounded-full"
                     onClick={nextContact}
-                    disabled={isLast}
+                    disabled={isLast || callEndedAwaitingOutcome}
                     aria-label="Next contact"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -521,8 +532,12 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <span className="flex items-center gap-1.5">
-                    Next contact
-                    <kbd className="px-1.5 py-0.5 text-[10px] bg-muted rounded font-mono">→</kbd>
+                    {callEndedAwaitingOutcome
+                      ? "Select an outcome below to save and continue"
+                      : "Next contact"}
+                    {!callEndedAwaitingOutcome && (
+                      <kbd className="px-1.5 py-0.5 text-[10px] bg-muted rounded font-mono">→</kbd>
+                    )}
                   </span>
                 </TooltipContent>
               </Tooltip>
@@ -684,6 +699,11 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Session Timer - always visible */}
+            <Badge variant="outline" className="font-mono text-xs gap-1.5 shrink-0 h-8 px-2.5">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              {formatDuration(sessionDuration)}
+            </Badge>
             <AbuButton 
               size="default"
               contactName={contactName || undefined}
@@ -778,7 +798,10 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
                   <span>Delete Contact</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={pauseSession} className="gap-2">
+                <DropdownMenuItem onClick={() => {
+                  pauseSession();
+                  if (sessionDbId) pauseSessionDb.mutate(sessionDbId);
+                }} className="gap-2">
                   <Home className="h-4 w-4" />
                   <span>Pause & Go Home</span>
                 </DropdownMenuItem>
@@ -834,11 +857,14 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
       </div>
 
       {/* Meeting Dialog */}
-      {currentContact && (
+      {(meetingDialogContact || currentContact) && (
         <MeetingDialog
           open={showMeetingDialog}
-          onOpenChange={setShowMeetingDialog}
-          contact={currentContact}
+          onOpenChange={(open) => {
+            setShowMeetingDialog(open);
+            if (!open) setMeetingDialogContact(null);
+          }}
+          contact={(meetingDialogContact ?? currentContact)!}
           userId={userId}
         />
       )}

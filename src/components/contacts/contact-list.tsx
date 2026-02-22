@@ -53,7 +53,7 @@ import { STAGES, INDUSTRIES } from "@/lib/constants";
 import { formatPhone, copyToClipboard, getInitials, cn } from "@/lib/utils";
 import { DialerPoolDialog, isEntityPaused, INDEFINITE_PAUSE_DATE, PAUSE_DURATION_OPTIONS } from "@/components/dialer/dialer-pool-dialog";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { 
   Search, 
   Phone, 
@@ -704,6 +704,7 @@ function BulkActionsBar({
   const { removeContactFromQueue } = useDialerStore();
   const queryClient = useQueryClient();
   const supabase = createClient();
+  const userId = useAuthId()!;
 
   const handleBulkStageChange = async (newStage: string) => {
     if (!newStage || selected.length === 0) return;
@@ -835,7 +836,7 @@ function BulkActionsBar({
 
       await supabase.from("dialer_pool_events").insert(
         names.map((n) => ({
-          user_id: DEFAULT_USER_ID,
+          user_id: userId,
           entity_type: "contact" as const,
           contact_id: n.id,
           company_id: null,
@@ -897,7 +898,7 @@ function BulkActionsBar({
 
       await supabase.from("dialer_pool_events").insert(
         paused.map((p) => ({
-          user_id: DEFAULT_USER_ID,
+          user_id: userId,
           entity_type: "contact" as const,
           contact_id: p.id,
           company_id: null,

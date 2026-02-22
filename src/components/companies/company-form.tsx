@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { INDUSTRIES, EMPLOYEE_RANGES } from "@/lib/constants";
-import { DEFAULT_USER_ID } from "@/lib/default-user";
+import { useAuthId } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -45,6 +45,7 @@ interface CompanyFormProps {
 }
 
 export function CompanyForm({ open, onOpenChange }: CompanyFormProps) {
+  const userId = useAuthId()!;
   const createCompany = useCreateCompany();
 
   const {
@@ -70,7 +71,7 @@ export function CompanyForm({ open, onOpenChange }: CompanyFormProps) {
   const onSubmit = async (data: CompanyFormValues) => {
     try {
       await createCompany.mutateAsync({
-        user_id: DEFAULT_USER_ID,
+        user_id: userId,
         name: data.name,
         domain: data.domain || null,
         industry: data.industry || null,

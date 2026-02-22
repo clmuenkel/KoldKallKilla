@@ -2,16 +2,17 @@
 
 import { useDialerStore } from "@/stores/dialer-store";
 import { useCompany } from "@/hooks/use-companies";
-import { useContactContext, formatOpenerSuggestion, useUpdateReferralNote, useSetCustomOpener, useRemoveDirectReferral } from "@/hooks/use-referrals";
+import { useUpdateContact } from "@/hooks/use-contacts";
+import { useNextCompanyMeeting } from "@/hooks/use-meetings";
+import { useContactContext, formatOpenerSuggestion, useUpdateReferralNote, useSetCustomOpener, useRemoveDirectReferral, useBulkSetOpenerForCompany } from "@/hooks/use-referrals";
 import { useCompanyNotes } from "@/hooks/use-notes";
 import { Badge, StageBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { STAGES, CALL_OUTCOMES_UI, CALL_DISPOSITIONS, PICKUP_DISPOSITIONS } from "@/lib/constants";
 import { formatPhone, copyToClipboard, getInitials, cn } from "@/lib/utils";
 import { getTimezoneFromLocation, getLocalTime, getTimezoneAbbreviation, isBusinessHours } from "@/lib/timezone";
@@ -28,29 +29,35 @@ import {
   MessageSquare,
   Check,
   Edit2,
-  Target,
   StickyNote,
   Smartphone,
   Globe,
   Briefcase,
   ChevronDown,
   ChevronUp,
+  Calendar,
+  Repeat,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import Link from "next/link";
 
 export function ContactPanelCompact() {
   const {
     currentContact,
     outcome,
     disposition,
-    confirmedBudget,
-    confirmedAuthority,
-    confirmedNeed,
-    confirmedTimeline,
     setOutcome,
     setDisposition,
-    setQualification,
+    updateCurrentContact,
   } = useDialerStore();
 
   const { data: company } = useCompany(currentContact?.company_id || "");
@@ -59,17 +66,30 @@ export function ContactPanelCompact() {
     currentContact?.company_id
   );
   const { data: companyNotes } = useCompanyNotes(currentContact?.company_id);
+  const { data: nextMeeting } = useNextCompanyMeeting(currentContact?.company_id ?? undefined);
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingOpener, setIsEditingOpener] = useState(false);
   const [openerText, setOpenerText] = useState("");
   const [companyExpanded, setCompanyExpanded] = useState(true);
+  const [isEditingContact, setIsEditingContact] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editMobile, setEditMobile] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
 
   const updateReferralNote = useUpdateReferralNote();
   const setCustomOpener = useSetCustomOpener();
   const removeReferral = useRemoveDirectReferral();
+  const bulkSetOpenerForCompany = useBulkSetOpenerForCompany();
+  const updateContact = useUpdateContact();
 
   if (!currentContact) return null;
+
+  // Reset edit state when switching to a different contact
+  useEffect(() => {
+    setIsEditingContact(false);
+  }, [currentContact.id]);
 
   const stage = STAGES.find((s) => s.value === currentContact.stage);
 
@@ -82,10 +102,6 @@ export function ContactPanelCompact() {
   const localTime = getLocalTime(timezone);
   const tzAbbr = getTimezoneAbbreviation(timezone);
   const isBusiness = isBusinessHours(timezone);
-
-  // BANT score
-  const bantScore = [confirmedBudget, confirmedAuthority, confirmedNeed, confirmedTimeline].filter(Boolean).length;
-  const bantPercent = bantScore * 25;
 
   const handleCopy = async (text: string, field: string) => {
     await copyToClipboard(text);
@@ -147,13 +163,40 @@ export function ContactPanelCompact() {
 
           {/* Name & Title */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold tracking-tight truncate">
-                {contactFullName}
-              </h2>
-              <CopyButton text={contactFullName} field="name" />
-            </div>
-            {currentContact.title && (
+            {isEditingContact ? (
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase text-muted-foreground">First name</Label>
+                <Input
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="h-9 text-sm"
+                  placeholder="First name"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl font-bold tracking-tight truncate">
+                  {contactFullName}
+                </h2>
+                <CopyButton text={contactFullName} field="name" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-muted-foreground"
+                  onClick={() => {
+                    setEditFirstName(currentContact.first_name || "");
+                    setEditMobile(currentContact.mobile || "");
+                    setEditPhone(currentContact.phone || "");
+                    setEditEmail(currentContact.email || "");
+                    setIsEditingContact(true);
+                  }}
+                >
+                  <Edit2 className="h-3.5 w-3.5 mr-1" />
+                  Edit
+                </Button>
+              </div>
+            )}
+            {!isEditingContact && currentContact.title && (
               <p className="text-muted-foreground font-medium mt-0.5 flex items-center gap-2">
                 <Briefcase className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{currentContact.title}</span>
@@ -166,22 +209,6 @@ export function ContactPanelCompact() {
                 stage={currentContact.stage as "fresh" | "contacted" | "qualified" | "meeting" | "proposal" | "won" | "lost"} 
                 className="shadow-sm"
               />
-              {bantScore > 0 && (
-                <Badge 
-                  variant="outline" 
-                  className={cn(
-                    "gap-1 font-medium",
-                    bantScore >= 3 
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : bantScore >= 2
-                      ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                      : ""
-                  )}
-                >
-                  <Target className="h-3 w-3" />
-                  {bantScore}/4 BANT
-                </Badge>
-              )}
               {/* Timezone Badge */}
               <Badge 
                 variant="outline" 
@@ -197,89 +224,173 @@ export function ContactPanelCompact() {
                 <span className="text-[10px] opacity-70">{tzAbbr}</span>
               </Badge>
             </div>
+            {nextMeeting && (
+              <Link
+                href="/meetings"
+                className="flex items-center gap-2 mt-2 text-sm text-primary hover:underline"
+              >
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {nextMeeting.contacts
+                    ? `Meeting with ${nextMeeting.contacts.first_name} ${nextMeeting.contacts.last_name ?? ""}`.trim()
+                    : "Upcoming"}
+                  {" "}on {format(new Date(nextMeeting.scheduled_at), "MMM d")} at{" "}
+                  {format(new Date(nextMeeting.scheduled_at), "h:mm a")}
+                  {nextMeeting.title && ` · ${nextMeeting.title}`}
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Quick Action Bar - 2 Column Grid */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Mobile */}
-        {currentContact.mobile && (
-          <button
-            onClick={() => handleCopy(currentContact.mobile!, "mobile")}
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
-              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
-              "active:scale-[0.98]",
-              copiedField === "mobile" && "bg-emerald-500/10 border-emerald-500/30"
-            )}
-          >
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-              "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-            )}>
-              <Smartphone className="h-5 w-5" />
+      {/* Quick Action Bar - 2 Column Grid (or edit form) */}
+      {isEditingContact ? (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Mobile</Label>
+              <Input
+                value={editMobile}
+                onChange={(e) => setEditMobile(e.target.value)}
+                className="h-9 font-mono text-sm"
+                placeholder="Mobile number"
+              />
             </div>
-            <div className="text-left min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Mobile</p>
-              <p className="font-mono font-semibold truncate">{formatPhone(currentContact.mobile)}</p>
+            <div className="space-y-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Direct</Label>
+              <Input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="h-9 font-mono text-sm"
+                placeholder="Direct number"
+              />
             </div>
-            {copiedField === "mobile" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
-          </button>
-        )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-muted-foreground">Email</Label>
+            <Input
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              className="h-9 text-sm"
+              placeholder="Email"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditingContact(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={updateContact.isPending}
+              onClick={async () => {
+                const updates = {
+                  first_name: editFirstName.trim() || null,
+                  mobile: editMobile.trim() || null,
+                  phone: editPhone.trim() || null,
+                  email: editEmail.trim() || null,
+                };
+                try {
+                  await updateContact.mutateAsync({
+                    id: currentContact.id,
+                    updates,
+                  });
+                  updateCurrentContact(updates);
+                  toast.success("Contact updated");
+                  setIsEditingContact(false);
+                } catch (error: any) {
+                  toast.error(error.message || "Failed to update contact");
+                }
+              }}
+            >
+              {updateContact.isPending ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {/* Mobile */}
+          {currentContact.mobile && (
+            <button
+              onClick={() => handleCopy(currentContact.mobile!, "mobile")}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+                "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+                "active:scale-[0.98]",
+                copiedField === "mobile" && "bg-emerald-500/10 border-emerald-500/30"
+              )}
+            >
+              <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+              )}>
+                <Smartphone className="h-5 w-5" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Mobile</p>
+                <p className="font-mono font-semibold truncate">{formatPhone(currentContact.mobile)}</p>
+              </div>
+              {copiedField === "mobile" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+            </button>
+          )}
 
-        {/* Direct Phone */}
-        {currentContact.phone && (
-          <button
-            onClick={() => handleCopy(currentContact.phone!, "phone")}
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
-              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
-              "active:scale-[0.98]",
-              copiedField === "phone" && "bg-emerald-500/10 border-emerald-500/30"
-            )}
-          >
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-              "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-            )}>
-              <Phone className="h-5 w-5" />
-            </div>
-            <div className="text-left min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Direct</p>
-              <p className="font-mono font-semibold truncate">{formatPhone(currentContact.phone)}</p>
-            </div>
-            {copiedField === "phone" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
-          </button>
-        )}
+          {/* Direct Phone */}
+          {currentContact.phone && (
+            <button
+              onClick={() => handleCopy(currentContact.phone!, "phone")}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+                "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+                "active:scale-[0.98]",
+                copiedField === "phone" && "bg-emerald-500/10 border-emerald-500/30"
+              )}
+            >
+              <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              )}>
+                <Phone className="h-5 w-5" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Direct</p>
+                <p className="font-mono font-semibold truncate">{formatPhone(currentContact.phone)}</p>
+              </div>
+              {copiedField === "phone" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+            </button>
+          )}
 
-        {/* Email */}
-        {currentContact.email && (
-          <button
-            onClick={() => handleCopy(currentContact.email!, "email")}
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
-              "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
-              "active:scale-[0.98]",
-              copiedField === "email" && "bg-emerald-500/10 border-emerald-500/30"
-            )}
-          >
-            <div className={cn(
-              "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
-              "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-            )}>
-              <Mail className="h-5 w-5" />
-            </div>
-            <div className="text-left min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Email</p>
-              <p className="font-semibold truncate">{currentContact.email}</p>
-            </div>
-            {copiedField === "email" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
-          </button>
-        )}
+          {/* Email */}
+          {currentContact.email && (
+            <button
+              onClick={() => handleCopy(currentContact.email!, "email")}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl border transition-all duration-200",
+                "hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm",
+                "active:scale-[0.98]",
+                copiedField === "email" && "bg-emerald-500/10 border-emerald-500/30"
+              )}
+            >
+              <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center shrink-0",
+                "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+              )}>
+                <Mail className="h-5 w-5" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Email</p>
+                <p className="font-semibold truncate">{currentContact.email}</p>
+              </div>
+              {copiedField === "email" && <Check className="h-4 w-4 text-emerald-500 ml-auto shrink-0" />}
+            </button>
+          )}
 
-        {/* LinkedIn */}
-        {currentContact.linkedin_url && (
+          {/* LinkedIn */}
+          {currentContact.linkedin_url && (
           <a
             href={currentContact.linkedin_url}
             target="_blank"
@@ -302,8 +413,9 @@ export function ContactPanelCompact() {
             </div>
             <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
           </a>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Location Row */}
       {(currentContact.city || currentContact.state) && (
@@ -312,6 +424,58 @@ export function ContactPanelCompact() {
           <span>{[currentContact.city, currentContact.state, currentContact.country].filter(Boolean).join(", ")}</span>
         </div>
       )}
+
+      {/* Cadence - editable in dialer */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+            <Calendar className="h-3 w-3" /> Next call
+          </label>
+          <input
+            type="date"
+            className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+            value={(currentContact as { next_call_date?: string | null }).next_call_date ?? ""}
+            onChange={(e) => {
+              const value = e.target.value || null;
+              updateContact.mutate(
+                { id: currentContact.id, updates: { next_call_date: value } },
+                { onSuccess: () => toast.success("Next call date updated"), onError: () => toast.error("Failed to update") }
+              );
+            }}
+            disabled={updateContact.isPending}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+            <Repeat className="h-3 w-3" /> Every
+          </label>
+          <Select
+            value={(currentContact as { cadence_days?: number | null }).cadence_days?.toString() ?? "default"}
+            onValueChange={(value) => {
+              updateContact.mutate(
+                {
+                  id: currentContact.id,
+                  updates: { cadence_days: value === "default" ? null : parseInt(value, 10) },
+                },
+                { onSuccess: () => toast.success("Cadence updated"), onError: () => toast.error("Failed to update") }
+              );
+            }}
+            disabled={updateContact.isPending}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Default" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default</SelectItem>
+              <SelectItem value="2">2 days</SelectItem>
+              <SelectItem value="3">3 days</SelectItem>
+              <SelectItem value="5">5 days</SelectItem>
+              <SelectItem value="7">1 week</SelectItem>
+              <SelectItem value="14">2 weeks</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* Company Card - Collapsible */}
       {(company || currentContact.company_name) && (
@@ -422,7 +586,7 @@ export function ContactPanelCompact() {
                   rows={3}
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   size="sm" 
                   variant="outline" 
@@ -437,6 +601,7 @@ export function ContactPanelCompact() {
                     onClick={async () => {
                       try {
                         await removeReferral.mutateAsync(currentContact.id);
+                        updateCurrentContact({ direct_referral_note: null });
                         toast.success("Opener cleared");
                         setIsEditingOpener(false);
                         setOpenerText("");
@@ -464,6 +629,7 @@ export function ContactPanelCompact() {
                           openerText: openerText,
                         });
                       }
+                      updateCurrentContact({ direct_referral_note: openerText.trim() || null });
                       toast.success("Opener saved");
                       setIsEditingOpener(false);
                     } catch (error: any) {
@@ -472,8 +638,30 @@ export function ContactPanelCompact() {
                   }}
                   disabled={updateReferralNote.isPending || setCustomOpener.isPending}
                 >
-                  Save
+                  Add for this person
                 </Button>
+                {currentContact.company_id && (
+                  <Button 
+                    size="sm" 
+                    variant="secondary"
+                    onClick={async () => {
+                      try {
+                        await bulkSetOpenerForCompany.mutateAsync({
+                          companyId: currentContact.company_id!,
+                          openerText: openerText,
+                        });
+                        updateCurrentContact({ direct_referral_note: openerText.trim() || null });
+                        toast.success("Opener set for everyone at this company");
+                        setIsEditingOpener(false);
+                      } catch (error: any) {
+                        toast.error(error.message || "Failed to set opener for company");
+                      }
+                    }}
+                    disabled={bulkSetOpenerForCompany.isPending}
+                  >
+                    Add for everyone in company
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -548,67 +736,6 @@ export function ContactPanelCompact() {
                 <span className="mr-1.5 text-base">{o.icon}</span>
                 {o.label}
               </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* BANT Qualification */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Target className="h-4 w-4 text-primary" />
-              Qualification (BANT)
-            </div>
-            <span className={cn(
-              "text-sm font-bold",
-              bantPercent >= 75 ? "text-emerald-600 dark:text-emerald-400" :
-              bantPercent >= 50 ? "text-amber-600 dark:text-amber-400" :
-              "text-muted-foreground"
-            )}>
-              {bantPercent}%
-            </span>
-          </div>
-          
-          {/* Progress Bar */}
-          <Progress 
-            value={bantPercent} 
-            className={cn(
-              "h-2 mb-4",
-              bantPercent >= 75 ? "[&>div]:bg-emerald-500" :
-              bantPercent >= 50 ? "[&>div]:bg-amber-500" : ""
-            )} 
-          />
-          
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { key: "budget" as const, label: "Budget", checked: confirmedBudget },
-              { key: "authority" as const, label: "Authority", checked: confirmedAuthority },
-              { key: "need" as const, label: "Need", checked: confirmedNeed },
-              { key: "timeline" as const, label: "Timeline", checked: confirmedTimeline },
-            ].map((item) => (
-              <label 
-                key={item.key}
-                className={cn(
-                  "flex flex-col items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-200",
-                  item.checked 
-                    ? "bg-emerald-500/10 border-emerald-500/30" 
-                    : "hover:bg-muted/50 hover:border-border/80"
-                )}
-              >
-                <Checkbox
-                  checked={item.checked}
-                  onCheckedChange={(checked) => setQualification(item.key, !!checked)}
-                  className={item.checked ? "border-emerald-500 data-[state=checked]:bg-emerald-500" : ""}
-                />
-                <span className={cn(
-                  "text-xs font-medium",
-                  item.checked ? "text-emerald-700 dark:text-emerald-400" : ""
-                )}>
-                  {item.label}
-                </span>
-              </label>
             ))}
           </div>
         </CardContent>
