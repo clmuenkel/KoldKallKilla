@@ -124,8 +124,8 @@ export default function ContactDetailPage() {
   const contactId = params.id as string;
 
   const { data: contact, isLoading, refetch: refetchContact } = useContact(contactId);
-  const { data: tasksData } = useTasks({ contactId, status: "todo", limit: 5 });
-  const tasks = (tasksData ?? []) as Task[];
+  const { data: tasksData } = useTasks({ contactId, status: "all", limit: 20 });
+  const tasks = ((tasksData ?? []) as Task[]).filter((t) => t.status !== "done");
   const updateContact = useUpdateContact();
   const deleteContact = useDeleteContact();
   const createNote = useCreateNote();

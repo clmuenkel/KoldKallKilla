@@ -15,8 +15,11 @@ export function useTasks(filters?: {
   return useQuery<TaskWithContact[]>({
     queryKey: ["tasks", filters],
     queryFn: async () => {
+      // Disambiguate contacts relationship:
+      // tasks has a direct FK (tasks.contact_id -> contacts.id) AND an indirect many-to-many via task_contacts.
+      // PostgREST requires explicit FK hint when multiple relationships exist.
       const selectWithJunction =
-        "*, contacts(id, first_name, last_name, company_name), task_contacts(contact_id, contacts(id, first_name, last_name, company_name))";
+        "*, contacts!tasks_contact_id_fkey(id, first_name, last_name, company_name), task_contacts(contact_id, contacts!task_contacts_contact_id_fkey(id, first_name, last_name, company_name))";
 
       let query = supabase
         .from("tasks")
@@ -76,7 +79,7 @@ export function useTodayTasks() {
       const { data, error } = await supabase
         .from("tasks")
         .select(
-          "*, contacts(id, first_name, last_name, company_name), task_contacts(contact_id, contacts(id, first_name, last_name, company_name))"
+          "*, contacts!tasks_contact_id_fkey(id, first_name, last_name, company_name), task_contacts(contact_id, contacts!task_contacts_contact_id_fkey(id, first_name, last_name, company_name))"
         )
         .eq("status", "todo")
         .lte("due_date", today.toISOString())

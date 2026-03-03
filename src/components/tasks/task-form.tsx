@@ -92,6 +92,7 @@ export function TaskForm({ open, onOpenChange, defaultContactId }: TaskFormProps
       await createTask.mutateAsync({
         ...data,
         user_id: userId,
+        status: "todo",
         due_date: data.due_date ? new Date(data.due_date).toISOString() : null,
         contact_id: data.contact_id || null,
         additional_contact_ids: additionalContactIds.length > 0 ? additionalContactIds : undefined,

@@ -17,8 +17,10 @@ export function useMeetings(filters?: {
   return useQuery<MeetingWithContact[]>({
     queryKey: ["meetings", filters],
     queryFn: async () => {
+      // Disambiguate contacts relationship:
+      // meetings has a direct FK (meetings.contact_id -> contacts.id) AND an indirect many-to-many via meeting_attendees.
       const selectWithAttendees =
-        "*, contacts(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts(id, first_name, last_name, company_name, title))";
+        "*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts!meeting_attendees_contact_id_fkey(id, first_name, last_name, company_name, title))";
       let query = supabase
         .from("meetings")
         .select(selectWithAttendees);
@@ -83,7 +85,7 @@ export function useAllMeetings() {
       const { data, error } = await supabase
         .from("meetings")
         .select(
-          "*, contacts(id, first_name, last_name, company_name, title)"
+          "*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title)"
         )
         .order("scheduled_at", { ascending: false });
 
@@ -103,7 +105,7 @@ export function useMeeting(id: string) {
       const { data, error } = await supabase
         .from("meetings")
         .select(
-          "*, contacts(id, first_name, last_name, company_name, title, email, phone)"
+          "*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title, email, phone)"
         )
         .eq("id", id)
         .single();
@@ -123,7 +125,7 @@ export function useNextCompanyMeeting(companyId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("meetings")
-        .select("*, contacts(id, first_name, last_name, company_name, title)")
+        .select("*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title)")
         .eq("company_id", companyId!)
         .eq("status", "scheduled")
         .gte("scheduled_at", new Date().toISOString())
@@ -153,7 +155,7 @@ export function useUpcomingMeetings(days: number = 7) {
       const { data, error } = await supabase
         .from("meetings")
         .select(
-          "*, contacts(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts(id, first_name, last_name, company_name, title))"
+          "*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts!meeting_attendees_contact_id_fkey(id, first_name, last_name, company_name, title))"
         )
         .eq("status", "scheduled")
         .gte("scheduled_at", startOfToday.toISOString())
@@ -180,7 +182,7 @@ export function useTodaysMeetings() {
       const { data, error } = await supabase
         .from("meetings")
         .select(
-          "*, contacts(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts(id, first_name, last_name, company_name, title))"
+          "*, contacts!meetings_contact_id_fkey(id, first_name, last_name, company_name, title), meeting_attendees(contact_id, contacts!meeting_attendees_contact_id_fkey(id, first_name, last_name, company_name, title))"
         )
         .eq("status", "scheduled")
         .gte("scheduled_at", today.toISOString())
