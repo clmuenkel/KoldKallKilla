@@ -106,6 +106,9 @@ export function TaskPopup({
     setIsLoadingAI(true);
     setAiSuggested(false);
 
+    // Always use the user's @task content as the title
+    setTitle(taskContent);
+
     fetch("/api/ai/task-suggest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -120,15 +123,13 @@ export function TaskPopup({
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.title) setTitle(data.title);
+        // Only use AI for type and importance — never overwrite the user's title
         if (data.type) setTaskType(data.type);
         if (data.importance) setImportance(String(data.importance));
         setAiSuggested(true);
       })
       .catch((err) => {
         console.error("AI suggestion failed:", err);
-        // Fallback to raw content
-        setTitle(taskContent);
       })
       .finally(() => {
         setIsLoadingAI(false);

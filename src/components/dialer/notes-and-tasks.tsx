@@ -404,7 +404,7 @@ export function NotesAndTasks({
             </div>
 
             {/* Notes List - fixed max height so long notes scroll inside the box */}
-            <ScrollArea className="flex-1 min-h-0 max-h-[280px]" ref={notesScrollRef}>
+            <ScrollArea className="flex-1 min-h-0" ref={notesScrollRef}>
               <div className="space-y-1.5 pr-1">
                 {notes.length > 0 && (
                   <div>
@@ -459,7 +459,7 @@ export function NotesAndTasks({
                         {savedNotes.map((note) => (
                           <div key={note.id} className="text-[10px] p-2 bg-muted/30 rounded group border border-transparent hover:border-border/50">
                             <div className="flex justify-between items-start gap-1">
-                              <p className="whitespace-pre-wrap flex-1 text-foreground/90 line-clamp-2">{note.content}</p>
+                              <p className="whitespace-pre-wrap flex-1 text-foreground/90">{note.content}</p>
                               <Button
                                 variant="ghost"
                                 size="icon"
