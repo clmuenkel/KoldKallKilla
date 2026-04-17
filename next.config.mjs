@@ -6,9 +6,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/ssr'],
-  },
+  serverExternalPackages: ['@supabase/ssr'],
 };
 
 export default nextConfig;

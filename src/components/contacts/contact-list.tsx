@@ -149,7 +149,7 @@ export function ContactList() {
     pageSize,
   };
 
-  const { data: paginatedData, isLoading } = usePaginatedContacts(filters);
+  const { data: paginatedData, isLoading, isError, error } = usePaginatedContacts(filters);
   const contacts = paginatedData?.data;
   const totalCount = paginatedData?.totalCount || 0;
   const totalPages = paginatedData?.totalPages || 1;
@@ -513,6 +513,11 @@ export function ContactList() {
       {isLoading ? (
         <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
           <Skeleton className="h-96 w-full" />
+        </div>
+      ) : isError ? (
+        <div className="rounded-xl border bg-card overflow-hidden shadow-sm p-8 text-center">
+          <p className="text-destructive font-medium">Failed to load contacts</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message || "Could not connect to the database. Please check your connection and try again."}</p>
         </div>
       ) : (
         <div className="rounded-xl border bg-card overflow-hidden shadow-sm">

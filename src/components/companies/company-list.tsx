@@ -89,7 +89,7 @@ export function CompanyList() {
   const deleteCompany = useDeleteCompany();
   const { removeCompanyContactsFromQueue } = useDialerStore();
 
-  const { data: paginatedData, isLoading, refetch } = usePaginatedCompanies({
+  const { data: paginatedData, isLoading, isError, error, refetch } = usePaginatedCompanies({
     search: debouncedSearch || undefined,
     industry: industryFilter !== "all" ? industryFilter : undefined,
     page,
@@ -182,6 +182,11 @@ export function CompanyList() {
       {isLoading ? (
         <div className="rounded-lg border bg-card overflow-hidden">
           <Skeleton className="h-96 w-full" />
+        </div>
+      ) : isError ? (
+        <div className="rounded-lg border bg-card overflow-hidden p-8 text-center">
+          <p className="text-destructive font-medium">Failed to load companies</p>
+          <p className="text-sm text-muted-foreground mt-1">{error?.message || "Could not connect to the database. Please check your connection and try again."}</p>
         </div>
       ) : (
         <div className="rounded-lg border bg-card overflow-hidden">

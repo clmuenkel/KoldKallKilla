@@ -42,7 +42,7 @@ interface TaskListProps {
 }
 
 export function TaskList({ filter = "all" }: TaskListProps) {
-  const { data: tasks, isLoading } = useTasks({
+  const { data: tasks, isLoading, isError, error } = useTasks({
     status: filter === "completed" ? "done" : "todo",
   });
   const completeTask = useCompleteTask();
@@ -97,6 +97,15 @@ export function TaskList({ filter = "all" }: TaskListProps) {
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-20 w-full" />
         ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-lg border bg-card p-8 text-center">
+        <p className="text-destructive font-medium">Failed to load tasks</p>
+        <p className="text-sm text-muted-foreground mt-1">{error?.message || "Could not connect to the database. Please check your connection and try again."}</p>
       </div>
     );
   }

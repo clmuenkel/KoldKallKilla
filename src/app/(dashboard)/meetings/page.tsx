@@ -71,7 +71,7 @@ export default function MeetingsPage() {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const { data: allMeetings, isLoading } = useAllMeetings();
+  const { data: allMeetings, isLoading, isError, error } = useAllMeetings();
 
   if (!userId) return null;
 
@@ -192,6 +192,13 @@ export default function MeetingsPage() {
           {isLoading ? (
             <div className="p-6 flex-1">
               <Skeleton className="h-full w-full rounded-xl" />
+            </div>
+          ) : isError ? (
+            <div className="p-6 flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-destructive font-medium">Failed to load meetings</p>
+                <p className="text-sm text-muted-foreground mt-1">{error?.message || "Could not connect to the database. Please check your connection and try again."}</p>
+              </div>
             </div>
           ) : view === "month" ? (
             <MonthView
