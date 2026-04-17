@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,22 +17,27 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      // Use server-side login to avoid browser-to-Supabase connectivity issues
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
 
       if (rememberMe) {
         localStorage.setItem("pez-remember", "1");
         localStorage.removeItem("pez-no-remember");
         sessionStorage.removeItem("pez-no-remember");
       } else {
-        // Store in both so we can detect browser-restart vs active session
         localStorage.setItem("pez-no-remember", "1");
         sessionStorage.setItem("pez-no-remember", "1");
         localStorage.removeItem("pez-remember");
