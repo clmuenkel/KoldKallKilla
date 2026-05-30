@@ -375,6 +375,8 @@ function EventBlock({
       ? "bg-muted/80 text-muted-foreground border-l-muted-foreground/40 line-through"
       : meeting.status === "completed"
         ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-l-emerald-500 hover:bg-emerald-200 dark:hover:bg-emerald-800/40"
+        : meeting.status === "no_show"
+          ? "bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300 border-l-rose-500 hover:bg-rose-200 dark:hover:bg-rose-800/40"
         : past
           ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-l-amber-500 hover:bg-amber-200 dark:hover:bg-amber-800/40"
           : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-l-blue-500 hover:bg-blue-200 dark:hover:bg-blue-800/40";
@@ -495,6 +497,8 @@ function SidebarCard({
       ? "bg-muted-foreground/40"
       : meeting.status === "completed"
         ? "bg-emerald-500"
+        : meeting.status === "no_show"
+          ? "bg-rose-500"
         : pastDue
           ? "bg-amber-500"
           : "bg-blue-500";
@@ -571,6 +575,11 @@ function SidebarCard({
           {meeting.status === "completed" && (
             <Badge className="text-[9px] px-1.5 h-4 mt-1.5 bg-emerald-500 hover:bg-emerald-500">
               Completed
+            </Badge>
+          )}
+          {meeting.status === "no_show" && (
+            <Badge className="text-[9px] px-1.5 h-4 mt-1.5 bg-rose-500 hover:bg-rose-500">
+              No-show
             </Badge>
           )}
           {pastDue && (
@@ -666,6 +675,8 @@ function MonthView({
                       ? "bg-muted text-muted-foreground line-through"
                       : m.status === "completed"
                         ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300"
+                        : m.status === "no_show"
+                          ? "bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300"
                         : past
                           ? "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300"
                           : "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300";

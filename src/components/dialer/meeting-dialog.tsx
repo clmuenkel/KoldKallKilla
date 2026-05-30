@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { useCreateMeeting } from "@/hooks/use-meetings";
 import { useContacts } from "@/hooks/use-contacts";
-import { useIncrementSessionMeetings } from "@/hooks/use-sessions";
-import { useDialerStore } from "@/stores/dialer-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,8 +73,6 @@ const TIME_SLOTS = generateTimeSlots();
 
 export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDialogProps) {
   const createMeeting = useCreateMeeting();
-  const incrementSessionMeetings = useIncrementSessionMeetings();
-  const sessionStartTime = useDialerStore((s) => s.sessionStartTime);
   const { data: contacts } = useContacts();
 
   const tomorrow = addBusinessDays(new Date(), 1);
@@ -132,13 +128,9 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
         attendee_ids: additionalAttendeeIds.length > 0 ? additionalAttendeeIds : undefined,
       });
 
-      if (sessionStartTime) {
-        try {
-          await incrementSessionMeetings.mutateAsync();
-        } catch {
-          // Non-blocking: session history may not update
-        }
-      }
+      // Note: session meetings_booked is incremented in useLogCall off the call
+      // disposition (single source of truth), not here — so this no longer
+      // double-counts, and meetings booked outside a dial don't inflate the stat.
 
       toast.success("Meeting scheduled!");
       onOpenChange(false);

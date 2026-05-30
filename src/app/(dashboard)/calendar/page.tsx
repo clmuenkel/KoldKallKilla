@@ -397,13 +397,18 @@ export default function CalendarPage() {
 
                 {/* Status Badge */}
                 <div>
-                  <Badge variant={
+                  <Badge
+                    className={selectedMeeting.status === "no_show" ? "bg-rose-500 text-white hover:bg-rose-500" : undefined}
+                    variant={
+                    selectedMeeting.status === "no_show" ? "default" :
                     selectedMeeting.status === "completed" ? "default" :
                     selectedMeeting.status === "cancelled" ? "destructive" :
                     isPast(new Date(selectedMeeting.scheduled_at)) ? "secondary" : "outline"
                   }>
-                    {selectedMeeting.status === "completed" ? "Completed" :
+                    {selectedMeeting.status === "no_show" ? "No-show" :
+                     selectedMeeting.status === "completed" ? "Completed" :
                      selectedMeeting.status === "cancelled" ? "Cancelled" :
+                     selectedMeeting.status === "rescheduled" ? "Rescheduled" :
                      isPast(new Date(selectedMeeting.scheduled_at)) ? "Past Due" : "Scheduled"}
                   </Badge>
                 </div>

@@ -267,10 +267,10 @@ export function CSVImport() {
                 .select("id")
                 .eq("user_id", userId)
                 .eq("domain", domain)
-                .single();
-              
-              if (existingCompany) {
-                companyId = existingCompany.id;
+                .limit(1);
+
+              if (existingCompany && existingCompany.length > 0) {
+                companyId = existingCompany[0].id;
                 companyCache.set(domain, companyId);
               }
             }
@@ -282,10 +282,10 @@ export function CSVImport() {
                 .select("id")
                 .eq("user_id", userId)
                 .eq("name", row.company)
-                .single();
-              
-              if (existingByName) {
-                companyId = existingByName.id;
+                .limit(1);
+
+              if (existingByName && existingByName.length > 0) {
+                companyId = existingByName[0].id;
                 if (domain) companyCache.set(domain, companyId);
               }
             }
@@ -323,9 +323,9 @@ export function CSVImport() {
             .select("id")
             .eq("user_id", userId)
             .eq("linkedin_url", row.linkedinUrl)
-            .single();
-          
-          if (byLinkedIn) existingContactId = byLinkedIn.id;
+            .limit(1);
+
+          if (byLinkedIn && byLinkedIn.length > 0) existingContactId = byLinkedIn[0].id;
         }
         
         // Try email
@@ -335,9 +335,9 @@ export function CSVImport() {
             .select("id")
             .eq("user_id", userId)
             .eq("email", row.email)
-            .single();
-          
-          if (byEmail) existingContactId = byEmail.id;
+            .limit(1);
+
+          if (byEmail && byEmail.length > 0) existingContactId = byEmail[0].id;
         }
         
         // Try mobile (primary phone for Apollo imports)
@@ -347,9 +347,9 @@ export function CSVImport() {
             .select("id")
             .eq("user_id", userId)
             .eq("mobile", row.mobile)
-            .single();
-          
-          if (byMobile) existingContactId = byMobile.id;
+            .limit(1);
+
+          if (byMobile && byMobile.length > 0) existingContactId = byMobile[0].id;
         }
         
         // Try phone (direct/other)
@@ -359,9 +359,9 @@ export function CSVImport() {
             .select("id")
             .eq("user_id", userId)
             .eq("phone", row.direct)
-            .single();
-          
-          if (byPhone) existingContactId = byPhone.id;
+            .limit(1);
+
+          if (byPhone && byPhone.length > 0) existingContactId = byPhone[0].id;
         }
 
         // 3. Insert or update contact

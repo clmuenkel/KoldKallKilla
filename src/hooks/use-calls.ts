@@ -380,10 +380,16 @@ export function useLogCall() {
                 break;
             }
 
-            // Track first meeting set if disposition indicates meeting booked
-            // Supports both new "meeting" disposition and legacy "interested_meeting"
-            if ((call.disposition === "meeting" || call.disposition === "interested_meeting") && !existingSession.first_meeting_set_at) {
-              updates.first_meeting_set_at = now.toISOString();
+            // Count a meeting set FROM this dial (call disposition). This is the
+            // single source of truth for session meetings_booked — counts every
+            // meeting-dispositioned call (not just the first), keyed to the correct
+            // session via call.session_id (works for any session length). The
+            // meeting dialog no longer increments separately (that double-counted
+            // and also counted self-booked meetings). Supports legacy "interested_meeting".
+            if (call.disposition === "meeting" || call.disposition === "interested_meeting") {
+              if (!existingSession.first_meeting_set_at) {
+                updates.first_meeting_set_at = now.toISOString();
+              }
               updates.meetings_booked = (existingSession.meetings_booked || 0) + 1;
             }
 

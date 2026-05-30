@@ -333,8 +333,11 @@ export function MeetingDetailDialog({
                   </Button>
                 )}
                 <Badge
+                  className={meeting.status === "no_show" ? "bg-amber-500 text-white hover:bg-amber-500" : undefined}
                   variant={
-                    meeting.status === "completed"
+                    meeting.status === "no_show"
+                      ? "default"
+                      : meeting.status === "completed"
                       ? "default"
                       : meeting.status === "cancelled"
                       ? "destructive"
@@ -343,10 +346,14 @@ export function MeetingDetailDialog({
                       : "outline"
                   }
                 >
-                  {meeting.status === "completed"
+                  {meeting.status === "no_show"
+                    ? "No-show"
+                    : meeting.status === "completed"
                     ? "Completed"
                     : meeting.status === "cancelled"
                     ? "Cancelled"
+                    : meeting.status === "rescheduled"
+                    ? "Rescheduled"
                     : isPastMeeting
                     ? "Past Due"
                     : "Scheduled"}
