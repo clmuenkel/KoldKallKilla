@@ -79,7 +79,11 @@ export function useTodayCallStats() {
         connected: data.filter((c) => c.outcome === "connected").length,
         voicemail: data.filter((c) => c.outcome === "voicemail").length,
         noAnswer: data.filter((c) => c.outcome === "no_answer").length,
-        meetingsBooked: data.filter((c) => c.disposition === "interested_meeting").length,
+        // Meetings set from dials = call disposition of a booked meeting (the
+        // dialer pickup flow uses "meeting", the info flow uses "interested_meeting").
+        meetingsBooked: data.filter(
+          (c) => c.disposition === "meeting" || c.disposition === "interested_meeting"
+        ).length,
       };
 
       return stats;

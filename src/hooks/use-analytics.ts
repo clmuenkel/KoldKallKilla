@@ -27,6 +27,16 @@ import type {
   DateRange,
 } from "@/types/analytics";
 
+// A "meeting set from a dial" = a logged call whose disposition is a booked
+// meeting. This is what the dial analytics should count — NOT every row in the
+// meetings table, which also includes follow-ups/standalone meetings Zad books
+// himself (or anything synced from Outlook).
+const MEETING_DISPOSITIONS = ["meeting", "interested_meeting"];
+
+function isMeetingDisposition(disposition: string | null | undefined): boolean {
+  return !!disposition && MEETING_DISPOSITIONS.includes(disposition);
+}
+
 // Get date range bounds
 function getDateBounds(range: DateRange, customStart?: string, customEnd?: string) {
   const now = new Date();
@@ -82,16 +92,6 @@ export function useAnalyticsSummary(
 
       if (callsError && callsError.code !== "42P01") throw callsError;
 
-      // Get meetings booked in this period
-      const { data: meetings, error: meetingsError } = await supabase
-        .from("meetings")
-        .select("id")
-        .eq("user_id", userId!)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
-
-      if (meetingsError && meetingsError.code !== "42P01") throw meetingsError;
-
       const { data: sessions } = await (supabase as any)
         .from("dialer_sessions")
         .select("duration_seconds")
@@ -104,7 +104,8 @@ export function useAnalyticsSummary(
         .reduce((sum: number, s: { duration_seconds: number | null }) => sum + (s.duration_seconds || 0), 0);
 
       const callsList = calls || [];
-      const meetingsList = meetings || [];
+      // Meetings booked FROM dials only (call disposition), not the meetings table.
+      const meetingsBooked = callsList.filter((c) => isMeetingDisposition(c.disposition)).length;
 
       const totalCalls = callsList.length;
       const connectedCalls = callsList.filter((c) => c.outcome === "connected").length;
@@ -120,12 +121,12 @@ export function useAnalyticsSummary(
       return {
         totalCalls,
         connectedCalls,
-        meetingsBooked: meetingsList.length,
+        meetingsBooked,
         voicemails,
         skipped,
         noAnswers,
         answerRate: actualAttempts > 0 ? Math.round((connectedCalls / actualAttempts) * 100) : 0,
-        setRate: connectedCalls > 0 ? Math.round((meetingsList.length / connectedCalls) * 100) : 0,
+        setRate: connectedCalls > 0 ? Math.round((meetingsBooked / connectedCalls) * 100) : 0,
         totalTalkTime,
         avgCallDuration: connectedCalls > 0 ? Math.round(totalTalkTime / connectedCalls) : 0,
         totalSessionTime,
@@ -147,20 +148,13 @@ export function useDailyStats(days: number = 14) {
     queryFn: async (): Promise<TrendDataPoint[]> => {
       const { data: calls, error } = await supabase
         .from("calls")
-        .select("started_at, outcome")
+        .select("started_at, outcome, disposition")
         .eq("user_id", userId!)
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString())
         .order("started_at", { ascending: true });
 
       if (error && error.code !== "42P01") throw error;
-
-      const { data: meetings } = await supabase
-        .from("meetings")
-        .select("created_at")
-        .eq("user_id", userId!)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
 
       // Group by date
       const callsByDate: Record<string, { total: number; connected: number }> = {};
@@ -173,11 +167,10 @@ export function useDailyStats(days: number = 14) {
           callsByDate[date].total++;
           if (call.outcome === "connected") callsByDate[date].connected++;
         }
-      });
-
-      (meetings || []).forEach((meeting) => {
-        const date = format(new Date(meeting.created_at), "yyyy-MM-dd");
-        meetingsByDate[date] = (meetingsByDate[date] || 0) + 1;
+        // Meetings set from dials only (call disposition), not the meetings table.
+        if (isMeetingDisposition(call.disposition)) {
+          meetingsByDate[date] = (meetingsByDate[date] || 0) + 1;
+        }
       });
 
       // Build trend data for each day
