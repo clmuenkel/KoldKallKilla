@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMeetings } from "@/hooks/use-meetings";
 import { useMarkMeetingMissed } from "@/hooks/use-followups";
+import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingDetailDialog } from "./meeting-detail";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ export function MeetingsList({
 }: MeetingsListProps) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const markMissed = useMarkMeetingMissed();
+  const isPrimaryUser = useIsPrimaryUser();
 
   const { data: meetings, isLoading } = useMeetings({
     contactId,
@@ -132,6 +134,7 @@ export function MeetingsList({
                   <div className="space-y-2">
                     {pastMeetings.slice(0, compact ? 3 : undefined).map((meeting) => {
                       const unresolved =
+                        isPrimaryUser &&
                         meeting.status === "scheduled" && isPast(new Date(meeting.scheduled_at));
                       return (
                         <div key={meeting.id} className="space-y-1">

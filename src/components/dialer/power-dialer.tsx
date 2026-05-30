@@ -11,6 +11,7 @@ import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
 import { useUpdateContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts } from "@/hooks/use-followups";
+import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { useSearchParams } from "next/navigation";
 import { CallQueue } from "./call-queue";
 import { ContactPanelCompact } from "./contact-panel";
@@ -177,6 +178,7 @@ export function PowerDialer() {
 
   // Human-curated category queues (NOT the auto-dialer pool). These intentionally
   // bypass the in-pool restriction so meeting/proposal-stage contacts still surface.
+  const isPrimaryUser = useIsPrimaryUser();
   const { data: followUpsDue } = useFollowUpsDue();
   const { data: missedMeetingContacts } = useMissedMeetingContacts();
 
@@ -184,13 +186,13 @@ export function PowerDialer() {
   const searchParams = useSearchParams();
   const appliedCategoryParam = useRef(false);
   useEffect(() => {
-    if (appliedCategoryParam.current) return;
+    if (appliedCategoryParam.current || !isPrimaryUser) return;
     const category = searchParams.get("category");
     if (category === "missed_meetings" || category === "follow_ups_due") {
       setFilterMode(category);
       appliedCategoryParam.current = true;
     }
-  }, [searchParams]);
+  }, [searchParams, isPrimaryUser]);
 
   // Fetch companies for company filter
   const { data: companies, isLoading: loadingCompanies } = useCompanies({});
@@ -900,7 +902,8 @@ export function PowerDialer() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Priority queues — Missed Meetings & Follow-ups Due */}
+              {/* Priority queues — Missed Meetings & Follow-ups Due (Zad's login only) */}
+              {isPrimaryUser && (
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -946,6 +949,7 @@ export function PowerDialer() {
                   </Badge>
                 </button>
               </div>
+              )}
 
               {/* Filter Mode Selection */}
               <RadioGroup

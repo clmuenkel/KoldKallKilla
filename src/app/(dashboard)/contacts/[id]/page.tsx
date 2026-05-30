@@ -17,6 +17,7 @@ import { ActivityTimeline } from "@/components/contacts/activity-timeline";
 import { ContactForm } from "@/components/contacts/contact-form";
 import { GroupedNotesTimeline } from "@/components/contacts/grouped-notes-timeline";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
+import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
 import { TaskForm } from "@/components/tasks/task-form";
@@ -140,6 +141,7 @@ export default function ContactDetailPage() {
   const [newNoteText, setNewNoteText] = useState("");
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const userId = useAuthId();
+  const isPrimaryUser = useIsPrimaryUser();
 
   if (!userId) return null;
 
@@ -673,7 +675,8 @@ export default function ContactDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Follow-up — "call me back on this day" */}
+            {/* Follow-up — "call me back on this day" (Zad's login only) */}
+            {isPrimaryUser && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -693,6 +696,7 @@ export default function ContactDetailPage() {
                 </p>
               </CardContent>
             </Card>
+            )}
 
             {/* Calling Cadence */}
             <Card>

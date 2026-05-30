@@ -8,6 +8,7 @@ import {
   useMissedMeetingContacts,
   useMarkFollowUpsAlerted,
 } from "@/hooks/use-followups";
+import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 
 /**
  * Quiet, consolidated alert at the top of the dashboard: who asked to be called
@@ -22,6 +23,7 @@ import {
 const MISSED_DISMISS_KEY = "missed_alert_dismissed_v1";
 
 export function FollowUpAlertBanner() {
+  const isPrimaryUser = useIsPrimaryUser();
   const { data: followUpAlerts } = useFollowUpAlerts();
   const { data: missed } = useMissedMeetingContacts();
   const markAlerted = useMarkFollowUpsAlerted();
@@ -38,6 +40,8 @@ export function FollowUpAlertBanner() {
   const missedCount = missed?.length ?? 0;
   const showMissed = missedCount > 0 && !missedDismissed;
 
+  // Only Zad's login gets these features; every other login keeps the original CRM.
+  if (!isPrimaryUser) return null;
   if (!mounted || (followUpCount === 0 && !showMissed)) return null;
 
   const dismiss = () => {
