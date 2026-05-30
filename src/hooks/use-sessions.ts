@@ -50,8 +50,8 @@ export function useSessions(options?: {
       // Compute additional stats
       return (data as DialerSession[]).map((session): SessionWithStats => ({
         ...session,
-        answer_rate: session.total_calls > 0 
-          ? Math.round((session.connected_calls / (session.total_calls - session.skipped)) * 100) 
+        answer_rate: (session.total_calls - session.skipped) > 0
+          ? Math.round((session.connected_calls / (session.total_calls - session.skipped)) * 100)
           : 0,
         set_rate: session.connected_calls > 0 
           ? Math.round((session.meetings_booked / session.connected_calls) * 100) 

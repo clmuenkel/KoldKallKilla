@@ -199,22 +199,24 @@ export function useMeetingsBookedToday() {
   const supabase = createClient();
 
   return useQuery<number>({
-    queryKey: ["meetings", "booked-today"],
+    // Keyed under "calls" so it refreshes when a call is logged.
+    queryKey: ["calls", "meetings-booked-today"],
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Query meetings CREATED today (booked today), not scheduled today
+      // "Meetings booked today" = meetings set FROM dials (call disposition),
+      // not every meetings-table row created today (which includes follow-ups
+      // Zad books himself and anything synced from Outlook). Mirrors use-analytics.
       const { data, error } = await supabase
-        .from("meetings")
-        .select("id")
-        .gte("created_at", today.toISOString())
-        .lt("created_at", tomorrow.toISOString());
+        .from("calls")
+        .select("disposition")
+        .gte("started_at", today.toISOString());
 
       if (error) throw error;
-      return data?.length || 0;
+      return (data || []).filter(
+        (c) => c.disposition === "meeting" || c.disposition === "interested_meeting"
+      ).length;
     },
   });
 }
