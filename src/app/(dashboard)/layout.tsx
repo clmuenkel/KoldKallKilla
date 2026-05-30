@@ -6,6 +6,7 @@ import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { GlobalSessionBar } from "@/components/dialer/mini-session-bar";
+import { FollowUpAlertBanner } from "@/components/layout/followup-alert-banner";
 
 export default function DashboardLayout({
   children,
@@ -26,6 +27,8 @@ export default function DashboardLayout({
         <main className="flex-1 flex flex-col overflow-hidden transition-all duration-300">
           {/* Global session bar - shows when dialer session is active */}
           {mounted && <GlobalSessionBar />}
+          {/* Follow-ups due + missed meetings alert */}
+          {mounted && <FollowUpAlertBanner />}
           <div className={`flex-1 overflow-auto ${mounted ? "animate-fade-in" : ""}`}>
             {children}
           </div>

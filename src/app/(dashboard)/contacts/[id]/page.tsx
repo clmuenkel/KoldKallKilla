@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ActivityTimeline } from "@/components/contacts/activity-timeline";
 import { ContactForm } from "@/components/contacts/contact-form";
 import { GroupedNotesTimeline } from "@/components/contacts/grouped-notes-timeline";
+import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
 import { TaskForm } from "@/components/tasks/task-form";
@@ -40,6 +41,7 @@ import {
   Star,
   PauseCircle,
   PlayCircle,
+  Clock,
 } from "lucide-react";
 import { DialerPoolDialog, isEntityPaused, isIndefinitePause } from "@/components/dialer/dialer-pool-dialog";
 import { useDialerStore } from "@/stores/dialer-store";
@@ -668,6 +670,27 @@ export default function ContactDetailPage() {
                   <p className="text-2xl font-bold">{contact.total_emails}</p>
                   <p className="text-xs text-muted-foreground">Emails</p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Follow-up — "call me back on this day" */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Follow-up
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <FollowUpControl
+                  contactId={contactId}
+                  currentFollowUp={contact.next_follow_up}
+                  className="w-full justify-start"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Sets a reminder and pauses the auto-dialer until that day. Shows in the
+                  dialer&apos;s Follow-ups Due queue.
+                </p>
               </CardContent>
             </Card>
 

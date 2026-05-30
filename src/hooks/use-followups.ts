@@ -1,0 +1,163 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
+import type { Contact } from "@/types/database";
+
+/**
+ * Helpers for the two human-driven dialer queues: "Follow-ups Due" and
+ * "Missed Meetings". These are explicit, Zad-curated lists — NOT the
+ * auto-dialer cadence. They intentionally ignore the dialer pool so that
+ * meeting/proposal-stage contacts (often out of pool) still surface.
+ *
+ * RLS scopes every query to the logged-in user, so no user_id filter here.
+ */
+
+/** End of the current local day, as an ISO string (inclusive due boundary). */
+function endOfTodayISO(): string {
+  const now = new Date();
+  return new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999
+  ).toISOString();
+}
+
+/**
+ * Contacts with a follow-up date that is due (today or overdue).
+ * Stays in the list until Zad books a meeting, connects on a call, or
+ * sets a new date — never auto-removed.
+ */
+export function useFollowUpsDue() {
+  const supabase = createClient();
+
+  return useQuery<Contact[]>({
+    queryKey: ["followups-due"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .not("next_follow_up", "is", null)
+        .lte("next_follow_up", endOfTodayISO())
+        .order("next_follow_up", { ascending: true });
+      if (error) throw error;
+      return (data as Contact[]) ?? [];
+    },
+  });
+}
+
+/**
+ * Contacts who have a missed meeting (status='no_show' or legacy
+ * outcome='no_show') AND no upcoming scheduled meeting. Booking a new
+ * meeting auto-clears them. won/lost contacts are excluded.
+ */
+export function useMissedMeetingContacts() {
+  const supabase = createClient();
+
+  return useQuery<Contact[]>({
+    queryKey: ["missed-meetings"],
+    queryFn: async () => {
+      // 1. Meetings that count as missed (new status or legacy outcome).
+      const { data: missedRows, error: missedErr } = await supabase
+        .from("meetings")
+        .select("contact_id")
+        .or("status.eq.no_show,outcome.eq.no_show");
+      if (missedErr) throw missedErr;
+
+      const missedIds = new Set(
+        (missedRows ?? []).map((r) => r.contact_id).filter(Boolean) as string[]
+      );
+      if (missedIds.size === 0) return [];
+
+      // 2. Contacts with an upcoming scheduled meeting are already re-booked.
+      const { data: upcomingRows, error: upcomingErr } = await supabase
+        .from("meetings")
+        .select("contact_id")
+        .eq("status", "scheduled")
+        .gte("scheduled_at", new Date().toISOString());
+      if (upcomingErr) throw upcomingErr;
+
+      const upcomingIds = new Set(
+        (upcomingRows ?? []).map((r) => r.contact_id).filter(Boolean) as string[]
+      );
+
+      const targetIds = [...missedIds].filter((id) => !upcomingIds.has(id));
+      if (targetIds.length === 0) return [];
+
+      // 3. Fetch those contacts, excluding closed (won/lost) deals.
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .in("id", targetIds)
+        .not("stage", "in", "(won,lost)");
+      if (error) throw error;
+      return (data as Contact[]) ?? [];
+    },
+  });
+}
+
+/** Mark a meeting as missed (no-show). First-class status, not an outcome. */
+export function useMarkMeetingMissed() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (meetingId: string) => {
+      const { data, error } = await supabase
+        .from("meetings")
+        .update({ status: "no_show" })
+        .eq("id", meetingId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["missed-meetings"] });
+    },
+  });
+}
+
+/**
+ * Set (or clear) a contact's follow-up date. Setting a date also pushes the
+ * auto-dialer's next_call_date to that day so the dialer won't surface them
+ * before the prospect asked to be called. Pass date=null to clear.
+ */
+export function useSetFollowUp() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      date,
+    }: {
+      id: string;
+      date: string | null;
+    }) => {
+      const updates =
+        date === null
+          ? { next_follow_up: null }
+          : { next_follow_up: date, next_call_date: date };
+      const { data, error } = await supabase
+        .from("contacts")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Contact;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["followups-due"] });
+    },
+  });
+}

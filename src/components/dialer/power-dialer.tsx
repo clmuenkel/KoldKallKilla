@@ -10,6 +10,8 @@ import { useDialerShortcuts, useShortcutsHelp, DIALER_SHORTCUTS } from "@/hooks/
 import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
 import { useUpdateContact } from "@/hooks/use-contacts";
+import { useFollowUpsDue, useMissedMeetingContacts } from "@/hooks/use-followups";
+import { useSearchParams } from "next/navigation";
 import { CallQueue } from "./call-queue";
 import { ContactPanelCompact } from "./contact-panel";
 import { CallControlsHeader } from "./call-controls";
@@ -63,7 +65,9 @@ import { toast } from "sonner";
 import { useAuthId } from "@/hooks/use-auth";
 import type { Contact } from "@/types/database";
 
-type FilterMode = "stage" | "company" | "all";
+type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_due";
+
+const CATEGORY_MODES: FilterMode[] = ["missed_meetings", "follow_ups_due"];
 
 // Keyboard Shortcuts Help Panel
 function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -170,7 +174,24 @@ export function PowerDialer() {
 
   // Fetch only in-pool contacts so dialer counts and queue match "In pool" on contacts page
   const { data: allContacts, isLoading: loadingContacts } = useContacts({ dialerPool: "in_pool" });
-  
+
+  // Human-curated category queues (NOT the auto-dialer pool). These intentionally
+  // bypass the in-pool restriction so meeting/proposal-stage contacts still surface.
+  const { data: followUpsDue } = useFollowUpsDue();
+  const { data: missedMeetingContacts } = useMissedMeetingContacts();
+
+  // Deep-link from the dashboard alert: /dialer?category=missed_meetings|follow_ups_due
+  const searchParams = useSearchParams();
+  const appliedCategoryParam = useRef(false);
+  useEffect(() => {
+    if (appliedCategoryParam.current) return;
+    const category = searchParams.get("category");
+    if (category === "missed_meetings" || category === "follow_ups_due") {
+      setFilterMode(category);
+      appliedCategoryParam.current = true;
+    }
+  }, [searchParams]);
+
   // Fetch companies for company filter
   const { data: companies, isLoading: loadingCompanies } = useCompanies({});
 
@@ -424,13 +445,29 @@ export function PowerDialer() {
     return acc;
   }, {} as Record<string, { total: number; withPhone: number }>);
 
+  // Counts for the two category queues (respect the require-phone toggle)
+  const countWithPhoneFilter = (contacts: Contact[] | undefined) => {
+    const list = contacts ?? [];
+    return requirePhone ? list.filter((c) => c.phone || c.mobile).length : list.length;
+  };
+  const categoryCounts = {
+    missed_meetings: countWithPhoneFilter(missedMeetingContacts),
+    follow_ups_due: countWithPhoneFilter(followUpsDue),
+  };
+
   // Calculate counts per timezone group (based on pre-filtered contacts for accurate counts)
   const getTimezoneCountsForFilteredContacts = () => {
-    if (!allContacts) return {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>;
-    
+    const tzSource =
+      filterMode === "missed_meetings"
+        ? missedMeetingContacts
+        : filterMode === "follow_ups_due"
+        ? followUpsDue
+        : allContacts;
+    if (!tzSource) return {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>;
+
     // Apply base filters first (same as getFilteredContacts but without timezone filter)
-    let baseFiltered = allContacts;
-    
+    let baseFiltered = tzSource;
+
     if (filterMode === "stage") {
       baseFiltered = baseFiltered.filter(c => selectedStages.includes(c.stage || "fresh"));
     } else if (filterMode === "company" && selectedCompanyId) {
@@ -484,23 +521,33 @@ export function PowerDialer() {
 
   // Get filtered contacts based on current selection
   const getFilteredContacts = (): Contact[] => {
-    if (!allContacts) return [];
-    
-    let filtered = allContacts;
-    
+    const isCategory = CATEGORY_MODES.includes(filterMode);
+
+    // Pick the source list. Category queues come from their own (pool-agnostic)
+    // queries; stage/company/all use the in-pool contact list.
+    const source =
+      filterMode === "missed_meetings"
+        ? missedMeetingContacts
+        : filterMode === "follow_ups_due"
+        ? followUpsDue
+        : allContacts;
+    if (!source) return [];
+
+    let filtered = source;
+
     // HARD FILTER: Same-day recall prevention
     // Contacts called today are never served again today, regardless of cadence mode
     if (contactsCalledToday && contactsCalledToday.size > 0) {
       filtered = filtered.filter(c => !contactsCalledToday.has(c.id));
     }
-    
+
     // Apply base filters (stage, company, all)
     if (filterMode === "stage") {
       filtered = filtered.filter(c => selectedStages.includes(c.stage || "fresh"));
     } else if (filterMode === "company" && selectedCompanyId) {
       filtered = filtered.filter(c => c.company_id === selectedCompanyId);
     }
-    
+
     // Require phone number
     if (requirePhone) {
       filtered = filtered.filter(c => c.phone || c.mobile);
@@ -513,6 +560,24 @@ export function PowerDialer() {
         const tz = getContactTimezone(c, company);
         const group = getTimezoneGroup(tz);
         return selectedTimezones.includes(group);
+      });
+    }
+
+    // Category queues are explicit, human-curated lists: skip the auto-dialer
+    // pool/cadence eligibility filters entirely. Sort AAA first, then by the
+    // most-overdue follow-up date, then group by company.
+    if (isCategory) {
+      return [...filtered].sort((a, b) => {
+        if (a.is_aaa && !b.is_aaa) return -1;
+        if (!a.is_aaa && b.is_aaa) return 1;
+        if (filterMode === "follow_ups_due") {
+          const da = a.next_follow_up ? new Date(a.next_follow_up).getTime() : Infinity;
+          const db = b.next_follow_up ? new Date(b.next_follow_up).getTime() : Infinity;
+          if (da !== db) return da - db; // most overdue first
+        }
+        const byCompany = (a.company_id || "").localeCompare(b.company_id || "");
+        if (byCompany !== 0) return byCompany;
+        return a.id.localeCompare(b.id);
       });
     }
 
@@ -835,9 +900,56 @@ export function PowerDialer() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Priority queues — Missed Meetings & Follow-ups Due */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("missed_meetings")}
+                  className={cn(
+                    "flex items-center justify-between gap-2 p-4 rounded-lg border-2 text-left transition-all",
+                    filterMode === "missed_meetings"
+                      ? "border-amber-500 bg-amber-500/10"
+                      : "border-border hover:border-amber-500/50"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-6 w-6 text-amber-500" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">Missed Meetings</span>
+                      <span className="text-xs text-muted-foreground">No-shows to win back</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryCounts.missed_meetings}
+                  </Badge>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("follow_ups_due")}
+                  className={cn(
+                    "flex items-center justify-between gap-2 p-4 rounded-lg border-2 text-left transition-all",
+                    filterMode === "follow_ups_due"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-6 w-6 text-primary" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">Follow-ups Due</span>
+                      <span className="text-xs text-muted-foreground">They asked you to call</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryCounts.follow_ups_due}
+                  </Badge>
+                </button>
+              </div>
+
               {/* Filter Mode Selection */}
               <RadioGroup
-                value={filterMode}
+                value={CATEGORY_MODES.includes(filterMode) ? "" : filterMode}
                 onValueChange={(v) => setFilterMode(v as FilterMode)}
                 className="grid grid-cols-3 gap-3"
               >

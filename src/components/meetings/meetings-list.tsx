@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMeetings } from "@/hooks/use-meetings";
+import { useMarkMeetingMissed } from "@/hooks/use-followups";
 import { MeetingDetailDialog } from "./meeting-detail";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +16,10 @@ import {
   Building2,
   Plus,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { format, isPast, isToday, isFuture } from "date-fns";
+import { toast } from "sonner";
 import type { MeetingWithContact } from "@/types/database";
 
 interface MeetingsListProps {
@@ -41,12 +44,22 @@ export function MeetingsList({
   compact = false,
 }: MeetingsListProps) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const markMissed = useMarkMeetingMissed();
 
   const { data: meetings, isLoading } = useMeetings({
     contactId,
     companyId,
     limit,
   });
+
+  const handleMarkMissed = async (meetingId: string) => {
+    try {
+      await markMissed.mutateAsync(meetingId);
+      toast.success("Marked as missed. Added to the Missed Meetings queue.");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to mark missed");
+    }
+  };
 
   // Separate upcoming and past meetings
   const upcomingMeetings = meetings?.filter(
@@ -117,14 +130,33 @@ export function MeetingsList({
                     Past ({pastMeetings.length})
                   </p>
                   <div className="space-y-2">
-                    {pastMeetings.slice(0, compact ? 3 : undefined).map((meeting) => (
-                      <MeetingCard
-                        key={meeting.id}
-                        meeting={meeting}
-                        onClick={() => setSelectedMeetingId(meeting.id)}
-                        compact={compact}
-                      />
-                    ))}
+                    {pastMeetings.slice(0, compact ? 3 : undefined).map((meeting) => {
+                      const unresolved =
+                        meeting.status === "scheduled" && isPast(new Date(meeting.scheduled_at));
+                      return (
+                        <div key={meeting.id} className="space-y-1">
+                          <MeetingCard
+                            meeting={meeting}
+                            onClick={() => setSelectedMeetingId(meeting.id)}
+                            compact={compact}
+                          />
+                          {unresolved && (
+                            <div className="flex justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 text-xs text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
+                                disabled={markMissed.isPending}
+                                onClick={() => handleMarkMissed(meeting.id)}
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                                Mark missed (no-show)
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -169,6 +201,9 @@ function MeetingCard({ meeting, onClick, compact = false }: MeetingCardProps) {
   const isTodayMeeting = isToday(new Date(meeting.scheduled_at));
 
   const getStatusBadge = () => {
+    if (meeting.status === "no_show") {
+      return <Badge className="bg-amber-500 text-white text-[10px]">No-show</Badge>;
+    }
     if (meeting.status === "completed") {
       return <Badge variant="default" className="text-[10px]">Completed</Badge>;
     }

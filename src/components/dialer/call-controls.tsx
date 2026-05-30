@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDialerStore, type PhoneType } from "@/stores/dialer-store";
 import { useLogCall, useSessionCallStats } from "@/hooks/use-calls";
 import { useUpdateContact, useDeleteContact } from "@/hooks/use-contacts";
+import { useSetFollowUp } from "@/hooks/use-followups";
 import type { Contact } from "@/types/database";
 import { useSessionDuration } from "@/hooks/use-session-duration";
 import { usePauseSession } from "@/hooks/use-sessions";
@@ -149,6 +150,9 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
 
   const logCall = useLogCall();
   const updateContact = useUpdateContact();
+  const setFollowUp = useSetFollowUp();
+  // Staged "call me back on" date for this call (YYYY-MM-DD). Applied on save.
+  const [followUpDate, setFollowUpDate] = useState<string | null>(null);
   const deleteContact = useDeleteContact();
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -334,6 +338,16 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
           },
         });
       }
+
+      // Follow-up ("call me back on X"). If Zad staged a date, set it (also pauses
+      // the auto-dialer until then). Otherwise, if he reached them and there was a
+      // pending follow-up, it's now handled — clear it so it leaves Follow-ups Due.
+      if (followUpDate) {
+        await setFollowUp.mutateAsync({ id: currentContact.id, date: followUpDate });
+      } else if (selectedOutcome === "connected" && currentContact.next_follow_up) {
+        await setFollowUp.mutateAsync({ id: currentContact.id, date: null });
+      }
+      setFollowUpDate(null);
 
       toast.success(`Call saved: ${selectedOutcome.replace("_", " ")}${selectedDisposition ? ` - ${selectedDisposition.replace(/_/g, " ")}` : ""}`);
       setAwaitingPickup(false);
@@ -946,6 +960,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
             setShowOtherInput(false);
             setOtherDispositionText("");
             setOtherCadenceDays(5);
+            setFollowUpDate(null);
           }
         }}
       >
@@ -960,6 +975,53 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
             </DialogDescription>
           </DialogHeader>
           
+          {/* Staged follow-up: "they asked me to call back on X" */}
+          <div className="flex items-center gap-2 flex-wrap rounded-md border bg-muted/30 px-3 py-2">
+            <span className="text-xs text-muted-foreground shrink-0">Call back on:</span>
+            {[
+              { label: "2d", days: 2 },
+              { label: "3d", days: 3 },
+              { label: "1wk", days: 7 },
+              { label: "2wk", days: 14 },
+              { label: "1mo", days: 30 },
+            ].map((p) => {
+              const d = new Date();
+              d.setDate(d.getDate() + p.days);
+              const value = formatDateForDB(d);
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setFollowUpDate(followUpDate === value ? null : value)}
+                  className={cn(
+                    "px-2 py-1 text-xs rounded-md border transition-colors",
+                    followUpDate === value
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-muted border-transparent"
+                  )}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+            <input
+              type="date"
+              min={formatDateForDB(new Date())}
+              value={followUpDate ?? ""}
+              onChange={(e) => setFollowUpDate(e.target.value || null)}
+              className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+            />
+            {followUpDate && (
+              <button
+                type="button"
+                onClick={() => setFollowUpDate(null)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                clear
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-2 py-4">
             {PICKUP_DISPOSITIONS.map((opt, index) => {
               const keyNumber = index + 1;

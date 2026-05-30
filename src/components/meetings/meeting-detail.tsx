@@ -219,12 +219,26 @@ export function MeetingDetailDialog({
 
   const handleComplete = async () => {
     try {
-      await completeMeeting.mutateAsync({
-        id: meetingId,
-        outcome: completionOutcome,
-        notes: completionNotes,
-      });
-      toast.success("Meeting marked as complete");
+      if (completionOutcome === "no_show") {
+        // No-show is a first-class status, not a "completed" outcome — this is what
+        // drives the Missed Meetings dialer queue.
+        await updateMeeting.mutateAsync({
+          id: meetingId,
+          updates: {
+            status: "no_show",
+            outcome: "no_show",
+            outcome_notes: completionNotes || null,
+          },
+        });
+        toast.success("Marked as missed. Added to the Missed Meetings queue.");
+      } else {
+        await completeMeeting.mutateAsync({
+          id: meetingId,
+          outcome: completionOutcome,
+          notes: completionNotes,
+        });
+        toast.success("Meeting marked as complete");
+      }
       setShowCompleteDialog(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to complete meeting");
@@ -691,8 +705,8 @@ export function MeetingDetailDialog({
             <Button variant="outline" onClick={() => setShowCompleteDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleComplete} disabled={completeMeeting.isPending}>
-              {completeMeeting.isPending ? (
+            <Button onClick={handleComplete} disabled={completeMeeting.isPending || updateMeeting.isPending}>
+              {completeMeeting.isPending || updateMeeting.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <CheckCircle className="h-4 w-4 mr-2" />
