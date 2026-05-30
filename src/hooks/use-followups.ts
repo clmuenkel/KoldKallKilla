@@ -100,6 +100,71 @@ export function useMissedMeetingContacts() {
   });
 }
 
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * The subset of due follow-ups that should be ALERTED right now (banner), as
+ * opposed to merely living in the dialer queue. Throttled to at most two alerts
+ * per follow-up: the first time it comes due, then once more ~3 days after the
+ * last alert. Anyone reached since the follow-up date is excluded. After two
+ * alerts it goes quiet (but stays in the Follow-ups Due queue).
+ */
+export function useFollowUpAlerts() {
+  const due = useFollowUpsDue();
+  const now = Date.now();
+
+  const contacts = (due.data ?? []).filter((c) => {
+    // Reached since the follow-up came due → already handled, no alert.
+    if (
+      c.last_contacted_at &&
+      c.next_follow_up &&
+      new Date(c.last_contacted_at).getTime() >= new Date(c.next_follow_up).getTime()
+    ) {
+      return false;
+    }
+    const count = c.follow_up_alert_count ?? 0;
+    if (count >= 2) return false; // used up both alerts
+    if (count === 0) return true; // first alert
+    // count === 1: only re-alert once ~3 days after the first alert.
+    if (!c.follow_up_alerted_at) return true;
+    return now >= new Date(c.follow_up_alerted_at).getTime() + THREE_DAYS_MS;
+  });
+
+  return { ...due, data: contacts };
+}
+
+/**
+ * Record that a set of contacts were just alerted: bump their alert count and
+ * stamp the time. Called when Zad acknowledges (dismisses) the banner, so the
+ * ~3-day window for the second alert is measured from acknowledgement.
+ */
+export function useMarkFollowUpsAlerted() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      contacts: { id: string; follow_up_alert_count: number | null }[]
+    ) => {
+      const stamp = new Date().toISOString();
+      await Promise.all(
+        contacts.map((c) =>
+          supabase
+            .from("contacts")
+            .update({
+              follow_up_alert_count: (c.follow_up_alert_count ?? 0) + 1,
+              follow_up_alerted_at: stamp,
+            })
+            .eq("id", c.id)
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["followups-due"] });
+    },
+  });
+}
+
 /** Mark a meeting as missed (no-show). First-class status, not an outcome. */
 export function useMarkMeetingMissed() {
   const supabase = createClient();

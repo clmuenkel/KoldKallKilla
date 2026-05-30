@@ -3,34 +3,55 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, Clock, X } from "lucide-react";
-import { useFollowUpsDue, useMissedMeetingContacts } from "@/hooks/use-followups";
+import {
+  useFollowUpAlerts,
+  useMissedMeetingContacts,
+  useMarkFollowUpsAlerted,
+} from "@/hooks/use-followups";
 
 /**
- * Quiet, consolidated alert shown at the top of the dashboard: who asked to be
- * called back today and which meetings were missed. One line, dismissible for
- * the session (Phase 1). Phase 2 will replace the per-session dismiss with the
- * real cross-device 2-alert throttle (follow_up_alerted_at / follow_up_alert_count).
+ * Quiet, consolidated alert at the top of the dashboard: who asked to be called
+ * back, and which meetings were missed.
+ *
+ * Follow-ups use a cross-device throttle (useFollowUpAlerts): each follow-up is
+ * alerted at most twice — the day it's due, then once ~3 days later, excluding
+ * anyone reached since — then it goes silent while staying in the Follow-ups Due
+ * dialer queue. Dismissing (X) is the acknowledgement that starts that ~3-day
+ * window. Missed meetings stay a simple count, hidden for the session on dismiss.
  */
-const DISMISS_KEY = "followup_alert_dismissed_v1";
+const MISSED_DISMISS_KEY = "missed_alert_dismissed_v1";
 
 export function FollowUpAlertBanner() {
-  const { data: followUps } = useFollowUpsDue();
+  const { data: followUpAlerts } = useFollowUpAlerts();
   const { data: missed } = useMissedMeetingContacts();
-  // Start dismissed so nothing flashes before we read sessionStorage on mount.
-  const [dismissed, setDismissed] = useState(true);
+  const markAlerted = useMarkFollowUpsAlerted();
+
+  const [mounted, setMounted] = useState(false);
+  const [missedDismissed, setMissedDismissed] = useState(true);
 
   useEffect(() => {
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
+    setMounted(true);
+    setMissedDismissed(sessionStorage.getItem(MISSED_DISMISS_KEY) === "1");
   }, []);
 
-  const followUpCount = followUps?.length ?? 0;
+  const followUpCount = followUpAlerts?.length ?? 0;
   const missedCount = missed?.length ?? 0;
+  const showMissed = missedCount > 0 && !missedDismissed;
 
-  if (dismissed || (followUpCount === 0 && missedCount === 0)) return null;
+  if (!mounted || (followUpCount === 0 && !showMissed)) return null;
 
   const dismiss = () => {
-    sessionStorage.setItem(DISMISS_KEY, "1");
-    setDismissed(true);
+    // Acknowledging advances the follow-up throttle and hides the missed count.
+    if (followUpAlerts && followUpAlerts.length > 0) {
+      markAlerted.mutate(
+        followUpAlerts.map((c) => ({
+          id: c.id,
+          follow_up_alert_count: c.follow_up_alert_count,
+        }))
+      );
+    }
+    sessionStorage.setItem(MISSED_DISMISS_KEY, "1");
+    setMissedDismissed(true);
   };
 
   return (
@@ -48,7 +69,7 @@ export function FollowUpAlertBanner() {
           </span>
         </Link>
       )}
-      {missedCount > 0 && (
+      {showMissed && (
         <Link
           href="/dialer?category=missed_meetings"
           className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 hover:bg-amber-500/10 transition-colors"

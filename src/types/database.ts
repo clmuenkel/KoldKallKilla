@@ -176,6 +176,8 @@ export interface Database {
           tags: string[];
           last_contacted_at: string | null;
           next_follow_up: string | null;
+          follow_up_alerted_at: string | null;
+          follow_up_alert_count: number;
           total_calls: number;
           total_emails: number;
           direct_referral_contact_id: string | null;
@@ -230,6 +232,8 @@ export interface Database {
           tags?: string[];
           last_contacted_at?: string | null;
           next_follow_up?: string | null;
+          follow_up_alerted_at?: string | null;
+          follow_up_alert_count?: number;
           total_calls?: number;
           total_emails?: number;
           direct_referral_contact_id?: string | null;
@@ -284,6 +288,8 @@ export interface Database {
           tags?: string[];
           last_contacted_at?: string | null;
           next_follow_up?: string | null;
+          follow_up_alerted_at?: string | null;
+          follow_up_alert_count?: number;
           total_calls?: number;
           total_emails?: number;
           direct_referral_contact_id?: string | null;
