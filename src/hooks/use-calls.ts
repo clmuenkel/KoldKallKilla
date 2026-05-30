@@ -204,14 +204,16 @@ export function useLogCall() {
       // Update contact - fetch current data first
       const { data: currentContactData } = await supabase
         .from("contacts")
-        .select("total_calls, cadence_days, dialer_status")
+        .select("total_calls, cadence_days, dialer_status, mobile, phone")
         .eq("id", call.contact_id)
         .single();
-      
-      const currentContact = currentContactData as { 
-        total_calls: number | null; 
+
+      const currentContact = currentContactData as {
+        total_calls: number | null;
         cadence_days: number | null;
         dialer_status: string | null;
+        mobile: string | null;
+        phone: string | null;
       } | null;
       
       const newTotalCalls = (currentContact?.total_calls || 0) + 1;
@@ -258,14 +260,29 @@ export function useLogCall() {
         }
         // Wrong number - clear the phone number that was used
         else if (call.disposition === "wrong_number") {
-          // Check which phone was used and clear it
+          const isEmpty = (v: string | null | undefined) =>
+            v == null || v.trim() === "";
+          // Clear the number that was used, and note what's left.
+          let remaining: string | null | undefined;
+          let cleared = false;
           if (call.phone_used === "mobile") {
             contactUpdate.mobile = null;
+            remaining = currentContact?.phone;
+            cleared = true;
           } else if (call.phone_used === "office") {
             contactUpdate.phone = null;
+            remaining = currentContact?.mobile;
+            cleared = true;
           }
-          // If both numbers are now empty, pause from dialer
-          // We'll check this after the update
+          // If clearing it leaves no usable number, pause from the dialer so the
+          // contact doesn't keep surfacing with nothing to call.
+          if (cleared && isEmpty(remaining)) {
+            contactUpdate.dialer_status = "paused";
+            contactUpdate.dialer_paused_until = INDEFINITE_PAUSE_DATE;
+            contactUpdate.dialer_pause_reason_code = "wrong_number";
+            contactUpdate.dialer_pause_reason_notes = "No valid phone number";
+            contactUpdate.dialer_paused_at = new Date().toISOString();
+          }
         }
         // Not interested - set next call ~1 month (22 business days) and pause until then
         else if (call.disposition === "not_interested") {

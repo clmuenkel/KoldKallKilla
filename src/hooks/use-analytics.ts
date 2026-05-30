@@ -60,8 +60,10 @@ function getDateBounds(range: DateRange, customStart?: string, customEnd?: strin
       return { start: startOfMonth(lastMonth), end: endOfDay(lastMonth) };
     case "custom":
       return {
-        start: customStart ? new Date(customStart) : startOfDay(now),
-        end: customEnd ? new Date(customEnd) : endOfDay(now),
+        // Normalize to full-day bounds like every other range, so a custom end
+        // date includes that whole day instead of cutting off at midnight.
+        start: customStart ? startOfDay(new Date(customStart)) : startOfDay(now),
+        end: customEnd ? endOfDay(new Date(customEnd)) : endOfDay(now),
       };
     default:
       return { start: startOfDay(now), end: endOfDay(now) };

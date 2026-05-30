@@ -47,13 +47,13 @@ export function useTasks(filters?: {
       }
 
       if (filters?.dueToday) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        // "Due today" = overdue + due today (anything actionable now), not done.
+        // One canonical definition, matching useTodayTasks and the Tasks page.
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
         query = query
-          .gte("due_date", today.toISOString())
-          .lt("due_date", tomorrow.toISOString());
+          .lte("due_date", endOfToday.toISOString())
+          .neq("status", "done");
       }
 
       if (filters?.limit) {
@@ -81,7 +81,8 @@ export function useTodayTasks() {
         .select(
           "*, contacts!tasks_contact_id_fkey(id, first_name, last_name, company_name), task_contacts(contact_id, contacts!task_contacts_contact_id_fkey(id, first_name, last_name, company_name))"
         )
-        .eq("status", "todo")
+        // Not done = todo + in_progress (anything still actionable today).
+        .neq("status", "done")
         .lte("due_date", today.toISOString())
         .order("due_date", { ascending: true })
         .limit(10);

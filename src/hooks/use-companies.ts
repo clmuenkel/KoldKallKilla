@@ -273,10 +273,11 @@ export function usePaginatedCompanies(filters?: CompanyFilters) {
           };
         }
 
-        // Step 4: Fetch all matching companies to sort them, then paginate
+        // Step 4: Fetch all matching companies to sort them, then paginate.
+        // hasContacts → inner-join contacts so only companies with ≥1 contact return.
         let allCompaniesQuery = supabase
           .from("companies")
-          .select("*")
+          .select(filters?.hasContacts ? "*, contacts!inner(id)" : "*")
           .in("id", allCompanyIds)
           .order("name", { ascending: true });
 
@@ -345,9 +346,14 @@ export function usePaginatedCompanies(filters?: CompanyFilters) {
 
       // No search term - use simple paginated query
       // Get total count
+      // hasContacts → inner-join contacts so only companies with ≥1 contact
+      // count/return (the filter is applied DB-side, before pagination).
       let countQuery = supabase
         .from("companies")
-        .select("id", { count: "exact", head: true });
+        .select(filters?.hasContacts ? "id, contacts!inner(id)" : "id", {
+          count: "exact",
+          head: true,
+        });
 
       if (filters?.industry) {
         countQuery = countQuery.eq("industry", filters.industry);
@@ -360,7 +366,7 @@ export function usePaginatedCompanies(filters?: CompanyFilters) {
       // Get paginated companies
       let query = supabase
         .from("companies")
-        .select("*")
+        .select(filters?.hasContacts ? "*, contacts!inner(id)" : "*")
         .order("name", { ascending: true });
 
       if (filters?.industry) {
