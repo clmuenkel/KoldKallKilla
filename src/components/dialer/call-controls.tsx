@@ -299,7 +299,10 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
           ended_at: new Date().toISOString(),
           duration_seconds: callDuration,
           outcome: selectedOutcome,
-          disposition: selectedDisposition || disposition || undefined,
+          // Only the disposition explicitly chosen for THIS call. Do NOT fall back
+          // to the store `disposition` — that leaks the previous call's disposition
+          // (e.g. a booked "meeting") onto later no-answer calls.
+          disposition: selectedDisposition || undefined,
           phone_used: selectedPhoneType,
           notes: notes || undefined,
           confirmed_budget: confirmedBudget,
@@ -311,7 +314,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
       });
 
       // Update contact BANT and stage: qualified if connected + positive; else contacted if fresh; else keep
-      const finalDisposition = selectedDisposition || disposition;
+      const finalDisposition = selectedDisposition;
       const positiveDisposition = finalDisposition === "meeting" || finalDisposition === "interested_follow_up" || finalDisposition?.includes("interested");
       const newStage =
         selectedOutcome === "connected" && positiveDisposition

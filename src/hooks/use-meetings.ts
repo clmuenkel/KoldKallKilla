@@ -210,12 +210,14 @@ export function useMeetingsBookedToday() {
       // Zad books himself and anything synced from Outlook). Mirrors use-analytics.
       const { data, error } = await supabase
         .from("calls")
-        .select("disposition")
+        .select("disposition, outcome")
         .gte("started_at", today.toISOString());
 
       if (error) throw error;
       return (data || []).filter(
-        (c) => c.disposition === "meeting" || c.disposition === "interested_meeting"
+        (c) =>
+          c.outcome === "connected" &&
+          (c.disposition === "meeting" || c.disposition === "interested_meeting")
       ).length;
     },
   });

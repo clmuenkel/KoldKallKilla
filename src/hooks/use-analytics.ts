@@ -106,8 +106,12 @@ export function useAnalyticsSummary(
         .reduce((sum: number, s: { duration_seconds: number | null }) => sum + (s.duration_seconds || 0), 0);
 
       const callsList = calls || [];
-      // Meetings booked FROM dials only (call disposition), not the meetings table.
-      const meetingsBooked = callsList.filter((c) => isMeetingDisposition(c.disposition)).length;
+      // Meetings booked FROM dials only: a CONNECTED call dispositioned as a
+      // booked meeting (connected guard prevents a stale disposition on a
+      // no-answer call from being counted).
+      const meetingsBooked = callsList.filter(
+        (c) => c.outcome === "connected" && isMeetingDisposition(c.disposition)
+      ).length;
 
       const totalCalls = callsList.length;
       const connectedCalls = callsList.filter((c) => c.outcome === "connected").length;
@@ -169,8 +173,8 @@ export function useDailyStats(days: number = 14) {
           callsByDate[date].total++;
           if (call.outcome === "connected") callsByDate[date].connected++;
         }
-        // Meetings set from dials only (call disposition), not the meetings table.
-        if (isMeetingDisposition(call.disposition)) {
+        // Meetings set from dials only: connected + booked-meeting disposition.
+        if (call.outcome === "connected" && isMeetingDisposition(call.disposition)) {
           meetingsByDate[date] = (meetingsByDate[date] || 0) + 1;
         }
       });
