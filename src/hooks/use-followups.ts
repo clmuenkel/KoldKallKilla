@@ -2,7 +2,14 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { format } from "date-fns";
 import type { Contact } from "@/types/database";
+
+/** Dated no-show note text, dropped on the contact when a meeting is marked missed. */
+export function noShowNoteContent(title: string, scheduledAt: string): string {
+  const when = format(new Date(scheduledAt), "EEE, MMM d yyyy 'at' h:mm a");
+  return `🚫 No-show — "${title}" was scheduled ${when}.`;
+}
 
 /**
  * Helpers for the two human-driven dialer queues: "Follow-ups Due" and
@@ -179,11 +186,27 @@ export function useMarkMeetingMissed() {
         .select()
         .single();
       if (error) throw error;
+      // Drop a dated note on the contact so the no-show is easy to see on their page.
+      const m = data as {
+        contact_id: string | null;
+        user_id: string;
+        title: string;
+        scheduled_at: string;
+      };
+      if (m?.contact_id) {
+        await supabase.from("notes").insert({
+          user_id: m.user_id,
+          contact_id: m.contact_id,
+          content: noShowNoteContent(m.title, m.scheduled_at),
+          source: "manual",
+        });
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       queryClient.invalidateQueries({ queryKey: ["missed-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
   });
 }

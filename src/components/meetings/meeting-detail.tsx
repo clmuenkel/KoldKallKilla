@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useMeeting, useUpdateMeeting, useSetMeetingAttendees, useCancelMeeting, useCompleteMeeting } from "@/hooks/use-meetings";
 import { useContacts } from "@/hooks/use-contacts";
+import { useCreateNote } from "@/hooks/use-notes";
+import { noShowNoteContent } from "@/hooks/use-followups";
 import { MeetingNotes } from "./meeting-notes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +102,7 @@ export function MeetingDetailDialog({
   const setMeetingAttendees = useSetMeetingAttendees();
   const cancelMeeting = useCancelMeeting();
   const completeMeeting = useCompleteMeeting();
+  const createNote = useCreateNote();
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completionOutcome, setCompletionOutcome] = useState("successful");
@@ -230,6 +233,15 @@ export function MeetingDetailDialog({
             outcome_notes: completionNotes || null,
           },
         });
+        // Drop a dated no-show note on the contact so it's easy to see on their page.
+        if (meeting?.contact_id) {
+          await createNote.mutateAsync({
+            user_id: meeting.user_id,
+            contact_id: meeting.contact_id,
+            content: noShowNoteContent(meeting.title, meeting.scheduled_at),
+            source: "manual",
+          });
+        }
         toast.success("Marked as missed. Added to the Missed Meetings queue.");
       } else {
         await completeMeeting.mutateAsync({
