@@ -17,6 +17,7 @@ import { ActivityTimeline } from "@/components/contacts/activity-timeline";
 import { ContactForm } from "@/components/contacts/contact-form";
 import { GroupedNotesTimeline } from "@/components/contacts/grouped-notes-timeline";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
+import { MissedMeetingButton } from "@/components/contacts/missed-meeting-button";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
@@ -454,6 +455,15 @@ export default function ContactDetailPage() {
                     <Calendar className="mr-2 h-4 w-4" />
                     Schedule Meeting
                   </Button>
+                  {isPrimaryUser && (
+                    <>
+                      <FollowUpControl
+                        contactId={contactId}
+                        currentFollowUp={contact.next_follow_up}
+                      />
+                      <MissedMeetingButton contactId={contactId} />
+                    </>
+                  )}
                   <AbuButton contactName={`${contact.first_name} ${contact.last_name || ''}`.trim()} />
                 </div>
               </CardContent>
@@ -674,29 +684,6 @@ export default function ContactDetailPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Follow-up — "call me back on this day" (Zad's login only) */}
-            {isPrimaryUser && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Follow-up
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <FollowUpControl
-                  contactId={contactId}
-                  currentFollowUp={contact.next_follow_up}
-                  className="w-full justify-start"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Sets a reminder and pauses the auto-dialer until that day. Shows in the
-                  dialer&apos;s Follow-ups Due queue.
-                </p>
-              </CardContent>
-            </Card>
-            )}
 
             {/* Calling Cadence */}
             <Card>
