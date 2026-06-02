@@ -382,6 +382,19 @@ export default function ContactDetailPage() {
 
                 {/* Contact Info */}
                 <div className="grid gap-4 mt-6 sm:grid-cols-2">
+                  {contact.mobile && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <button
+                        onClick={() => handleCopy(contact.mobile!, "Mobile")}
+                        className="text-sm hover:text-primary hover:underline flex items-center gap-1"
+                      >
+                        {formatPhone(contact.mobile)}
+                        <span className="text-xs text-muted-foreground">mobile</span>
+                        <Copy className="h-3 w-3 opacity-50" />
+                      </button>
+                    </div>
+                  )}
                   {contact.phone && (
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -390,6 +403,7 @@ export default function ContactDetailPage() {
                         className="text-sm hover:text-primary hover:underline flex items-center gap-1"
                       >
                         {formatPhone(contact.phone)}
+                        <span className="text-xs text-muted-foreground">office</span>
                         <Copy className="h-3 w-3 opacity-50" />
                       </button>
                     </div>
