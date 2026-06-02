@@ -71,8 +71,10 @@ export function CallQueue({ companiesById }: CallQueueProps) {
   const upcomingContacts = queue.filter(
     (c, idx) => idx !== currentIndex && !completedIdsSet.has(c.id)
   );
-  const visibleUpcoming = upcomingContacts.slice(0, MAX_VISIBLE_UPCOMING);
-  const hiddenUpcomingCount = Math.max(0, upcomingContacts.length - MAX_VISIBLE_UPCOMING);
+  // Render the full upcoming list — the ScrollArea handles scrolling. (Previously
+  // capped at 10 with a "+N more below" hint, but the rest were never rendered,
+  // so you couldn't scroll to them.)
+  const visibleUpcoming = upcomingContacts;
 
   return (
     <div className="flex flex-col h-full">
@@ -188,13 +190,6 @@ export function CallQueue({ companiesById }: CallQueueProps) {
                   );
                 })}
               </div>
-              
-              {/* Show more indicator */}
-              {hiddenUpcomingCount > 0 && (
-                <div className="mt-2 px-2 py-1.5 text-center text-xs text-muted-foreground bg-muted/30 rounded-lg">
-                  +{hiddenUpcomingCount} more contacts below
-                </div>
-              )}
             </div>
           )}
         </div>
