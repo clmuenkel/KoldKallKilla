@@ -207,6 +207,9 @@ function MeetingCard({ meeting, onClick, compact = false }: MeetingCardProps) {
     if (meeting.status === "no_show") {
       return <Badge className="bg-amber-500 text-white text-[10px]">No-show</Badge>;
     }
+    if (meeting.status === "no_show_resolved") {
+      return <Badge variant="secondary" className="text-[10px]">No-show (handled)</Badge>;
+    }
     if (meeting.status === "completed") {
       return <Badge variant="default" className="text-[10px]">Completed</Badge>;
     }

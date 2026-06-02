@@ -212,6 +212,32 @@ export function useMarkMeetingMissed() {
 }
 
 /**
+ * Remove a contact from the Missed Meetings queue without booking a new meeting.
+ * Resolves all their no-show meetings (status/outcome -> 'no_show_resolved') so
+ * they no longer match the missed-meetings query, while preserving the history
+ * that it was a no-show.
+ */
+export function useDismissMissedMeeting() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (contactId: string) => {
+      const { error } = await supabase
+        .from("meetings")
+        .update({ status: "no_show_resolved", outcome: "no_show_resolved" })
+        .eq("contact_id", contactId)
+        .or("status.eq.no_show,outcome.eq.no_show");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["missed-meetings"] });
+    },
+  });
+}
+
+/**
  * Set (or clear) a contact's follow-up date. Setting a date also pushes the
  * auto-dialer's next_call_date to that day so the dialer won't surface them
  * before the prospect asked to be called. Pass date=null to clear.

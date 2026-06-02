@@ -10,7 +10,7 @@ import { useDialerShortcuts, useShortcutsHelp, DIALER_SHORTCUTS } from "@/hooks/
 import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
 import { useUpdateContact } from "@/hooks/use-contacts";
-import { useFollowUpsDue, useMissedMeetingContacts } from "@/hooks/use-followups";
+import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { useSearchParams } from "next/navigation";
 import { CallQueue } from "./call-queue";
@@ -161,6 +161,7 @@ export function PowerDialer() {
   
   const logCall = useLogCall();
   const updateContact = useUpdateContact();
+  const dismissMissed = useDismissMissedMeeting();
   
   // Session management hooks
   const createSession = useCreateSession();
@@ -1302,7 +1303,28 @@ export function PowerDialer() {
           {/* Column 2: Contact + Company Info (flex grow) */}
           <div className="flex-1 border-r flex flex-col min-w-0">
             {currentContact ? (
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {filterMode === "missed_meetings" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-muted-foreground"
+                    disabled={dismissMissed.isPending}
+                    onClick={async () => {
+                      const id = currentContact.id;
+                      try {
+                        await dismissMissed.mutateAsync(id);
+                        pruneQueue((c) => c.id === id);
+                        toast.success("Removed from Missed Meetings");
+                      } catch (e: any) {
+                        toast.error(e.message || "Failed to remove");
+                      }
+                    }}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove from Missed Meetings
+                  </Button>
+                )}
                 <ContactPanelCompact />
               </div>
             ) : (
