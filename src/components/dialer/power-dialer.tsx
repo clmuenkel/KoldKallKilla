@@ -12,6 +12,7 @@ import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use
 import { useUpdateContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
+import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { useSearchParams } from "next/navigation";
 import { CallQueue } from "./call-queue";
 import { ContactPanelCompact } from "./contact-panel";
@@ -1304,26 +1305,36 @@ export function PowerDialer() {
           <div className="flex-1 border-r flex flex-col min-w-0">
             {currentContact ? (
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {filterMode === "missed_meetings" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-muted-foreground"
-                    disabled={dismissMissed.isPending}
-                    onClick={async () => {
-                      const id = currentContact.id;
-                      try {
-                        await dismissMissed.mutateAsync(id);
-                        pruneQueue((c) => c.id === id);
-                        toast.success("Removed from Missed Meetings");
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to remove");
-                      }
-                    }}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Remove from Missed Meetings
-                  </Button>
+                {isPrimaryUser && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Set a follow-up on this contact anytime — no need to log a call first */}
+                    <FollowUpControl
+                      contactId={currentContact.id}
+                      currentFollowUp={currentContact.next_follow_up}
+                      size="sm"
+                    />
+                    {filterMode === "missed_meetings" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-muted-foreground"
+                        disabled={dismissMissed.isPending}
+                        onClick={async () => {
+                          const id = currentContact.id;
+                          try {
+                            await dismissMissed.mutateAsync(id);
+                            pruneQueue((c) => c.id === id);
+                            toast.success("Removed from Missed Meetings");
+                          } catch (e: any) {
+                            toast.error(e.message || "Failed to remove");
+                          }
+                        }}
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        Remove from Missed Meetings
+                      </Button>
+                    )}
+                  </div>
                 )}
                 <ContactPanelCompact />
               </div>
