@@ -13,6 +13,7 @@ import { useUpdateContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
+import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
 import { useSearchParams } from "next/navigation";
 import { CallQueue } from "./call-queue";
 import { ContactPanelCompact } from "./contact-panel";
@@ -1312,6 +1313,16 @@ export function PowerDialer() {
                       contactId={currentContact.id}
                       currentFollowUp={currentContact.next_follow_up}
                       size="sm"
+                    />
+                    <RemoveFollowUpButton
+                      contactId={currentContact.id}
+                      currentFollowUp={currentContact.next_follow_up}
+                      size="sm"
+                      onRemoved={() => {
+                        if (filterMode === "follow_ups_due") {
+                          pruneQueue((c) => c.id === currentContact.id);
+                        }
+                      }}
                     />
                     {filterMode === "missed_meetings" && (
                       <Button

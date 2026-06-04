@@ -18,6 +18,7 @@ import { ContactForm } from "@/components/contacts/contact-form";
 import { GroupedNotesTimeline } from "@/components/contacts/grouped-notes-timeline";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { MissedMeetingButton } from "@/components/contacts/missed-meeting-button";
+import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
@@ -472,6 +473,10 @@ export default function ContactDetailPage() {
                   {isPrimaryUser && (
                     <>
                       <FollowUpControl
+                        contactId={contactId}
+                        currentFollowUp={contact.next_follow_up}
+                      />
+                      <RemoveFollowUpButton
                         contactId={contactId}
                         currentFollowUp={contact.next_follow_up}
                       />
