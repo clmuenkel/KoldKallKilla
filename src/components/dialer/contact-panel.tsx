@@ -74,6 +74,7 @@ export function ContactPanelCompact() {
   const [companyExpanded, setCompanyExpanded] = useState(true);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
   const [editMobile, setEditMobile] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -164,14 +165,25 @@ export function ContactPanelCompact() {
           {/* Name & Title */}
           <div className="flex-1 min-w-0">
             {isEditingContact ? (
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase text-muted-foreground">First name</Label>
-                <Input
-                  value={editFirstName}
-                  onChange={(e) => setEditFirstName(e.target.value)}
-                  className="h-9 text-sm"
-                  placeholder="First name"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">First name</Label>
+                  <Input
+                    value={editFirstName}
+                    onChange={(e) => setEditFirstName(e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="First name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Last name</Label>
+                  <Input
+                    value={editLastName}
+                    onChange={(e) => setEditLastName(e.target.value)}
+                    className="h-9 text-sm"
+                    placeholder="Last name"
+                  />
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
@@ -185,6 +197,7 @@ export function ContactPanelCompact() {
                   className="h-8 text-muted-foreground"
                   onClick={() => {
                     setEditFirstName(currentContact.first_name || "");
+                    setEditLastName(currentContact.last_name || "");
                     setEditMobile(currentContact.mobile || "");
                     setEditPhone(currentContact.phone || "");
                     setEditEmail(currentContact.email || "");
@@ -291,6 +304,7 @@ export function ContactPanelCompact() {
               onClick={async () => {
                 const updates = {
                   first_name: editFirstName.trim() || null,
+                  last_name: editLastName.trim() || null,
                   mobile: editMobile.trim() || null,
                   phone: editPhone.trim() || null,
                   email: editEmail.trim() || null,
