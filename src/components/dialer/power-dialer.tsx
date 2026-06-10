@@ -10,7 +10,7 @@ import { useDialerShortcuts, useShortcutsHelp, DIALER_SHORTCUTS } from "@/hooks/
 import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
 import { useUpdateContact } from "@/hooks/use-contacts";
-import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting } from "@/hooks/use-followups";
+import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting, useAddToMissedMeetings } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
@@ -164,6 +164,7 @@ export function PowerDialer() {
   const logCall = useLogCall();
   const updateContact = useUpdateContact();
   const dismissMissed = useDismissMissedMeeting();
+  const addMissed = useAddToMissedMeetings();
   
   // Session management hooks
   const createSession = useCreateSession();
@@ -1324,7 +1325,7 @@ export function PowerDialer() {
                         }
                       }}
                     />
-                    {filterMode === "missed_meetings" && (
+                    {filterMode === "missed_meetings" ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1343,6 +1344,27 @@ export function PowerDialer() {
                       >
                         <X className="mr-2 h-4 w-4" />
                         Remove from Missed Meetings
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
+                        disabled={addMissed.isPending}
+                        onClick={async () => {
+                          try {
+                            await addMissed.mutateAsync({
+                              contactId: currentContact.id,
+                              userId,
+                            });
+                            toast.success("Added to Missed Meetings");
+                          } catch (e: any) {
+                            toast.error(e.message || "Failed to add");
+                          }
+                        }}
+                      >
+                        <AlertTriangle className="mr-2 h-4 w-4" />
+                        Add to Missed Meetings
                       </Button>
                     )}
                   </div>

@@ -212,6 +212,82 @@ export function useMarkMeetingMissed() {
 }
 
 /**
+ * Add a contact to the Missed Meetings queue from anywhere (e.g. the dialer).
+ * If they have an unresolved past scheduled meeting, mark it no-show; otherwise
+ * create a no-show meeting record so they show up. Drops a dated no-show note.
+ * No-ops if they're already in the queue.
+ */
+export function useAddToMissedMeetings() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      contactId,
+      userId,
+    }: {
+      contactId: string;
+      userId: string;
+    }) => {
+      const { data: meetings } = await supabase
+        .from("meetings")
+        .select("id,title,scheduled_at,status,outcome")
+        .eq("contact_id", contactId);
+      const list = meetings ?? [];
+
+      if (list.some((m) => m.status === "no_show" || m.outcome === "no_show")) {
+        return; // already in Missed Meetings
+      }
+
+      const pastScheduled = list
+        .filter(
+          (m) =>
+            m.status === "scheduled" &&
+            new Date(m.scheduled_at).getTime() < Date.now()
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+        )[0];
+
+      let title: string;
+      let when: string;
+      if (pastScheduled) {
+        await supabase
+          .from("meetings")
+          .update({ status: "no_show" })
+          .eq("id", pastScheduled.id);
+        title = pastScheduled.title;
+        when = pastScheduled.scheduled_at;
+      } else {
+        when = new Date().toISOString();
+        title = "Missed meeting";
+        await supabase.from("meetings").insert({
+          user_id: userId,
+          contact_id: contactId,
+          title,
+          scheduled_at: when,
+          status: "no_show",
+          outcome: "no_show",
+        });
+      }
+
+      await supabase.from("notes").insert({
+        user_id: userId,
+        contact_id: contactId,
+        content: noShowNoteContent(title, when),
+        source: "manual",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["missed-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+  });
+}
+
+/**
  * Remove a contact from the Missed Meetings queue without booking a new meeting.
  * Resolves all their no-show meetings (status/outcome -> 'no_show_resolved') so
  * they no longer match the missed-meetings query, while preserving the history
