@@ -9,7 +9,7 @@ import { useDialerAutosave, useHydrateDraft } from "@/hooks/use-dialer-autosave"
 import { useDialerShortcuts, useShortcutsHelp, DIALER_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
 import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
-import { useUpdateContact } from "@/hooks/use-contacts";
+import { useUpdateContact, useContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting, useAddToMissedMeetings } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
@@ -165,6 +165,10 @@ export function PowerDialer() {
   const updateContact = useUpdateContact();
   const dismissMissed = useDismissMissedMeeting();
   const addMissed = useAddToMissedMeetings();
+  // Live copy of the current contact so the follow-up controls reflect changes
+  // immediately (the store `currentContact` is a session snapshot that doesn't
+  // update when next_follow_up changes).
+  const { data: liveCurrentContact } = useContact(currentContact?.id ?? "");
   
   // Session management hooks
   const createSession = useCreateSession();
@@ -1312,12 +1316,12 @@ export function PowerDialer() {
                     {/* Set a follow-up on this contact anytime — no need to log a call first */}
                     <FollowUpControl
                       contactId={currentContact.id}
-                      currentFollowUp={currentContact.next_follow_up}
+                      currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
                       size="sm"
                     />
                     <RemoveFollowUpButton
                       contactId={currentContact.id}
-                      currentFollowUp={currentContact.next_follow_up}
+                      currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
                       size="sm"
                       onRemoved={() => {
                         if (filterMode === "follow_ups_due") {
