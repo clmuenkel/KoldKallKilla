@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthId } from "@/hooks/use-auth";
+import { getContactTimezone, getTimezoneGroup, getTimezoneGroupLabel } from "@/lib/timezone";
 import { 
   startOfDay, 
   endOfDay, 
@@ -105,6 +106,21 @@ export function useAnalyticsSummary(
       const totalSessionTime = ((sessions as any[]) || [])
         .reduce((sum: number, s: { duration_seconds: number | null }) => sum + (s.duration_seconds || 0), 0);
 
+      // Meetings that came due in this range, by scheduled_at. No-show rate is
+      // measured against RESOLVED meetings (no_show + completed) — "of the
+      // meetings that actually came due, what % flaked."
+      const { data: mtgs } = await supabase
+        .from("meetings")
+        .select("status")
+        .eq("user_id", userId!)
+        .in("status", ["no_show", "completed"])
+        .gte("scheduled_at", start.toISOString())
+        .lte("scheduled_at", end.toISOString());
+      const mtgList = (mtgs as { status: string }[]) || [];
+      const noShows = mtgList.filter((m) => m.status === "no_show").length;
+      const completedMeetings = mtgList.filter((m) => m.status === "completed").length;
+      const resolvedMeetings = noShows + completedMeetings;
+
       const callsList = calls || [];
       // Meetings booked FROM dials only: a CONNECTED call dispositioned as a
       // booked meeting (connected guard prevents a stale disposition on a
@@ -133,6 +149,8 @@ export function useAnalyticsSummary(
         noAnswers,
         answerRate: actualAttempts > 0 ? Math.round((connectedCalls / actualAttempts) * 100) : 0,
         setRate: connectedCalls > 0 ? Math.round((meetingsBooked / connectedCalls) * 100) : 0,
+        noShows,
+        noShowRate: resolvedMeetings > 0 ? Math.round((noShows / resolvedMeetings) * 100) : 0,
         totalTalkTime,
         avgCallDuration: connectedCalls > 0 ? Math.round(totalTalkTime / connectedCalls) : 0,
         totalSessionTime,
@@ -315,11 +333,13 @@ export function useTimezonePerformance() {
     queryFn: async (): Promise<TimezonePerformance[]> => {
       const thirtyDaysAgo = subDays(new Date(), 30);
 
+      // contacts.timezone does NOT exist — timezone is derived from the contact's
+      // state, falling back to the company's timezone (same logic as the dialer).
       const { data: calls, error } = await supabase
         .from("calls")
         .select(`
           outcome,
-          contacts!inner(timezone)
+          contacts(state, companies(timezone))
         `)
         .eq("user_id", userId!)
         .gte("started_at", thirtyDaysAgo.toISOString())
@@ -327,14 +347,19 @@ export function useTimezonePerformance() {
 
       if (error && error.code !== "42P01") throw error;
 
-      // Group by timezone
+      // Group by TZ group label (Eastern / Central / Mountain / Pacific / …)
       const byTimezone: Record<string, { total: number; connected: number }> = {};
-      
+
       (calls || []).forEach((call: any) => {
-        const tz = call.contacts?.timezone || "Unknown";
-        if (!byTimezone[tz]) byTimezone[tz] = { total: 0, connected: 0 };
-        byTimezone[tz].total++;
-        if (call.outcome === "connected") byTimezone[tz].connected++;
+        const contact = call.contacts;
+        const tz = getContactTimezone(
+          { state: contact?.state ?? null },
+          contact?.companies ? { timezone: contact.companies.timezone } : null
+        );
+        const label = getTimezoneGroupLabel(getTimezoneGroup(tz));
+        if (!byTimezone[label]) byTimezone[label] = { total: 0, connected: 0 };
+        byTimezone[label].total++;
+        if (call.outcome === "connected") byTimezone[label].connected++;
       });
 
       return Object.entries(byTimezone)
@@ -343,8 +368,8 @@ export function useTimezonePerformance() {
           timezone,
           total_calls: stats.total,
           connected: stats.connected,
-          answer_rate: stats.total > 0 
-            ? Math.round((stats.connected / stats.total) * 100) 
+          answer_rate: stats.total > 0
+            ? Math.round((stats.connected / stats.total) * 100)
             : null,
         }))
         .sort((a, b) => b.total_calls - a.total_calls);

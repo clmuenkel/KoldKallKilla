@@ -163,6 +163,8 @@ export interface AnalyticsSummary {
   noAnswers: number;
   answerRate: number;
   setRate: number;
+  noShows: number;
+  noShowRate: number;
   totalTalkTime: number;
   avgCallDuration: number;
   totalSessionTime: number;

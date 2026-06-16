@@ -31,6 +31,7 @@ import {
   Activity,
   Globe,
   Zap,
+  CalendarX,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -118,7 +119,7 @@ export default function AnalyticsPage() {
           )}
 
           {/* Key Metrics */}
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
             <MetricCard
               title="Total Calls"
               value={summary?.totalCalls || 0}
@@ -155,6 +156,19 @@ export default function AnalyticsPage() {
               icon={<Zap className="h-4 w-4" />}
               loading={loadingSummary}
               comparison={weekComparison?.changes.setRate}
+            />
+            <MetricCard
+              title="No-Shows"
+              value={summary?.noShows || 0}
+              icon={<CalendarX className="h-4 w-4" />}
+              loading={loadingSummary}
+            />
+            <MetricCard
+              title="No-Show Rate"
+              value={summary?.noShowRate || 0}
+              suffix="%"
+              icon={<CalendarX className="h-4 w-4" />}
+              loading={loadingSummary}
             />
             <MetricCard
               title="Session Time"
