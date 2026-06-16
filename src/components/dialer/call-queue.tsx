@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, memo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDialerStore } from "@/stores/dialer-store";
 import { useSessionCompletedContacts } from "@/hooks/use-calls";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -32,7 +32,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const MAX_VISIBLE_UPCOMING = 10;
 
 interface CallQueueProps {
   companiesById?: Map<string, { timezone?: string | null }>;
@@ -66,15 +65,30 @@ export function CallQueue({ companiesById }: CallQueueProps) {
     ? Math.min((completedCount / queue.length) * 100, 100) 
     : 0;
 
+  // Map id -> original queue index once, so rows don't each run queue.findIndex
+  // (that made the list O(n^2) at 4,000 contacts).
+  const indexById = useMemo(() => {
+    const m = new Map<string, number>();
+    queue.forEach((c, i) => m.set(c.id, i));
+    return m;
+  }, [queue]);
+
   // Current contact and upcoming (excluding completed ones)
   const currentContact = queue[currentIndex];
-  const upcomingContacts = queue.filter(
-    (c, idx) => idx !== currentIndex && !completedIdsSet.has(c.id)
+  const upcomingContacts = useMemo(
+    () => queue.filter((c, idx) => idx !== currentIndex && !completedIdsSet.has(c.id)),
+    [queue, currentIndex, completedIdsSet]
   );
-  // Render the full upcoming list — the ScrollArea handles scrolling. (Previously
-  // capped at 10 with a "+N more below" hint, but the rest were never rendered,
-  // so you couldn't scroll to them.)
-  const visibleUpcoming = upcomingContacts;
+
+  // Virtualize the upcoming list so only the ~visible rows render (4,000 rows
+  // would otherwise build 4,000 DOM subtrees on every render).
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: upcomingContacts.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 64,
+    overscan: 8,
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -98,8 +112,9 @@ export function CallQueue({ companiesById }: CallQueueProps) {
       </div>
 
       {/* Queue List */}
-      <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Fixed top: completed section + current contact */}
+        <div className="p-2 space-y-1 shrink-0">
           {/* Collapsed Completed Section */}
           {completedCount > 0 && (
             <div className="mb-2">
@@ -121,26 +136,22 @@ export function CallQueue({ companiesById }: CallQueueProps) {
                   <ChevronDown className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 )}
               </button>
-              
+
               {/* Expanded completed list */}
               {showCompleted && (
-                <div className="mt-1 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                  {completedContacts.map((contact) => {
-                    // Find the original index in the queue for navigation
-                    const originalIndex = queue.findIndex((c) => c.id === contact.id);
-                    return (
-                      <ContactItem
-                        key={contact.id}
-                        contact={contact}
-                        index={originalIndex}
-                        isCurrent={currentIndex === originalIndex}
-                        isPast={true}
-                        onGoToContact={goToContact}
-                        onSkipContact={skipContact}
-                        companiesById={companiesById}
-                      />
-                    );
-                  })}
+                <div className="mt-1 space-y-1 max-h-48 overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+                  {completedContacts.map((contact) => (
+                    <ContactItem
+                      key={contact.id}
+                      contact={contact}
+                      index={indexById.get(contact.id) ?? 0}
+                      isCurrent={currentIndex === indexById.get(contact.id)}
+                      isPast={true}
+                      onGoToContact={goToContact}
+                      onSkipContact={skipContact}
+                      companiesById={companiesById}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -148,7 +159,7 @@ export function CallQueue({ companiesById }: CallQueueProps) {
 
           {/* Current Contact - Always Visible */}
           {currentContact && (
-            <div className="mb-2">
+            <div>
               {completedCount > 0 && !showCompleted && (
                 <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1">
                   Current
@@ -165,35 +176,49 @@ export function CallQueue({ companiesById }: CallQueueProps) {
               />
             </div>
           )}
+        </div>
 
-          {/* Upcoming Contacts - Capped at MAX_VISIBLE_UPCOMING */}
-          {visibleUpcoming.length > 0 && (
-            <div>
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 mb-1">
-                Up Next ({upcomingContacts.length})
-              </div>
-              <div className="space-y-1">
-                {visibleUpcoming.map((contact) => {
-                  // Find the original index in the queue for navigation
-                  const originalIndex = queue.findIndex((c) => c.id === contact.id);
+        {/* Up Next — virtualized so 4,000 rows don't all render */}
+        {upcomingContacts.length > 0 && (
+          <>
+            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-4 pb-1 shrink-0">
+              Up Next ({upcomingContacts.length})
+            </div>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
+              <div
+                style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative", width: "100%" }}
+              >
+                {rowVirtualizer.getVirtualItems().map((vi) => {
+                  const contact = upcomingContacts[vi.index];
                   return (
-                    <ContactItem
+                    <div
                       key={contact.id}
-                      contact={contact}
-                      index={originalIndex}
-                      isCurrent={false}
-                      isPast={false}
-                      onGoToContact={goToContact}
-                      onSkipContact={skipContact}
-                      companiesById={companiesById}
-                    />
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${vi.start}px)`,
+                        paddingBottom: 4,
+                      }}
+                    >
+                      <ContactItem
+                        contact={contact}
+                        index={indexById.get(contact.id) ?? 0}
+                        isCurrent={false}
+                        isPast={false}
+                        onGoToContact={goToContact}
+                        onSkipContact={skipContact}
+                        companiesById={companiesById}
+                      />
+                    </div>
                   );
                 })}
               </div>
             </div>
-          )}
-        </div>
-      </ScrollArea>
+          </>
+        )}
+      </div>
 
       {/* Quick Stats Footer */}
       <div className="p-3 border-t bg-card/50 shrink-0">
@@ -240,7 +265,7 @@ interface ContactItemProps {
   companiesById?: Map<string, { timezone?: string | null }>;
 }
 
-function ContactItem({ contact, index, isCurrent, isPast, onGoToContact, onSkipContact, companiesById }: ContactItemProps) {
+const ContactItem = memo(function ContactItem({ contact, index, isCurrent, isPast, onGoToContact, onSkipContact, companiesById }: ContactItemProps) {
   const hasPhone = !!contact.phone || !!contact.mobile;
   const isAAA = contact.is_aaa;
   
@@ -424,4 +449,4 @@ function ContactItem({ contact, index, isCurrent, isPast, onGoToContact, onSkipC
       )}
     </div>
   );
-}
+});

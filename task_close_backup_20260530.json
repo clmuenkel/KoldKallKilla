@@ -1,0 +1,1282 @@
+[
+ {
+  "id": "52828d65-9e67-45ea-bb74-d348c99a0344",
+  "title": "Run free discovery audit for Tarbet RFP-to-bid process",
+  "type": "task",
+  "due_date": "2026-03-18T17:00:00+00:00",
+  "contact_id": "c1256fa6-0001-43d9-a378-cc7880650933",
+  "created_at": "2026-03-23T03:25:05.468475+00:00"
+ },
+ {
+  "id": "f83830fa-b05d-4c0d-88c8-a367323a5770",
+  "title": "Send partnership roadmap doc + slides to Andrew (513 Plumbing)",
+  "type": "follow_up",
+  "due_date": "2026-03-30T21:30:00+00:00",
+  "contact_id": "33ef3acc-a8af-4d71-b3d9-f47b1338bc1c",
+  "created_at": "2026-03-24T02:33:20.792424+00:00"
+ },
+ {
+  "id": "01efb6d9-edce-4942-b9d1-0d7c8d46cc3d",
+  "title": "Prep revised proposal for 513 Plumbing - CRM + GPS time clock scope",
+  "type": "follow_up",
+  "due_date": "2026-03-30T21:30:00+00:00",
+  "contact_id": "33ef3acc-a8af-4d71-b3d9-f47b1338bc1c",
+  "created_at": "2026-03-24T02:33:20.792424+00:00"
+ },
+ {
+  "id": "701465f4-a7f8-40ac-a0f5-a50ca3414aa8",
+  "title": "Update standard meeting intro - replace Bridgepoint with Evios",
+  "type": "follow_up",
+  "due_date": "2026-03-25T00:00:00+00:00",
+  "contact_id": "4109fa34-8c3d-4c71-ae19-9f230bee72f1",
+  "created_at": "2026-03-24T17:31:10.291383+00:00"
+ },
+ {
+  "id": "8f183bcf-7f4a-492f-a88d-643a7d8f0f78",
+  "title": "Prep Hauser demo: inventory + voice + supplier pricing + RFP automation",
+  "type": "task",
+  "due_date": "2026-03-24T17:00:00+00:00",
+  "contact_id": "dcee15e7-918b-41dd-a76d-a965a333de65",
+  "created_at": "2026-03-23T03:22:09.637218+00:00"
+ },
+ {
+  "id": "f9a87639-5c77-4245-b770-ec2d459d6312",
+  "title": "Compile QB + Housecall Pro + warehouse integration questions for GT Plumbing",
+  "type": "task",
+  "due_date": "2026-03-24T17:00:00+00:00",
+  "contact_id": "56865ba5-5454-4f2e-a140-21edaa2613c4",
+  "created_at": "2026-03-23T03:22:09.637218+00:00"
+ },
+ {
+  "id": "a35b3355-4035-407e-9de7-eaf31f2a1e65",
+  "title": "Prep Burke demo: QR scanning + voice updates + truck inventory + pricing tiers",
+  "type": "task",
+  "due_date": "2026-03-19T17:00:00+00:00",
+  "contact_id": "1eed0ba0-7355-45b6-a9d9-6bafa7858db9",
+  "created_at": "2026-03-23T03:22:09.637218+00:00"
+ },
+ {
+  "id": "517ef4fc-9c4c-4d3b-be70-5cf71482c29c",
+  "title": "Carl-Luca: Deliver first iteration proposal to Plumbing Today",
+  "type": "task",
+  "due_date": "2026-03-20T17:00:00+00:00",
+  "contact_id": "0c920900-b64a-44cf-a67e-3f4883e1dfda",
+  "created_at": "2026-03-23T03:26:15.397469+00:00"
+ },
+ {
+  "id": "782d9a9b-7176-4252-8da7-e7720809ad56",
+  "title": "Send discovery questions Claude wrote to William Andrade team before Apr 1 call",
+  "type": "follow_up",
+  "due_date": "2026-04-01T00:00:00+00:00",
+  "contact_id": "4109fa34-8c3d-4c71-ae19-9f230bee72f1",
+  "created_at": "2026-03-25T22:54:38.92769+00:00"
+ },
+ {
+  "id": "1643c0e4-a4b7-4e19-a93b-5ba734fc337c",
+  "title": "Build QSP roadmap with rough pricing and month/week milestones for Apr 1 closing call",
+  "type": "task",
+  "due_date": "2026-04-01T00:00:00+00:00",
+  "contact_id": "4109fa34-8c3d-4c71-ae19-9f230bee72f1",
+  "created_at": "2026-03-25T22:54:38.92769+00:00"
+ },
+ {
+  "id": "0cbfd7db-1713-4613-b441-921c7645c446",
+  "title": "Research video upload/storage feasibility for dashboard media tab",
+  "type": "task",
+  "due_date": "2026-04-01T00:00:00+00:00",
+  "contact_id": "4109fa34-8c3d-4c71-ae19-9f230bee72f1",
+  "created_at": "2026-03-25T22:54:38.92769+00:00"
+ },
+ {
+  "id": "e7053d39-d08b-49be-b768-9f084674dff3",
+  "title": "Build mentor model prototype: voice-first app + GPT/Claude workflow with step-by-step checklists and photo review. Send for trial within 1 week.",
+  "type": "task",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-03-25T22:54:44.590226+00:00"
+ },
+ {
+  "id": "513ba4ab-cf4a-447f-8780-994e6dfd9d9c",
+  "title": "Find Chris Finken",
+  "type": "follow_up",
+  "due_date": "2026-03-17T00:00:00+00:00",
+  "contact_id": "8899883a-f97a-4b37-8f99-38854143b40f",
+  "created_at": "2026-03-12T21:44:38.299845+00:00"
+ },
+ {
+  "id": "05bd2e5b-162f-4610-b705-536602c0e49f",
+  "title": "Build UI mockups for QSP: dashboard + overhead + tech store flow",
+  "type": "task",
+  "due_date": "2026-03-19T17:00:00+00:00",
+  "contact_id": "4109fa34-8c3d-4c71-ae19-9f230bee72f1",
+  "created_at": "2026-03-23T03:23:53.988891+00:00"
+ },
+ {
+  "id": "3f180a3a-a056-4a04-8344-42cf0165beb0",
+  "title": "Fix Justus info",
+  "type": "other",
+  "due_date": "2026-03-02T00:00:00+00:00",
+  "contact_id": "4e19e1ee-3ea2-4988-a69d-96e3d435764e",
+  "created_at": "2026-02-25T23:56:43.49025+00:00"
+ },
+ {
+  "id": "9a996df2-550b-4bb7-9b8b-4fafa44a81ee",
+  "title": "Send Andrew Cleary price-book materials + answer follow-up questions",
+  "type": "follow_up",
+  "due_date": "2026-03-18T17:00:00+00:00",
+  "contact_id": "33ef3acc-a8af-4d71-b3d9-f47b1338bc1c",
+  "created_at": "2026-03-23T03:25:05.468475+00:00"
+ },
+ {
+  "id": "16586f56-48b9-42bf-84ad-1a1cc776eb6c",
+  "title": "Prep Parobek roadmap + pricing from submitted video/screenshots",
+  "type": "task",
+  "due_date": "2026-03-18T17:00:00+00:00",
+  "contact_id": "5a95c56b-efd6-45ab-888e-081e280707e3",
+  "created_at": "2026-03-23T03:25:05.468475+00:00"
+ },
+ {
+  "id": "875742d5-cc08-4e51-8d46-3113063cc848",
+  "title": "Build and demo sales outreach + automated follow-up bot with marketing automation CRM integration for Lifeline Apr 3 meeting",
+  "type": "task",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-03-25T22:54:44.590226+00:00"
+ },
+ {
+  "id": "e6a7d4ce-53fa-4ae4-9d30-dbbba4360f21",
+  "title": "Build maintenance-package workflow demo: customer signup, yearly inspection scheduling, priority dispatching, door-knock marketing campaign support",
+  "type": "task",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-03-25T22:54:44.590226+00:00"
+ },
+ {
+  "id": "817cd138-fbdd-4562-9324-ea93d525c0ab",
+  "title": "[Zad] Send Sundance follow-up invite + agenda for Apr 3 demo",
+  "type": "follow_up",
+  "due_date": "2026-03-28T00:00:00+00:00",
+  "contact_id": "c69aebd3-290b-44c9-a48a-73a1258367e6",
+  "created_at": "2026-03-27T17:08:50.553104+00:00"
+ },
+ {
+  "id": "40383e25-1f2b-42f9-b2fd-09bf2b2fae8b",
+  "title": "[Carl-Luca] Build invoice-scanning mockup for Sundance: capture, categorization/kits, QB push",
+  "type": "task",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "c69aebd3-290b-44c9-a48a-73a1258367e6",
+  "created_at": "2026-03-27T17:08:50.553104+00:00"
+ },
+ {
+  "id": "ab002a08-1eb9-483e-8bd9-42d603b4df2c",
+  "title": "[Carl-Luca] Build custom inventory demo (truck + warehouse) for Osborne Apr 8 meeting",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-03-30T15:53:14.56562+00:00"
+ },
+ {
+  "id": "22ec4632-fe45-48df-8c3f-a05c29368a85",
+  "title": "[Zad] Send Goodwin demo screenshots + summary email. Calendar invite for Apr 8 1PM CT follow-up.",
+  "type": "follow_up",
+  "due_date": "2026-03-31T00:00:00+00:00",
+  "contact_id": "7179ec2e-110f-467d-b3f2-dae8bbdab3aa",
+  "created_at": "2026-03-30T19:07:51.221954+00:00"
+ },
+ {
+  "id": "7c4fd288-752e-4f80-9378-abb071b007f4",
+  "title": "[Carl-Luca] Record desktop demo video + phone app screen recording. Send to Goodwin (Kristin) so she can share with VP and president.",
+  "type": "task",
+  "due_date": "2026-03-31T00:00:00+00:00",
+  "contact_id": "7179ec2e-110f-467d-b3f2-dae8bbdab3aa",
+  "created_at": "2026-03-30T19:07:51.221954+00:00"
+ },
+ {
+  "id": "24b63968-9023-4029-949e-5054abc4c1b9",
+  "title": "[Zad] Record desktop + phone demo videos and send to Goodwin Plumbing",
+  "type": "follow_up",
+  "due_date": "2026-04-08T18:00:00+00:00",
+  "contact_id": "0438f9e6-4741-41e3-b741-9b4139d5b7c5",
+  "created_at": "2026-03-31T02:33:11.112333+00:00"
+ },
+ {
+  "id": "62dfaf3b-1743-4e6f-9a37-7c934938a600",
+  "title": "[Zad] Send post-demo email with screenshots and summary to Goodwin Plumbing",
+  "type": "follow_up",
+  "due_date": "2026-04-08T04:59:00+00:00",
+  "contact_id": "0438f9e6-4741-41e3-b741-9b4139d5b7c5",
+  "created_at": "2026-03-31T02:33:11.112333+00:00"
+ },
+ {
+  "id": "4b904fe5-a671-4460-a8c9-5feed8b46441",
+  "title": "[Zad] Prepare roadmap for Goodwin Plumbing follow-up meeting Apr 8",
+  "type": "meeting_prep",
+  "due_date": "2026-04-08T18:00:00+00:00",
+  "contact_id": "0438f9e6-4741-41e3-b741-9b4139d5b7c5",
+  "created_at": "2026-03-31T02:33:11.112333+00:00"
+ },
+ {
+  "id": "4ed9f336-0b4e-417a-bcb5-d6fb480b73d3",
+  "title": "[Zad] Email Sundance contact re: availability and scheduling conflict",
+  "type": "follow_up",
+  "due_date": "2026-04-03T04:59:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-03-31T02:33:16.400425+00:00"
+ },
+ {
+  "id": "507fcd01-26f7-424e-a1ff-ffb20c3c7a55",
+  "title": "[Carl-Luca] Build customized inventory demo for Osborne Plumbing",
+  "type": "deliverable",
+  "due_date": "2026-04-08T15:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-03-31T02:33:16.400425+00:00"
+ },
+ {
+  "id": "1c96419d-c1a6-40dd-932d-088b68d5e346",
+  "title": "[Carl-Luca] Prep bid tracking dashboard demo for Andersons Plumbing - show centralized dashboard + automated bid creation",
+  "type": "task",
+  "due_date": "2026-04-06T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-03-31T15:17:02.764386+00:00"
+ },
+ {
+  "id": "7baa3569-2959-431e-8527-823652f052f3",
+  "title": "[Carl-Luca] Show Rare Breed inventory app template + P&L dashboard demo on follow-up call",
+  "type": "task",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "04741103-a0bd-479c-b034-44763c4790da",
+  "created_at": "2026-03-31T22:59:50.90811+00:00"
+ },
+ {
+  "id": "64ff69ce-8dee-4d7d-8543-1d1e4d46db9a",
+  "title": "[Carl-Luca] Build multi-platform bid tracking dashboard demo for Andersons Plumbing",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-01T02:16:58.610867+00:00"
+ },
+ {
+  "id": "a02e9a82-8104-4a6a-97b7-2ab6bb40105e",
+  "title": "[Carl-Luca] Prep inventory app template + P&L dashboard demo for Rare Breed follow-up call",
+  "type": "custom",
+  "due_date": "2026-04-03T00:00:00+00:00",
+  "contact_id": "04741103-a0bd-479c-b034-44763c4790da",
+  "created_at": "2026-04-01T02:38:11.327962+00:00"
+ },
+ {
+  "id": "e6edf2a9-ccb9-45b3-8004-48607309dc72",
+  "title": "[Carl-Luca] Build multi-platform bid tracking dashboard demo for Andersons Plumbing",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-01T11:25:25.43548+00:00"
+ },
+ {
+  "id": "9609fc80-122a-44f3-8189-708ec527a16e",
+  "title": "[Carl-Luca] Prep automated bid creation + centralized dashboard concepts for Andersons demo",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-01T11:25:25.43548+00:00"
+ },
+ {
+  "id": "0764fe83-6e7e-4276-81ce-031547e7c576",
+  "title": "[Carl-Luca] Build blueprint scanning demo for Zack Smith - extract fixture counts + pipe lengths by type from PDFs",
+  "type": "task",
+  "due_date": "2026-04-08T00:00:00+00:00",
+  "contact_id": "5f47e1d0-4935-4a08-a572-c7f81c2e7f9e",
+  "created_at": "2026-04-02T13:40:49.349097+00:00"
+ },
+ {
+  "id": "97ac82bf-abab-4eb4-8bf7-c942d1cd5456",
+  "title": "[Zad] Resend email to Adam with WKS Restaurant Group decision-maker contacts and Carl Pro platform info",
+  "type": "follow_up",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-03T02:33:35.725404+00:00"
+ },
+ {
+  "id": "bc56a626-dbab-4622-ae57-66ea62828f5d",
+  "title": "[Zad] Send Adam 10-min heads-up text before Apr 7 demo meeting",
+  "type": "follow_up",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-03T02:33:35.725404+00:00"
+ },
+ {
+  "id": "af774f86-4904-42d1-ad57-e8f7965232fe",
+  "title": "[Carl-Luca] Build sales dashboard demo for Andersons Plumbing (multi-platform bid tracking / lead categorization)",
+  "type": "custom",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-03T02:33:35.725404+00:00"
+ },
+ {
+  "id": "f9975581-5e5a-46d8-9e73-f2ac2683f7dd",
+  "title": "[Carl-Luca] Add ANALYZE roof button to priority queue UI - show roof age, risk drivers, follow-up history when pressed",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-03T18:22:29.309204+00:00"
+ },
+ {
+  "id": "6e69c7a6-cf02-45d9-bfa1-cf0bb7e30aea",
+  "title": "[Zad] Record + send concise demo package for Micah to show \"Blue\" (decision-maker) - make it 8-year-old simple",
+  "type": "task",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-03T18:22:29.309204+00:00"
+ },
+ {
+  "id": "9f735a3c-5dda-4400-bcb4-71cd7b128a1f",
+  "title": "[Zad] Find and send Beam AI vendor info to group for reference",
+  "type": "follow_up",
+  "due_date": "2026-04-08T00:00:00+00:00",
+  "contact_id": "5f47e1d0-4935-4a08-a572-c7f81c2e7f9e",
+  "created_at": "2026-04-06T02:36:41.23452+00:00"
+ },
+ {
+  "id": "7b5159a8-c6e6-450a-b129-3ae5229d4394",
+  "title": "[Carl-Luca] Build blueprint scanning demo \u2014 extract fixture counts + pipe lengths from provided plans",
+  "type": "custom",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "5f47e1d0-4935-4a08-a572-c7f81c2e7f9e",
+  "created_at": "2026-04-06T02:36:41.23452+00:00"
+ },
+ {
+  "id": "3bcd8b82-06a3-4491-b6b2-cb64799df75a",
+  "title": "find Andy Fritz",
+  "type": "follow_up",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "24b81776-6fee-4359-8a6f-daf78587768b",
+  "created_at": "2026-05-12T21:38:17.220467+00:00"
+ },
+ {
+  "id": "783e9865-ea6e-4520-8945-f01ede1ee018",
+  "title": "[Carl-Luca] Add ANALYZE this roof button to priority queue UI showing roof age, risk drivers, follow-up history",
+  "type": "custom",
+  "due_date": "2026-04-08T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-06T02:36:45.411638+00:00"
+ },
+ {
+  "id": "204e1d35-26ce-44b3-9260-56c18617d8ea",
+  "title": "[Carl-Luca] Record concise demo video for Micah to show Blue \u2014 simple enough for non-technical viewer",
+  "type": "custom",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-06T02:36:45.411638+00:00"
+ },
+ {
+  "id": "0fb61be2-d213-410b-bd7f-bc29e262b76a",
+  "title": "[Zad] Get Blue full name and title \u2014 add to CRM as decision-maker contact",
+  "type": "follow_up",
+  "due_date": "2026-04-07T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-06T02:36:45.411638+00:00"
+ },
+ {
+  "id": "9f927ba7-7c4c-43cb-b007-34c56a88916e",
+  "title": "[Zad] Prep Mr. Rooter demo: job mgmt data + financial dashboard (margins, material spend, tech performance)",
+  "type": "task",
+  "due_date": "2026-04-10T00:00:00+00:00",
+  "contact_id": "e92e4715-4b04-433e-bd8b-c5d8a05dcb32",
+  "created_at": "2026-04-07T19:14:08.816325+00:00"
+ },
+ {
+  "id": "68e32852-5ad3-43dc-8d40-bca7155224e5",
+  "title": "[Carl-Luca] Build demo: receipt/invoice scanning to QuickBooks Desktop via ServiceTitan POs for Mr. Rooter",
+  "type": "task",
+  "due_date": "2026-04-10T00:00:00+00:00",
+  "contact_id": "e92e4715-4b04-433e-bd8b-c5d8a05dcb32",
+  "created_at": "2026-04-07T19:14:08.816325+00:00"
+ },
+ {
+  "id": "6ea52486-b48a-4dfd-80b4-05150bae0a8f",
+  "title": "[Carl-Luca] Prep dashboard demo with QuickBooks integration for Andersons Plumbing - Apr 9 call",
+  "type": "task",
+  "due_date": "2026-04-08T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-07T20:19:41.363282+00:00"
+ },
+ {
+  "id": "f52d8a8d-90a1-4ec7-9618-89c8067a7f93",
+  "title": "[Zad] Draft recap email to Todd (REEIS) - pricing breakdown (dev/implementation/support) + CRM dashboard + bid automation POC proposal",
+  "type": "follow_up",
+  "due_date": "2026-04-08T00:00:00+00:00",
+  "contact_id": "8d02a17a-9a00-494e-9dff-633a4a483cf8",
+  "created_at": "2026-04-07T22:34:35.47171+00:00"
+ },
+ {
+  "id": "9fe8020e-0a02-40ee-b03c-1d03b36b5e4a",
+  "title": "[Zad] Send demo video to Angela (materials/pricebook workflow + tech view)",
+  "type": "follow_up",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-04-08T16:26:12.655315+00:00"
+ },
+ {
+  "id": "484645e9-c811-407e-91f2-30b06b47f6ab",
+  "title": "[Carl-Luca] Build demo video for Osborne - show materials, pricebook, tech view",
+  "type": "task",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-04-08T16:26:12.655315+00:00"
+ },
+ {
+  "id": "2aab0d22-9bff-4d20-a535-6dd61a02f113",
+  "title": "[Zad] Send Lifeline follow-up meeting invite (next Wednesday 10:30 AM CT)",
+  "type": "follow_up",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-08T16:26:12.655315+00:00"
+ },
+ {
+  "id": "d09dc804-e556-4f39-a5da-e396c978910b",
+  "title": "[Carl-Luca] Build Lifeline POC - lead re-engagement + AccuLynx integration (request API key from Micah)",
+  "type": "task",
+  "due_date": "2026-04-15T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-08T16:26:12.655315+00:00"
+ },
+ {
+  "id": "38fe3c09-bda8-4433-90a9-0a0264296312",
+  "title": "[Zad] Prep Sundance discovery checklist: QB state, inputs needed, 2-week due diligence scope",
+  "type": "task",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "c69aebd3-290b-44c9-a48a-73a1258367e6",
+  "created_at": "2026-04-08T23:53:56.605683+00:00"
+ },
+ {
+  "id": "95aa9524-822f-4dbb-ae77-83556af9a1db",
+  "title": "[Zad] Send rough pricing proposal for Pure Plumbing invoice scanning + job costing ($20K dev / $1K/mo support range)",
+  "type": "follow_up",
+  "due_date": "2026-04-15T00:00:00+00:00",
+  "contact_id": "916abb99-114a-4844-a09a-1009af834a39",
+  "created_at": "2026-04-08T23:53:56.605683+00:00"
+ },
+ {
+  "id": "b3206df0-5092-416f-bee1-ba199b0c2821",
+  "title": "[Zad] Send Sundance pricing/plan draft before Apr 10 meeting (dev fee vs monthly support breakdown)",
+  "type": "follow_up",
+  "due_date": "2026-04-09T00:00:00+00:00",
+  "contact_id": "c69aebd3-290b-44c9-a48a-73a1258367e6",
+  "created_at": "2026-04-08T23:53:56.605683+00:00"
+ },
+ {
+  "id": "7dae0ff8-968c-4bc4-9d3f-733081de4719",
+  "title": "[Carl-Luca] Build POC: lead re-engagement + maintenance plan automation (AccuLynx integration) for Lifeline Roofing",
+  "type": "custom",
+  "due_date": "2026-04-10T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-09T02:34:44.463478+00:00"
+ },
+ {
+  "id": "9f46d4b3-2a94-4693-8107-620266495a3a",
+  "title": "[Carl-Luca] Record and send demo video (materials/pricebook workflow, tech-friendly view) to Angela at Osborne Plumbing",
+  "type": "custom",
+  "due_date": "2026-04-11T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-04-09T02:34:47.279557+00:00"
+ },
+ {
+  "id": "1a78dc27-acd7-4219-85ab-0516c5ac20d8",
+  "title": "[Zad] Request CAD/vector PDF from Tad for blueprint detection accuracy improvement",
+  "type": "follow_up",
+  "due_date": "2026-04-14T00:00:00+00:00",
+  "contact_id": "5f47e1d0-4935-4a08-a572-c7f81c2e7f9e",
+  "created_at": "2026-04-09T14:19:04.885678+00:00"
+ },
+ {
+  "id": "a25023ac-d1c3-40c9-91c9-4189c9f67adc",
+  "title": "[Carl-Luca] Continue AI takeoff software dev - improve from 30-40% error rate, prep follow-up update for Tad",
+  "type": "task",
+  "due_date": "2026-04-14T00:00:00+00:00",
+  "contact_id": "5f47e1d0-4935-4a08-a572-c7f81c2e7f9e",
+  "created_at": "2026-04-09T14:19:06.899951+00:00"
+ },
+ {
+  "id": "fcbcbdd7-2946-4497-8d9f-c8d84e557235",
+  "title": "[Carl-Luca] Build CRM POC demo for Andersons Plumbing \u2014 Service Fusion + QuickBooks integration, contact sourcing, vendor workflow automation, business-card scanning. Must be ready for Apr 14 demo at 9 AM CT with Tiffany, Adam, and Dispatcher Dimitri.",
+  "type": "task",
+  "due_date": "2026-04-13T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-09T20:45:25.907794+00:00"
+ },
+ {
+  "id": "dc36473a-b332-4282-bcd8-84fdc385cb8c",
+  "title": "[Zad] Send Parker Services demo link + scoped homework email",
+  "type": "follow_up",
+  "due_date": "2026-04-11T00:00:00+00:00",
+  "contact_id": "e11975e8-a1d0-40ef-86b4-77f8c0abb288",
+  "created_at": "2026-04-10T20:40:21.56491+00:00"
+ },
+ {
+  "id": "fe359881-5d76-4f82-87a6-d45aeffc422c",
+  "title": "[Carl-Luca] Build Andersons Plumbing CRM POC demo - SF/QB integration, contact sourcing, vendor workflow automation, biz card scanning",
+  "type": "custom",
+  "due_date": "2026-04-14T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-11T02:33:15.059226+00:00"
+ },
+ {
+  "id": "aaf05c93-7218-4293-b2e9-496d034205d8",
+  "title": "[Zad] Send calendar invite for Andersons Plumbing demo Apr 14 9AM - include Adam, Dimitri, confirm with Tiffany",
+  "type": "follow_up",
+  "due_date": "2026-04-10T00:00:00+00:00",
+  "contact_id": "8ca0aad0-f8ec-45b0-853a-99c507ca91b8",
+  "created_at": "2026-04-11T02:33:16.564196+00:00"
+ },
+ {
+  "id": "21e9406e-be74-41f5-bba6-3b0ef1d4c1bd",
+  "title": "[Zad] Send Mr. Rooter - calendar invite for Apr 30 follow-up at 9 AM CT + reminder",
+  "type": "follow_up",
+  "due_date": "2026-04-14T00:00:00+00:00",
+  "contact_id": "e92e4715-4b04-433e-bd8b-c5d8a05dcb32",
+  "created_at": "2026-04-13T18:35:54.466428+00:00"
+ },
+ {
+  "id": "664c5b4b-41d7-4c2a-8118-fa88d2db0848",
+  "title": "[Carl-Luca] Build task-tracker demo connected to Housecall Pro for Peerless follow-up",
+  "type": "task",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-21T20:09:55.182892+00:00"
+ },
+ {
+  "id": "42733b1d-46c5-4563-9fc0-b77ba135c265",
+  "title": "[Carl-Luca] Take over running demos during calls \u2014 Zad screen share issues",
+  "type": "task",
+  "due_date": "2026-04-22T00:00:00+00:00",
+  "contact_id": "8e280d9a-0ca1-4dce-9a57-ff175c2d79b8",
+  "created_at": "2026-04-21T20:09:55.182892+00:00"
+ },
+ {
+  "id": "7b90f2fc-d46c-4dc0-b813-fdd00197f1f0",
+  "title": "[Zad] Build rough pricing/inventory dashboard for standard Evios demo deck (from Plumbing Care meeting)",
+  "type": "task",
+  "due_date": "2026-04-22T00:00:00+00:00",
+  "contact_id": "8e280d9a-0ca1-4dce-9a57-ff175c2d79b8",
+  "created_at": "2026-04-21T20:09:55.182892+00:00"
+ },
+ {
+  "id": "0bf7f808-6332-42ab-8a95-416faa6b93de",
+  "title": "[Zad] Send Told Plumbing demo links to Dave, Raquel, Kaden",
+  "type": "follow_up",
+  "due_date": "2026-04-22T00:00:00+00:00",
+  "contact_id": "d0780a54-8064-4621-9dcb-a68cb63cb680",
+  "created_at": "2026-04-21T20:09:55.182892+00:00"
+ },
+ {
+  "id": "d947591f-1912-47c3-94b4-ef50c1a46b15",
+  "title": "[Carl-Luca] Build iPad data entry app prototype for J&J \u2014 digitize timesheet, daily material list, mileage forms. Demo at Apr 23 follow-up.",
+  "type": "task",
+  "due_date": "2026-04-22T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-04-21T20:09:55.182892+00:00"
+ },
+ {
+  "id": "34e49468-174b-4580-b886-2f33efe0cb62",
+  "title": "[Zad] Send demo links to Told Plumbing (Dave, Raquel, Kaden)",
+  "type": "follow_up",
+  "due_date": "2026-04-21T00:00:00+00:00",
+  "contact_id": "d0780a54-8064-4621-9dcb-a68cb63cb680",
+  "created_at": "2026-04-21T21:20:43.545257+00:00"
+ },
+ {
+  "id": "6f5c696f-0b02-4ad7-a30b-b5d1f3da8fb3",
+  "title": "[Zad] Prepare Rare Breed fully-owned cost proposal (consult IP attorney first)",
+  "type": "follow_up",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "04741103-a0bd-479c-b034-44763c4790da",
+  "created_at": "2026-04-21T21:20:47.887571+00:00"
+ },
+ {
+  "id": "0bebb547-1742-4f53-aed6-3238ec403ad0",
+  "title": "[Zad] Prep task tracker demo for HCP - Peerless Plumbing",
+  "type": "follow_up",
+  "due_date": "2026-04-29T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-21T21:20:49.743604+00:00"
+ },
+ {
+  "id": "2dfbf34b-953e-455b-acba-e80073ec75c8",
+  "title": "[Carl-Luca] Take over running client demos going forward",
+  "type": "custom",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "8e280d9a-0ca1-4dce-9a57-ff175c2d79b8",
+  "created_at": "2026-04-21T21:20:55.232253+00:00"
+ },
+ {
+  "id": "b9d24a21-46c5-46d3-bd86-746881b3ac4d",
+  "title": "[Carl-Luca] Take over running demos during client calls (Zad's screen share has issues)",
+  "type": "custom",
+  "due_date": "2026-04-24T00:00:00+00:00",
+  "contact_id": "8e280d9a-0ca1-4dce-9a57-ff175c2d79b8",
+  "created_at": "2026-04-22T00:34:22.768415+00:00"
+ },
+ {
+  "id": "1d098537-5b7d-491e-b08f-6dfe083c8d9d",
+  "title": "[Zad] Build simple inventory/rough-pricing dashboard (labor vs materials + margins) and add to standard Evios demo deck \u2014 call Martin to align",
+  "type": "follow_up",
+  "due_date": "2026-04-24T00:00:00+00:00",
+  "contact_id": "8e280d9a-0ca1-4dce-9a57-ff175c2d79b8",
+  "created_at": "2026-04-22T00:34:25.59433+00:00"
+ },
+ {
+  "id": "65c28bbb-f07b-45fc-aa61-4c3af03e9179",
+  "title": "[Zad] Send demo links/videos to Dave, Raquel, and Kaden (Told Plumbing) today",
+  "type": "follow_up",
+  "due_date": "2026-04-21T00:00:00+00:00",
+  "contact_id": "d0780a54-8064-4621-9dcb-a68cb63cb680",
+  "created_at": "2026-04-22T00:34:28.255132+00:00"
+ },
+ {
+  "id": "06d94306-9b0d-43b0-b745-99792884e4c4",
+  "title": "[Carl-Luca] Build task-tracker demo connected to Housecall Pro for Peerless Plumbing \u2014 ready for Apr 29 follow-up call",
+  "type": "custom",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-22T00:34:33.217634+00:00"
+ },
+ {
+  "id": "f2661fd3-be33-45be-9d2a-c615d3efc008",
+  "title": "[Zad] Schedule May 13 meeting with Chris Osborne - need all decision-makers present (Chris is the buyer)",
+  "type": "follow_up",
+  "due_date": "2026-04-24T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-04-22T16:00:43.249325+00:00"
+ },
+ {
+  "id": "0e56a5fa-c62b-4213-9ed8-1e09f4ec9da5",
+  "title": "[Zad] Confirm Chris Osborne will attend May 13 meeting \u2014 he's the decision-maker, she can't say yes alone",
+  "type": "follow_up",
+  "due_date": "2026-05-10T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-04-23T00:32:38.093477+00:00"
+ },
+ {
+  "id": "93aeb21d-fdd6-439f-8a38-13be2f6ca618",
+  "title": "[Zad] Send J&J follow-up email with whiteboard photo + unanswered questions to refine phase 1 app scope",
+  "type": "follow_up",
+  "due_date": "2026-04-24T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-04-23T16:59:27.534338+00:00"
+ },
+ {
+  "id": "9c2106fd-55ba-4568-8a75-d1d11cdbb6b0",
+  "title": "[Zad] Add Karen to all future J&J email correspondence",
+  "type": "follow_up",
+  "due_date": "2026-04-24T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-04-23T16:59:27.534338+00:00"
+ },
+ {
+  "id": "32ca85f3-728c-4bdf-9f13-cd28f5b6395f",
+  "title": "[Zad] Send iPad app demo video link to J&J (Miranda + Taryn)",
+  "type": "follow_up",
+  "due_date": "2026-04-23T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-04-23T16:59:27.534338+00:00"
+ },
+ {
+  "id": "d27fe123-3d9e-4000-8641-8271d527ae47",
+  "title": "[Carl-Luca] Build rough demo of AI estimator-buddy tool for Chris Plumbing",
+  "type": "task",
+  "due_date": "2026-04-30T00:00:00+00:00",
+  "contact_id": "2c7c25c9-4988-4232-8a18-a990023ff23f",
+  "created_at": "2026-04-24T16:56:51.949791+00:00"
+ },
+ {
+  "id": "c52d8f8a-5c68-49e8-884a-08affe0256fb",
+  "title": "[Zad] Prepare pricing proposal for Chris Plumbing estimator-buddy (upfront + monthly)",
+  "type": "follow_up",
+  "due_date": "2026-04-30T00:00:00+00:00",
+  "contact_id": "2c7c25c9-4988-4232-8a18-a990023ff23f",
+  "created_at": "2026-04-24T16:56:51.949791+00:00"
+ },
+ {
+  "id": "cc3cbbd2-621c-42a3-a2fa-aaca62b0404b",
+  "title": "[Zad] Set up direct meeting with Blue (Lifeline) once Micah shares proposal info",
+  "type": "follow_up",
+  "due_date": "2026-05-01T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-24T18:00:59.233497+00:00"
+ },
+ {
+  "id": "b847a72d-3c7a-482e-8581-3c85c3b0b874",
+  "title": "[Carl-Luca] Build AI estimator-buddy demo for Chris Plumbing (due before Apr 30 follow-up)",
+  "type": "task",
+  "due_date": "2026-04-30T00:00:00+00:00",
+  "contact_id": "2c7c25c9-4988-4232-8a18-a990023ff23f",
+  "created_at": "2026-04-24T20:08:31.162444+00:00"
+ },
+ {
+  "id": "01cda433-e93e-448c-b221-ba50492aeefb",
+  "title": "[Carl-Luca] Notify Zad when barcode inventory app is ready and tested \u2014 trigger PPS David Garza follow-up",
+  "type": "custom",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "4c73b36e-cf8f-4fc9-8efc-3e8f50fc49cd",
+  "created_at": "2026-04-25T00:34:12.734546+00:00"
+ },
+ {
+  "id": "1641e919-1267-43c5-984b-d655089e2ef1",
+  "title": "[Carl-Luca] Build AI estimator-buddy demo for Chris Plumbing \u2014 ready for Apr 30 follow-up meeting",
+  "type": "custom",
+  "due_date": "2026-04-30T00:00:00+00:00",
+  "contact_id": "2c7c25c9-4988-4232-8a18-a990023ff23f",
+  "created_at": "2026-04-25T00:34:17.491119+00:00"
+ },
+ {
+  "id": "15165653-5268-4477-808e-9dfab26f5610",
+  "title": "[Zad] Prep pricing proposal for Chris Kujat (estimator-buddy tool: $1.5K-$10K upfront + monthly) before Apr 30",
+  "type": "follow_up",
+  "due_date": "2026-04-29T00:00:00+00:00",
+  "contact_id": "2c7c25c9-4988-4232-8a18-a990023ff23f",
+  "created_at": "2026-04-25T00:34:17.491119+00:00"
+ },
+ {
+  "id": "a07eca17-6b48-4c72-b589-220a5e0d5ca3",
+  "title": "[Zad] Follow up with Micah before May 1 \u2014 confirm Blue has reviewed Lifeline Roofing proposal",
+  "type": "follow_up",
+  "due_date": "2026-04-28T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-04-25T00:34:20.999374+00:00"
+ },
+ {
+  "id": "88bf3b26-f59a-4461-b3f0-a6424edce573",
+  "title": "[Zad] Send Rare Breed demo app + Option B pricing proposal",
+  "type": "follow_up",
+  "due_date": "2026-05-05T00:00:00+00:00",
+  "contact_id": "04741103-a0bd-479c-b034-44763c4790da",
+  "created_at": "2026-04-28T21:07:37.771318+00:00"
+ },
+ {
+  "id": "7de65ae7-ecf3-410d-861b-fb03eb75648a",
+  "title": "[Zad] Prepare custom proposal + demo for All Purpose Plumbing (timekeeping, cost coding, materials tracking)",
+  "type": "task",
+  "due_date": "2026-05-06T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-04-29T00:19:31.388337+00:00"
+ },
+ {
+  "id": "4d16958c-b663-4b48-a98f-3c53005a35ae",
+  "title": "[Carl-Luca] Send Lindsey dashboard demo link via email so she can share with office team (Shawna + Heather)",
+  "type": "task",
+  "due_date": "2026-05-05T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-29T20:03:59.779567+00:00"
+ },
+ {
+  "id": "4a115d7d-8b35-42cc-be74-9de4a54bc7c3",
+  "title": "[Carl-Luca] Provide Lindsey with 2 Evios client references who use the dashboard",
+  "type": "task",
+  "due_date": "2026-05-05T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-29T20:03:59.779567+00:00"
+ },
+ {
+  "id": "132c5b50-624f-4876-bfc5-abdd28b8faf1",
+  "title": "find Mike Miner number",
+  "type": "follow_up",
+  "due_date": "2026-04-30T00:00:00+00:00",
+  "contact_id": "5c5f6e0e-672c-4e2a-8596-1fadd184afb1",
+  "created_at": "2026-04-29T21:47:17.960472+00:00"
+ },
+ {
+  "id": "9be1577e-46ea-4fb7-810e-a78d9c0361d6",
+  "title": "[Carl-Luca] Send dashboard demo link to Lindsey so she can share with office team",
+  "type": "custom",
+  "due_date": "2026-05-02T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-30T00:33:30.649972+00:00"
+ },
+ {
+  "id": "964ae26e-bd14-449e-bb1a-a9c909a7ac2c",
+  "title": "[Carl-Luca] Provide Evios client references to Lindsey (2 clients using the dashboard)",
+  "type": "custom",
+  "due_date": "2026-05-02T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-04-30T00:33:30.649972+00:00"
+ },
+ {
+  "id": "a2699d86-dcad-4ac8-8c14-d94393b58186",
+  "title": "[Zad] Send Curtis requirements email + demo video of email-bot dashboard (Pecan Street)",
+  "type": "follow_up",
+  "due_date": "2026-05-05T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-04-30T15:41:17.286743+00:00"
+ },
+ {
+  "id": "ce19ecce-c76a-4d57-a5c8-57de30ff6343",
+  "title": "[Zad] Send Curtis requirements email + email-bot demo video (Pecan Street)",
+  "type": "follow_up",
+  "due_date": "2026-05-02T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-01T00:37:28.388127+00:00"
+ },
+ {
+  "id": "a170b63a-a982-449a-8276-f1c565581d86",
+  "title": "[Carl-Luca] Build email bot: Pecan Street leak/battery monitoring with Housecall Pro integration",
+  "type": "follow_up",
+  "due_date": null,
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-01T00:37:28.966379+00:00"
+ },
+ {
+  "id": "7017500b-6505-4c33-827f-5fba77a3452f",
+  "title": "Follow up with Micah (Lifeline Roofing) - declined May 1 meeting after proposal",
+  "type": "follow_up",
+  "due_date": "2026-05-02T00:00:00+00:00",
+  "contact_id": "a0b419c8-1920-45fc-aa47-06bf2dd983c8",
+  "created_at": "2026-05-01T19:20:50.727424+00:00"
+ },
+ {
+  "id": "a5f6fc4f-b64e-4bfd-bc04-370229ed6a0c",
+  "title": "[Zad] Send Tyson demo link for time-tracking and materials-management app",
+  "type": "follow_up",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:18:11.582948+00:00"
+ },
+ {
+  "id": "1720f923-7663-4378-862c-7f3c8a40d96f",
+  "title": "[Zad] Send All Purpose proposal - pilot option + full implementation, with pricing",
+  "type": "follow_up",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:18:11.582948+00:00"
+ },
+ {
+  "id": "202e38b5-fec9-4112-9443-5cf19cd136a6",
+  "title": "[Zad] Prep phase-based time-tracking demo for May 13 meeting with Tyson and partner",
+  "type": "task",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:18:11.582948+00:00"
+ },
+ {
+  "id": "7dccfa8c-e17e-44bd-933b-2f95c04f59cd",
+  "title": "[Zad] Send demo link to Tyson Malone (All Purpose)",
+  "type": "follow_up",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:33:48.625385+00:00"
+ },
+ {
+  "id": "97d3c19d-3439-407b-b25d-efc0efa203c8",
+  "title": "[Zad] Prepare proposal \u2014 pilot + full implementation options with pricing (All Purpose)",
+  "type": "follow_up",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:33:48.625385+00:00"
+ },
+ {
+  "id": "533308f8-22cc-4d9b-b838-8cbb97bc90b1",
+  "title": "[Zad] Phase-based time tracking demo ready for May 13 meeting (All Purpose)",
+  "type": "follow_up",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-07T00:33:48.625385+00:00"
+ },
+ {
+  "id": "fdf06341-c7b1-45f9-bd0d-d1b1ddae9941",
+  "title": "[Carl-Luca] Build dashboard features: reporting, manual estimate approval, internal notes, invoice sent status (Peerless)",
+  "type": "custom",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-07T00:33:53.391859+00:00"
+ },
+ {
+  "id": "584ac4fc-4626-42c4-9e85-bb87750d00e3",
+  "title": "[Carl-Luca] Build Google Drive automation \u2014 auto-move files on job assignment/completion (Peerless)",
+  "type": "custom",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-07T00:33:53.391859+00:00"
+ },
+ {
+  "id": "6266a5f9-650e-40c8-aca6-4a304538fbc5",
+  "title": "[Zad] Pull client references from golden client list + send to Lindsey (Peerless)",
+  "type": "follow_up",
+  "due_date": "2026-05-09T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-07T00:33:53.391859+00:00"
+ },
+ {
+  "id": "160003ed-fe1c-4f53-87b5-10cba051ab0e",
+  "title": "[Zad] Finalize scope and pricing for pilot phase (Peerless)",
+  "type": "follow_up",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-07T00:33:53.391859+00:00"
+ },
+ {
+  "id": "00e578c1-db50-4dd6-b692-32b547c6eb0a",
+  "title": "[Zad] Send calendar invite for May 8 11:30 AM CT discovery call to all attendees",
+  "type": "follow_up",
+  "due_date": "2026-05-07T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-07T15:42:43.388718+00:00"
+ },
+ {
+  "id": "0ef99821-d2e6-49df-a8df-2cfd90ef1c88",
+  "title": "[Zad] Attend May 8 discovery call - review HCP fields and finalize integration scope",
+  "type": "task",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-07T15:42:43.388718+00:00"
+ },
+ {
+  "id": "e3e08db1-a518-4a6e-b2cd-2bd012dcebcd",
+  "title": "[Carl-Luca] Build email parser: Leak Defense alert emails -> HCP lead creation/updates with severity tags",
+  "type": "task",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-07T15:42:43.388718+00:00"
+ },
+ {
+  "id": "945de013-2542-4669-90a3-2909042f0679",
+  "title": "[Zad] Send contract to J&J + confirm initial $4K payment",
+  "type": "follow_up",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-07T16:47:51.128959+00:00"
+ },
+ {
+  "id": "29202e22-4023-49d3-9ff9-021e265958d1",
+  "title": "[Carl-Luca] Build tool inventory + allocation iPad app for J&J",
+  "type": "task",
+  "due_date": "2026-07-02T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-07T16:47:51.128959+00:00"
+ },
+ {
+  "id": "8788f13f-9148-493e-a8c4-4f032a7c98ea",
+  "title": "[Zad] Get J&J contract signed and collect $4k upfront payment",
+  "type": "follow_up",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-08T00:32:50.628631+00:00"
+ },
+ {
+  "id": "ea56c01c-e227-48c7-96ba-4ddde944de3f",
+  "title": "[Carl-Luca] Coordinate tool/equipment inventory at J&J site (first step before system setup)",
+  "type": "custom",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-08T00:32:50.628631+00:00"
+ },
+ {
+  "id": "06372cc7-6c71-4d20-b07a-0688b1e5efd9",
+  "title": "[Carl-Luca] Set up Evios iPad app on J&J iPads and sync system",
+  "type": "custom",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-08T00:32:50.628631+00:00"
+ },
+ {
+  "id": "aeb051d3-b59a-4205-992d-faf9cfd3b2bb",
+  "title": "[Carl-Luca] Record training video for J&J staff on iPad tooling/inventory system",
+  "type": "custom",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "e5f11213-bbbc-4a1d-8101-8ce9c176024b",
+  "created_at": "2026-05-08T00:32:50.628631+00:00"
+ },
+ {
+  "id": "0b2625c2-edcd-43d1-8db2-df29dcf2fb0a",
+  "title": "[Carl-Luca] Build Leak Defense email parser: parse alerts, categorize by severity, create/update HouseCall Pro leads with tags",
+  "type": "custom",
+  "due_date": "2026-05-08T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-08T00:32:53.394663+00:00"
+ },
+ {
+  "id": "e3d226a1-8926-4ca7-8771-6e6afb5fdc4b",
+  "title": "[Carl-Luca] Build Leak Defense email parser + HCP integration for Pecan Street (post May 8 scope call)",
+  "type": "task",
+  "due_date": "2026-05-09T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-08T02:15:26.627644+00:00"
+ },
+ {
+  "id": "5f09d49e-b7d8-4c7d-9db4-cd1a06664006",
+  "title": "[Carl-Luca] Send SOW via DocuSign to Pecan Street for review and signature",
+  "type": "task",
+  "due_date": "2026-05-11T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-08T17:43:50.237569+00:00"
+ },
+ {
+  "id": "5dfb5eb0-fb1e-421f-b438-680626543af0",
+  "title": "[Carl-Luca] Implement phase 1: Pecan Street leak alerts to HCP integration (map device IDs, create/update leads, add line items, tag alerts)",
+  "type": "task",
+  "due_date": "2026-05-13T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-08T17:43:50.237569+00:00"
+ },
+ {
+  "id": "dc0b48dd-fdf7-444f-baba-fcb440f56738",
+  "title": "[Carl-Luca] Draft and send Pecan Street integration SOW via DocuSign",
+  "type": "custom",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-09T00:34:11.421543+00:00"
+ },
+ {
+  "id": "a17d4076-7927-4856-8801-d65484b67592",
+  "title": "[Carl-Luca] Implement phase 1: Pecan Street leak alerts -> HCP integration (email parsing, device ID mapping, lead creation)",
+  "type": "custom",
+  "due_date": "2026-05-12T00:00:00+00:00",
+  "contact_id": "cdd20382-7b5c-491b-8cd4-656d7ca18055",
+  "created_at": "2026-05-09T00:34:13.178945+00:00"
+ },
+ {
+  "id": "12a960c6-40ce-47ed-b9d2-a91c5a03dab0",
+  "title": "[Carl-Luca] Fix bugs on main page of Osborne application",
+  "type": "task",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-05-13T16:14:15.145591+00:00"
+ },
+ {
+  "id": "0b62d997-e0bc-4878-9591-f2f8d18d514f",
+  "title": "[Zad] Provide additional leads for same companies to Eric Jones free by Friday (no refund unless these fail)",
+  "type": "follow_up",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "15f93762-c62f-4213-b2e4-de679c186407",
+  "created_at": "2026-05-13T18:23:47.989584+00:00"
+ },
+ {
+  "id": "768a3ee7-5cf4-46ea-80d5-04195b84aa7a",
+  "title": "[Zad] Build inventory/shipping tracking demo for Jon (order numbers, weights, locations, customs) \u2014 ready for May 15 demo",
+  "type": "task",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "03c52065-de9b-46b2-9b04-93802c8212e8",
+  "created_at": "2026-05-13T23:46:31.38018+00:00"
+ },
+ {
+  "id": "566c5200-42af-4e42-9bbc-c4cb78640e9d",
+  "title": "[Zad] Confirm Tyler availability + send Jon calendar invite for May 15 demo (Tyler + wife included)",
+  "type": "follow_up",
+  "due_date": "2026-05-14T00:00:00+00:00",
+  "contact_id": "03c52065-de9b-46b2-9b04-93802c8212e8",
+  "created_at": "2026-05-13T23:46:31.38018+00:00"
+ },
+ {
+  "id": "271883a4-aa58-4d04-b6e9-41318d5a8315",
+  "title": "[Zad] Send proposal + scope doc for phase-performance tracking app to Tyson + Chaz before May 20 call",
+  "type": "follow_up",
+  "due_date": "2026-05-18T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-13T23:46:31.38018+00:00"
+ },
+ {
+  "id": "2c117356-73da-4cce-813f-fc9f98856d27",
+  "title": "[Zad] Send live demo link for phase-performance app to Tyson + Chaz before May 20 call",
+  "type": "follow_up",
+  "due_date": "2026-05-18T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-13T23:46:31.38018+00:00"
+ },
+ {
+  "id": "8af4a19b-a973-44d0-be24-cab0e2a83c6d",
+  "title": "[Zad] Prep Bit Buddy pitch for Rob (Archimedes) \u2014 one small use case, FieldPulse context, proof of concept ask",
+  "type": "task",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "f97c7437-fc71-478b-8c73-245998ef7c9f",
+  "created_at": "2026-05-13T23:46:31.38018+00:00"
+ },
+ {
+  "id": "40e8c007-79e0-4e14-9411-c0b131c49030",
+  "title": "[Zad] Send proposal and scope doc to All Purpose before May 20 call",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-14T00:35:03.189223+00:00"
+ },
+ {
+  "id": "23ef361a-fdc9-4d09-8ce3-b4b9db8655fd",
+  "title": "[Zad] Send live demo link for phase-performance app to Tyson + Chaz",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "cb74cbf8-b993-464a-8170-d78c0b14c3fd",
+  "created_at": "2026-05-14T00:35:03.189223+00:00"
+ },
+ {
+  "id": "5a8b3e1a-e037-4e87-9591-31409bde4fb3",
+  "title": "[Carl-Luca] Build inventory/shipping tracking dashboard demo for Jon (order numbers, weights, customs)",
+  "type": "custom",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "03c52065-de9b-46b2-9b04-93802c8212e8",
+  "created_at": "2026-05-14T00:35:05.919793+00:00"
+ },
+ {
+  "id": "2deb0b06-9be1-4982-a9e5-fc262b7655b8",
+  "title": "[Zad] Confirm Tyler availability and add Tyler + wife to May 15 Evios Inventory Demo invite",
+  "type": "follow_up",
+  "due_date": "2026-05-14T00:00:00+00:00",
+  "contact_id": "03c52065-de9b-46b2-9b04-93802c8212e8",
+  "created_at": "2026-05-14T00:35:05.919793+00:00"
+ },
+ {
+  "id": "b6d74a9e-fb1a-4050-ba24-e038d21146d8",
+  "title": "[Zad] Send replacement leads to Farmington Valley free of charge (bad $500 lead resolution)",
+  "type": "follow_up",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "15f93762-c62f-4213-b2e4-de679c186407",
+  "created_at": "2026-05-14T00:35:07.42404+00:00"
+ },
+ {
+  "id": "069ac380-0e58-4a06-a9ae-92056b9cebaf",
+  "title": "[Carl-Luca] Fix bugs on main page of Osborne application",
+  "type": "custom",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-05-14T00:35:09.7877+00:00"
+ },
+ {
+  "id": "4a0169ad-d0a4-414b-9363-10e920846f5d",
+  "title": "[Zad] Address J&J payment and contract details",
+  "type": "follow_up",
+  "due_date": "2026-05-15T00:00:00+00:00",
+  "contact_id": "85c8fe4e-dbea-42a1-a297-e41ce718a184",
+  "created_at": "2026-05-14T00:35:09.7877+00:00"
+ },
+ {
+  "id": "32c883ee-99ab-4121-aa0d-974168750736",
+  "title": "[Zad] Send revised pilot proposal to Peerless Plumbing ($4K kickoff / $4K launch, 4-week scope) + new pilot demo link",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-14T18:20:10.895728+00:00"
+ },
+ {
+  "id": "152594b8-ac7e-4b50-bc28-bb2e58a0a69e",
+  "title": "[Zad] Send Peerless Plumbing reference contacts (Omar & Asif email addresses)",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-14T18:20:10.895728+00:00"
+ },
+ {
+  "id": "bfa8fe3a-b5b3-4af0-80f2-23f2c3079974",
+  "title": "[Carl-Luca] Build pilot-phase demo for Peerless Plumbing (reduced scope: CRM + Drive sync + dashboard)",
+  "type": "task",
+  "due_date": "2026-05-20T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-14T18:20:10.895728+00:00"
+ },
+ {
+  "id": "cc762df6-a360-4986-ad10-1011c917fedf",
+  "title": "[Zad] Send pilot-phase proposal ($4K kickoff, $4K launch, 4-week scope) + new demo link to Peerless Plumbing",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-15T00:33:42.008032+00:00"
+ },
+ {
+  "id": "b45e6a2a-fa56-41f3-9daf-ad4b17f0a210",
+  "title": "[Zad] Send Omar and Asif email addresses to Peerless Plumbing for reference calls",
+  "type": "follow_up",
+  "due_date": "2026-05-16T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-15T00:33:44.177182+00:00"
+ },
+ {
+  "id": "e6f52ce2-0c04-407f-a023-8ab6bd1d7d23",
+  "title": "[Zad] Send revised pilot proposal ($4K kickoff, $4K launch, 4-week scope) + new demo link scoped to pilot features",
+  "type": "follow_up",
+  "due_date": "2026-05-19T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-17T00:35:14.38023+00:00"
+ },
+ {
+  "id": "3de0e0e8-8baf-4d37-ab5f-40caa5babd4a",
+  "title": "[Zad] Send Omar and Asif reference contact emails to Lindsey (Peerless Plumbing)",
+  "type": "follow_up",
+  "due_date": "2026-05-16T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-17T00:35:14.38023+00:00"
+ },
+ {
+  "id": "e961e8ac-227d-4046-a5f0-2eaa3ec99e0f",
+  "title": "[Carl-Luca] Build pilot-phase demo: CRM + AI, Google Drive sync, estimates/invoices/customer dashboard (for Peerless Plumbing May 21 call)",
+  "type": "custom",
+  "due_date": "2026-05-21T00:00:00+00:00",
+  "contact_id": "9aef5000-b2b0-4493-bbb1-5e6e3c739d4c",
+  "created_at": "2026-05-17T00:35:14.38023+00:00"
+ },
+ {
+  "id": "81bfa7f2-58c7-41fb-813c-85f7cc19327b",
+  "title": "[Carl-Luca] Update Evios website: add current product demos + improve overall look",
+  "type": "task",
+  "due_date": "2026-05-21T00:00:00+00:00",
+  "contact_id": "c48b0c5f-0ef4-469e-bfd5-ec72525d18da",
+  "created_at": "2026-05-18T17:20:39.962155+00:00"
+ },
+ {
+  "id": "21827913-1b49-449b-8d91-fcee5bc310a7",
+  "title": "[Zad] Ask J&J and Pecan clients for testimonials/survey to feature on Evios website",
+  "type": "follow_up",
+  "due_date": "2026-05-21T00:00:00+00:00",
+  "contact_id": "c48b0c5f-0ef4-469e-bfd5-ec72525d18da",
+  "created_at": "2026-05-18T17:20:39.962155+00:00"
+ },
+ {
+  "id": "bb17c6b8-88fc-44ac-9bfa-88ae61c6792a",
+  "title": "[Carl-Luca] Update Evios website with current product demos and improved look (Kelly mtg)",
+  "type": "custom",
+  "due_date": "2026-05-21T00:00:00+00:00",
+  "contact_id": "2e733c7b-a9e7-4a43-9a1d-6f27902826cd",
+  "created_at": "2026-05-19T00:31:58.453554+00:00"
+ },
+ {
+  "id": "309b8643-1ca6-447d-809a-fdf93eebdfd1",
+  "title": "[Zad] Ask J&J and Pecan for testimonials to feature on Evios website (Kelly mtg)",
+  "type": "follow_up",
+  "due_date": "2026-05-20T00:00:00+00:00",
+  "contact_id": "2e733c7b-a9e7-4a43-9a1d-6f27902826cd",
+  "created_at": "2026-05-19T00:31:58.453554+00:00"
+ },
+ {
+  "id": "764d10f8-d8d8-4da5-8317-197ddf98978d",
+  "title": "[Zad] Prep custom demo + proposal for JK Plumbing inventory/bidding automation - Jun 4 manager demo",
+  "type": "task",
+  "due_date": "2026-06-03T00:00:00+00:00",
+  "contact_id": "e0e5524c-0992-49d1-bd28-49816ba81c8f",
+  "created_at": "2026-05-28T18:13:19.454168+00:00"
+ },
+ {
+  "id": "4916988f-cb8e-4a46-8ffc-6cd1043b9386",
+  "title": "[Zad] Prepare scope and proposal for Great Basin after June 4 scoping call",
+  "type": "follow_up",
+  "due_date": "2026-06-05T00:00:00+00:00",
+  "contact_id": "abb70b3b-159d-4cb8-89a9-50259cc864ca",
+  "created_at": "2026-05-29T00:34:20.317687+00:00"
+ },
+ {
+  "id": "10a6377a-c991-4e23-9dc2-2d5022fe1824",
+  "title": "[Zad] Prepare custom demo and proposal for JK Plumbing (inventory + Ferguson PO + QuickBooks) before June 4",
+  "type": "follow_up",
+  "due_date": "2026-06-03T00:00:00+00:00",
+  "contact_id": "e0e5524c-0992-49d1-bd28-49816ba81c8f",
+  "created_at": "2026-05-29T00:34:25.147751+00:00"
+ },
+ {
+  "id": "0dd8f1b7-db7e-402f-b9c2-81f8a92ee6f7",
+  "title": "[Carl-Luca] Build polished demo for JK Plumbing manager: inventory flow + Ferguson direct PO ordering + QuickBooks integration",
+  "type": "follow_up",
+  "due_date": "2026-06-04T00:00:00+00:00",
+  "contact_id": "e0e5524c-0992-49d1-bd28-49816ba81c8f",
+  "created_at": "2026-05-29T00:34:25.147751+00:00"
+ },
+ {
+  "id": "4fac9862-fd40-4d7f-900d-ed6cc1077967",
+  "title": "[Zad] Prepare scope + proposal for Great Basin inventory system after June 4 call",
+  "type": "proposal",
+  "due_date": "2026-06-04T00:00:00+00:00",
+  "contact_id": "abb70b3b-159d-4cb8-89a9-50259cc864ca",
+  "created_at": "2026-05-29T18:24:44.374649+00:00"
+ }
+]

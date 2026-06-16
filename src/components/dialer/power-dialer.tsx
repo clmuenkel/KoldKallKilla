@@ -72,6 +72,19 @@ type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_
 
 const CATEGORY_MODES: FilterMode[] = ["missed_meetings", "follow_ups_due"];
 
+// Representative timezone per group (for business-hours display). Pure — module level.
+function getRepresentativeTimezone(group: TimezoneGroup): string | null {
+  switch (group) {
+    case "pacific": return "America/Los_Angeles";
+    case "mountain": return "America/Denver";
+    case "central": return "America/Chicago";
+    case "eastern": return "America/New_York";
+    case "alaska": return "America/Anchorage";
+    case "hawaii": return "America/Honolulu";
+    default: return null;
+  }
+}
+
 // Keyboard Shortcuts Help Panel
 function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
@@ -445,28 +458,35 @@ export function PowerDialer() {
     canSave: !!outcome,
   });
 
-  // Calculate counts per stage
-  const stageCounts = STAGES.reduce((acc, stage) => {
-    const stageContacts = allContacts?.filter(c => c.stage === stage.value) || [];
-    acc[stage.value] = {
-      total: stageContacts.length,
-      withPhone: stageContacts.filter(c => c.phone || c.mobile).length,
-    };
+  // Calculate counts per stage (memoized — one pass over allContacts, not on
+  // every render of the dialer).
+  const stageCounts = useMemo(() => {
+    const acc = {} as Record<string, { total: number; withPhone: number }>;
+    for (const stage of STAGES) acc[stage.value] = { total: 0, withPhone: 0 };
+    for (const c of allContacts ?? []) {
+      const bucket = acc[c.stage];
+      if (!bucket) continue;
+      bucket.total++;
+      if (c.phone || c.mobile) bucket.withPhone++;
+    }
     return acc;
-  }, {} as Record<string, { total: number; withPhone: number }>);
+  }, [allContacts]);
 
   // Counts for the two category queues (respect the require-phone toggle)
-  const countWithPhoneFilter = (contacts: Contact[] | undefined) => {
-    const list = contacts ?? [];
-    return requirePhone ? list.filter((c) => c.phone || c.mobile).length : list.length;
-  };
-  const categoryCounts = {
-    missed_meetings: countWithPhoneFilter(missedMeetingContacts),
-    follow_ups_due: countWithPhoneFilter(followUpsDue),
-  };
+  const categoryCounts = useMemo(() => {
+    const count = (contacts: Contact[] | undefined) => {
+      const list = contacts ?? [];
+      return requirePhone ? list.filter((c) => c.phone || c.mobile).length : list.length;
+    };
+    return {
+      missed_meetings: count(missedMeetingContacts),
+      follow_ups_due: count(followUpsDue),
+    };
+  }, [missedMeetingContacts, followUpsDue, requirePhone]);
 
-  // Calculate counts per timezone group (based on pre-filtered contacts for accurate counts)
-  const getTimezoneCountsForFilteredContacts = () => {
+  // Calculate counts per timezone group (memoized — this iterates the whole
+  // source list and does per-contact timezone work, so it must not run every render).
+  const timezoneCounts = useMemo(() => {
     const tzSource =
       filterMode === "missed_meetings"
         ? missedMeetingContacts
@@ -475,56 +495,30 @@ export function PowerDialer() {
         : allContacts;
     if (!tzSource) return {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>;
 
-    // Apply base filters first (same as getFilteredContacts but without timezone filter)
     let baseFiltered = tzSource;
-
     if (filterMode === "stage") {
       baseFiltered = baseFiltered.filter(c => selectedStages.includes(c.stage || "fresh"));
     } else if (filterMode === "company" && selectedCompanyId) {
       baseFiltered = baseFiltered.filter(c => c.company_id === selectedCompanyId);
     }
-    
     if (requirePhone) {
       baseFiltered = baseFiltered.filter(c => c.phone || c.mobile);
     }
-    
-    // Count contacts per timezone group
-    const counts = TIMEZONE_GROUPS.reduce((acc, group) => {
+
+    return TIMEZONE_GROUPS.reduce((acc, group) => {
       const groupContacts = baseFiltered.filter(c => {
         const company = c.company_id ? companiesById.get(c.company_id) : null;
         const tz = getContactTimezone(c, company);
         return getTimezoneGroup(tz) === group;
       });
-      
-      // Get status for this timezone group (use first contact's timezone as representative)
-      const representativeTz = group !== "unknown" 
-        ? getRepresentativeTimezone(group)
-        : null;
-      
+      const representativeTz = group !== "unknown" ? getRepresentativeTimezone(group) : null;
       acc[group] = {
         count: groupContacts.length,
         status: getBusinessHourStatus(representativeTz),
       };
       return acc;
     }, {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>);
-    
-    return counts;
-  };
-  
-  // Get a representative timezone for a group (for business hours display)
-  const getRepresentativeTimezone = (group: TimezoneGroup): string | null => {
-    switch (group) {
-      case "pacific": return "America/Los_Angeles";
-      case "mountain": return "America/Denver";
-      case "central": return "America/Chicago";
-      case "eastern": return "America/New_York";
-      case "alaska": return "America/Anchorage";
-      case "hawaii": return "America/Honolulu";
-      default: return null;
-    }
-  };
-  
-  const timezoneCounts = getTimezoneCountsForFilteredContacts();
+  }, [filterMode, missedMeetingContacts, followUpsDue, allContacts, selectedStages, selectedCompanyId, requirePhone, companiesById]);
 
   // Maximum call attempts before contact is exhausted
   const MAX_CALL_ATTEMPTS = 10;
@@ -654,7 +648,18 @@ export function PowerDialer() {
     return filtered;
   };
 
-  const filteredContacts = getFilteredContacts();
+  // Memoized: filtering + sorting up to ~4,000 contacts must not run on every
+  // render (e.g. while typing a note). Only recompute when an input changes.
+  // (getFilteredContacts is a closure over these values.)
+  const filteredContacts = useMemo(
+    () => getFilteredContacts(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      allContacts, missedMeetingContacts, followUpsDue, filterMode, selectedStages,
+      selectedCompanyId, requirePhone, enableCadence, selectedTimezones,
+      contactsCalledToday, pausedCompanyIds, companiesById,
+    ]
+  );
   const contactsReadyToCall = filteredContacts.length;
 
   const handleStageToggle = (stageValue: string) => {

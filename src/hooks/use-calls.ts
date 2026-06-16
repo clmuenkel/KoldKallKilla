@@ -491,12 +491,17 @@ export function useLogCall() {
 
       return callData as Call;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       queryClient.invalidateQueries({ queryKey: ["calls", "session-completed"] });
       queryClient.invalidateQueries({ queryKey: ["calls", "session-stats"] });
       queryClient.invalidateQueries({ queryKey: ["calls", "today-stats"] });
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      // Do NOT invalidate the full ["contacts"] list here — it refetches all
+      // ~4,000 in-pool rows after EVERY call (the stall between calls). The
+      // active session queue is pruned in the store and same-day-recall prevents
+      // re-serving, so the big list doesn't need a mid-session refetch. Just keep
+      // the single called contact fresh (1 row).
+      queryClient.invalidateQueries({ queryKey: ["contact", variables.call.contact_id] });
       queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["activity"] });

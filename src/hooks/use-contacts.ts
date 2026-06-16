@@ -391,9 +391,16 @@ export function useUpdateContact() {
       return data as Contact;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      // Patch the single changed contact inside any cached ["contacts", ...] list
+      // instead of invalidating (which would refetch the whole 4,000-row in-pool
+      // list on every call/edit during a dialer session — the main source of lag).
+      queryClient.setQueriesData<Contact[]>({ queryKey: ["contacts"] }, (old) =>
+        old ? old.map((c) => (c.id === data.id ? { ...c, ...data } : c)) : old
+      );
+      // The single-contact query is one row — keep it fresh for live views.
+      queryClient.setQueryData(["contact", data.id], data);
+      // Paginated list is small (one page); invalidate is cheap.
       queryClient.invalidateQueries({ queryKey: ["contacts-paginated"] });
-      queryClient.invalidateQueries({ queryKey: ["contact", data.id] });
     },
   });
 }

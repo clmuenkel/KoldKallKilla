@@ -582,17 +582,29 @@ export function getContactTimezone(
  * - "borderline": 8-9am or 5-6pm (acceptable but not ideal)
  * - "bad": outside business hours
  */
+// Intl.DateTimeFormat is one of the most expensive JS calls; building one per
+// contact per render (4,000+ rows) is the dialer's biggest hot spot. Cache one
+// formatter per (timezone, kind) and reuse it.
+const _fmtCache = new Map<string, Intl.DateTimeFormat>();
+function getFormatter(timezone: string, kind: "hour24" | "time12"): Intl.DateTimeFormat {
+  const key = `${kind}|${timezone}`;
+  let f = _fmtCache.get(key);
+  if (!f) {
+    f =
+      kind === "hour24"
+        ? new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", hour12: false })
+        : new Intl.DateTimeFormat("en-US", { timeZone: timezone, hour: "numeric", minute: "2-digit", hour12: true });
+    _fmtCache.set(key, f);
+  }
+  return f;
+}
+
 export function getBusinessHourStatus(timezone: string | null): BusinessHourStatus {
   if (!timezone) return "bad";
-  
+
   try {
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      hour: "numeric",
-      hour12: false,
-    });
-    const hour = parseInt(formatter.format(now), 10);
+    const hour = parseInt(getFormatter(timezone, "hour24").format(now), 10);
     
     // Good: 9am - 5pm (9-16 in 24h)
     if (hour >= 9 && hour < 17) {
@@ -616,14 +628,9 @@ export function getBusinessHourStatus(timezone: string | null): BusinessHourStat
  */
 export function getLocalTimeShort(timezone: string | null): string {
   if (!timezone) return "";
-  
+
   try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(new Date()).toLowerCase().replace(" ", "");
+    return getFormatter(timezone, "time12").format(new Date()).toLowerCase().replace(" ", "");
   } catch {
     return "";
   }
