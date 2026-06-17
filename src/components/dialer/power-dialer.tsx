@@ -129,10 +129,43 @@ function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
+const NOTES_WIDTH_KEY = "dialer_notes_width";
+const NOTES_WIDTH_MIN = 280;
+const NOTES_WIDTH_MAX = 720;
+
 export function PowerDialer() {
   const userId = useAuthId()!;
   const notesInputRef = useRef<HTMLTextAreaElement>(null);
-  
+
+  // Resizable notes column (drag handle on its left edge; persisted).
+  const [notesWidth, setNotesWidth] = useState(320);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(NOTES_WIDTH_KEY));
+    if (saved >= NOTES_WIDTH_MIN && saved <= NOTES_WIDTH_MAX) setNotesWidth(saved);
+  }, []);
+  const startNotesResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = notesWidth;
+    const onMove = (ev: MouseEvent) => {
+      // Dragging left (smaller clientX) widens the notes column.
+      const next = Math.min(NOTES_WIDTH_MAX, Math.max(NOTES_WIDTH_MIN, startW + (startX - ev.clientX)));
+      setNotesWidth(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      setNotesWidth((w) => {
+        localStorage.setItem(NOTES_WIDTH_KEY, String(w));
+        return w;
+      });
+    };
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [notesWidth]);
+
   // Session setup state
   const [filterMode, setFilterMode] = useState<FilterMode>("stage");
   const [selectedStages, setSelectedStages] = useState<string[]>(["fresh"]);
@@ -1387,10 +1420,18 @@ export function PowerDialer() {
             )}
           </div>
 
-          {/* Column 3: Notes + Tasks (fixed width) */}
-          <div className="w-80 flex flex-col shrink-0 bg-card/30">
+          {/* Drag handle to resize the notes column */}
+          <div
+            onMouseDown={startNotesResize}
+            className="w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
+            title="Drag to resize notes"
+          />
+
+          {/* Column 3: Notes + Tasks (resizable width) */}
+          <div className="flex flex-col shrink-0 bg-card/30" style={{ width: notesWidth }}>
             {currentContact ? (
               <NotesAndTasks
+                key={currentContact.id}
                 contact={currentContact}
                 colleagues={(colleagues as Contact[]) || []}
                 userId={userId}
