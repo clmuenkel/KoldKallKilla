@@ -467,3 +467,113 @@ export function useIncrementSessionMeetings() {
     },
   });
 }
+
+export interface SessionCall {
+  id: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  outcome: string;
+  disposition: string | null;
+  notes: string | null;
+  contact: { id: string; first_name: string; last_name: string | null; company_name: string | null } | null;
+}
+
+export interface SessionDetail {
+  session: DialerSession;
+  calls: SessionCall[];
+  metrics: {
+    totalCalls: number;
+    connected: number;
+    voicemails: number;
+    noAnswers: number;
+    skipped: number;
+    meetingsBooked: number;
+    answerRate: number;
+    setRate: number;
+    durationSeconds: number | null;
+    talkTimeSeconds: number;
+  };
+}
+
+const MEETING_DISPOSITIONS = ["meeting", "interested_meeting"];
+
+/**
+ * Per-session drill-down: the session row + all calls logged under it
+ * (calls.session_id = id) + computed metrics. Only sessions created after the
+ * ai_screener fix have linked calls; older calls have no session_id.
+ */
+export function useSessionDetail(sessionId: string) {
+  const supabase = createClient();
+  const userId = useAuthId();
+
+  return useQuery<SessionDetail | null>({
+    queryKey: ["session-detail", userId, sessionId],
+    enabled: !!userId && !!sessionId,
+    queryFn: async () => {
+      const { data: session, error: sErr } = await (supabase as any)
+        .from("dialer_sessions")
+        .select("*")
+        .eq("id", sessionId)
+        .single();
+      if (sErr) throw sErr;
+
+      const { data: callsData, error: cErr } = await supabase
+        .from("calls")
+        .select(
+          "id, started_at, ended_at, duration_seconds, outcome, disposition, notes, contacts(id, first_name, last_name, company_name)"
+        )
+        .eq("session_id", sessionId)
+        .order("started_at", { ascending: true });
+      if (cErr) throw cErr;
+
+      const calls: SessionCall[] = ((callsData as any[]) || []).map((c) => ({
+        id: c.id,
+        started_at: c.started_at,
+        ended_at: c.ended_at,
+        duration_seconds: c.duration_seconds,
+        outcome: c.outcome,
+        disposition: c.disposition,
+        notes: c.notes,
+        contact: c.contacts
+          ? {
+              id: c.contacts.id,
+              first_name: c.contacts.first_name,
+              last_name: c.contacts.last_name,
+              company_name: c.contacts.company_name,
+            }
+          : null,
+      }));
+
+      const totalCalls = calls.length;
+      const connected = calls.filter((c) => c.outcome === "connected").length;
+      const voicemails = calls.filter((c) => c.outcome === "voicemail").length;
+      const noAnswers = calls.filter((c) => c.outcome === "no_answer").length;
+      const skipped = calls.filter((c) => c.outcome === "skipped").length;
+      const meetingsBooked = calls.filter(
+        (c) => c.outcome === "connected" && c.disposition && MEETING_DISPOSITIONS.includes(c.disposition)
+      ).length;
+      const attempts = totalCalls - skipped;
+      const talkTimeSeconds = calls
+        .filter((c) => c.outcome === "connected")
+        .reduce((s, c) => s + (c.duration_seconds || 0), 0);
+
+      return {
+        session: session as DialerSession,
+        calls,
+        metrics: {
+          totalCalls,
+          connected,
+          voicemails,
+          noAnswers,
+          skipped,
+          meetingsBooked,
+          answerRate: attempts > 0 ? Math.round((connected / attempts) * 100) : 0,
+          setRate: connected > 0 ? Math.round((meetingsBooked / connected) * 100) : 0,
+          durationSeconds: (session as any).duration_seconds,
+          talkTimeSeconds,
+        },
+      };
+    },
+  });
+}

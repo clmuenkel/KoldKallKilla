@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -69,7 +70,7 @@ export default function AnalyticsPage() {
   const { data: timezones } = useTimezonePerformance();
   const { data: streak } = useCallingStreak();
   const { data: weekComparison } = useWeekComparison();
-  const { data: sessions } = useSessions({ limit: 10 });
+  const { data: sessions } = useSessions({ limit: 30 });
   const { data: targets } = useTargets();
   const endAllOpenSessions = useEndAllOpenSessions();
 
@@ -330,7 +331,7 @@ export default function AnalyticsPage() {
                     Recent Sessions
                   </CardTitle>
                   <CardDescription>
-                    Auto-detected calling sessions (30+ min gap = new session)
+                    Your start-to-stop calling sessions. Click one to drill in.
                   </CardDescription>
                 </div>
                 <Button
@@ -353,7 +354,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               {sessions && sessions.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
                   {sessions.map((session) => (
                     <SessionRow key={session.id} session={session} />
                   ))}
@@ -563,7 +564,10 @@ function SessionRow({ session }: { session: SessionWithStats }) {
     : "In progress";
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+    <Link
+      href={`/analytics/sessions/${session.id}`}
+      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+    >
       <div className="flex items-center gap-4">
         <div className="text-center">
           <p className="text-sm font-medium">
@@ -599,6 +603,6 @@ function SessionRow({ session }: { session: SessionWithStats }) {
           {duration}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
