@@ -219,13 +219,13 @@ export function useDailyStats(days: number = 14) {
 }
 
 // Outcome breakdown for pie chart
-export function useOutcomeBreakdown(range: DateRange = "this_week") {
+export function useOutcomeBreakdown(range: DateRange = "this_week", customStart?: string, customEnd?: string) {
   const supabase = createClient();
   const userId = useAuthId();
-  const { start, end } = getDateBounds(range);
+  const { start, end } = getDateBounds(range, customStart, customEnd);
 
   return useQuery({
-    queryKey: ["outcome-breakdown", userId!, range],
+    queryKey: ["outcome-breakdown", userId!, range, customStart, customEnd],
     enabled: !!userId,
     queryFn: async (): Promise<OutcomeBreakdown[]> => {
       const { data: calls, error } = await supabase
@@ -378,13 +378,13 @@ export function useTimezonePerformance() {
 }
 
 // Disposition breakdown for connected calls
-export function useDispositionBreakdown(range: DateRange = "this_week") {
+export function useDispositionBreakdown(range: DateRange = "this_week", customStart?: string, customEnd?: string) {
   const supabase = createClient();
   const userId = useAuthId();
-  const { start, end } = getDateBounds(range);
+  const { start, end } = getDateBounds(range, customStart, customEnd);
 
   return useQuery({
-    queryKey: ["disposition-breakdown", userId, range],
+    queryKey: ["disposition-breakdown", userId, range, customStart, customEnd],
     enabled: !!userId,
     queryFn: async (): Promise<DispositionBreakdown[]> => {
       const { data: calls, error } = await supabase

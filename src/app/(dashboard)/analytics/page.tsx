@@ -34,6 +34,21 @@ import {
   Zap,
   CalendarX,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RTooltip,
+  PieChart as RPieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Legend,
+} from "recharts";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   useAnalyticsSummary,
@@ -58,15 +73,22 @@ const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "last_week", label: "Last Week" },
   { value: "this_month", label: "This Month" },
   { value: "last_month", label: "Last Month" },
+  { value: "custom", label: "Custom range" },
 ];
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState<DateRange>("this_week");
+  // Custom range (YYYY-MM-DD). Only used when dateRange === "custom".
+  const [customStart, setCustomStart] = useState<string>("");
+  const [customEnd, setCustomEnd] = useState<string>("");
+  // Only pass custom dates once both are set, so a half-filled range doesn't query.
+  const cs = dateRange === "custom" && customStart && customEnd ? customStart : undefined;
+  const ce = dateRange === "custom" && customStart && customEnd ? customEnd : undefined;
 
-  const { data: summary, isLoading: loadingSummary } = useAnalyticsSummary(dateRange);
+  const { data: summary, isLoading: loadingSummary } = useAnalyticsSummary(dateRange, cs, ce);
   const { data: dailyStats, isLoading: loadingDaily } = useDailyStats(14);
-  const { data: outcomes, isLoading: loadingOutcomes } = useOutcomeBreakdown(dateRange);
-  const { data: dispositions } = useDispositionBreakdown(dateRange);
+  const { data: outcomes, isLoading: loadingOutcomes } = useOutcomeBreakdown(dateRange, cs, ce);
+  const { data: dispositions } = useDispositionBreakdown(dateRange, cs, ce);
   const { data: timezones } = useTimezonePerformance();
   const { data: streak } = useCallingStreak();
   const { data: weekComparison } = useWeekComparison();
@@ -85,18 +107,39 @@ export default function AnalyticsPage() {
             title="Performance Analytics"
             description="Track your cold calling performance and identify trends"
             actions={
-              <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DATE_RANGE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_RANGE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {dateRange === "custom" && (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={customStart}
+                      max={customEnd || undefined}
+                      onChange={(e) => setCustomStart(e.target.value)}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    />
+                    <span className="text-muted-foreground text-sm">to</span>
+                    <input
+                      type="date"
+                      value={customEnd}
+                      min={customStart || undefined}
+                      onChange={(e) => setCustomEnd(e.target.value)}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
             }
           />
 
@@ -229,28 +272,34 @@ export default function AnalyticsPage() {
                 <CardDescription>Connection rate by timezone</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {timezones?.slice(0, 5).map((tz) => (
-                    <div key={tz.timezone} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate max-w-[120px]">
-                          {tz.timezone.replace("America/", "").replace("_", " ")}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({tz.total_calls} calls)
-                        </span>
-                      </div>
-                      <Badge variant={tz.answer_rate && tz.answer_rate >= 20 ? "default" : "secondary"}>
-                        {tz.answer_rate || 0}%
-                      </Badge>
-                    </div>
-                  ))}
-                  {(!timezones || timezones.length === 0) && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No timezone data yet
-                    </p>
-                  )}
-                </div>
+                {timezones && timezones.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart
+                      layout="vertical"
+                      data={timezones
+                        .slice(0, 6)
+                        .map((tz) => ({
+                          name: tz.timezone,
+                          "Answer %": tz.answer_rate || 0,
+                          calls: tz.total_calls,
+                        }))}
+                      margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={70} />
+                      <RTooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                        formatter={(v: any, _n: any, p: any) => [`${v}% (${p.payload.calls} calls)`, "Answer rate"]}
+                      />
+                      <Bar dataKey="Answer %" fill="hsl(var(--primary))" radius={[0, 3, 3, 0]} maxBarSize={22} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No timezone data yet
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -429,96 +478,67 @@ function MetricCard({
 }
 
 function SimpleTrendChart({ data }: { data: TrendDataPoint[] }) {
-  if (data.length === 0) {
+  if (data.length === 0 || data.every((d) => d.calls === 0)) {
     return (
-      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-        No data available
+      <div className="h-[220px] flex items-center justify-center text-muted-foreground">
+        No calls in this period
       </div>
     );
   }
 
-  const maxCalls = Math.max(...data.map((d) => d.calls), 1);
+  const chartData = data.map((d) => ({
+    label: format(new Date(d.date), "M/d"),
+    Calls: d.calls,
+    Connected: d.connected,
+    "Answer %": d.answerRate,
+  }));
 
   return (
-    <div className="h-[200px] flex items-end gap-1">
-      {data.map((day, i) => {
-        const height = (day.calls / maxCalls) * 100;
-        const isToday = i === data.length - 1;
-        
-        return (
-          <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full flex flex-col items-center">
-              {day.calls > 0 && (
-                <span className="text-[10px] text-muted-foreground mb-1">
-                  {day.calls}
-                </span>
-              )}
-              <div
-                className={cn(
-                  "w-full rounded-t transition-all",
-                  isToday ? "bg-primary" : "bg-primary/60",
-                  day.calls === 0 && "bg-muted"
-                )}
-                style={{ height: `${Math.max(height, 4)}%` }}
-                title={`${format(new Date(day.date), "MMM d")}: ${day.calls} calls, ${day.answerRate}% answer rate`}
-              />
-            </div>
-            <span className="text-[9px] text-muted-foreground">
-              {format(new Date(day.date), "d")}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <ResponsiveContainer width="100%" height={220}>
+      <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+        <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
+        <RTooltip
+          contentStyle={{ fontSize: 12, borderRadius: 8 }}
+          labelStyle={{ fontWeight: 600 }}
+        />
+        <Bar yAxisId="left" dataKey="Calls" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} maxBarSize={28} />
+        <Bar yAxisId="left" dataKey="Connected" fill="#22c55e" radius={[3, 3, 0, 0]} maxBarSize={28} />
+        <Line yAxisId="right" type="monotone" dataKey="Answer %" stroke="#f59e0b" strokeWidth={2} dot={false} />
+      </ComposedChart>
+    </ResponsiveContainer>
   );
 }
 
 function OutcomeChart({ outcomes }: { outcomes: { outcome: string; count: number; percentage: number; color: string }[] }) {
   if (outcomes.length === 0) {
     return (
-      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+      <div className="h-[220px] flex items-center justify-center text-muted-foreground">
         No calls recorded
       </div>
     );
   }
 
-  const total = outcomes.reduce((sum, o) => sum + o.count, 0);
+  const data = outcomes.map((o) => ({
+    name: o.outcome.replace(/_/g, " "),
+    value: o.count,
+    color: o.color,
+  }));
 
   return (
-    <div className="space-y-4">
-      {/* Simple bar representation */}
-      <div className="h-8 flex rounded-full overflow-hidden">
-        {outcomes.map((outcome) => (
-          <div
-            key={outcome.outcome}
-            className="h-full transition-all"
-            style={{
-              width: `${outcome.percentage}%`,
-              backgroundColor: outcome.color,
-            }}
-            title={`${outcome.outcome}: ${outcome.count} (${outcome.percentage}%)`}
-          />
-        ))}
-      </div>
-
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-2">
-        {outcomes.map((outcome) => (
-          <div key={outcome.outcome} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full shrink-0"
-              style={{ backgroundColor: outcome.color }}
-            />
-            <span className="text-xs truncate capitalize">
-              {outcome.outcome.replace(/_/g, " ")}
-            </span>
-            <span className="text-xs text-muted-foreground ml-auto">
-              {outcome.count}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={220}>
+      <RPieChart>
+        <Pie data={data} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
+          {data.map((d) => (
+            <Cell key={d.name} fill={d.color} />
+          ))}
+        </Pie>
+        <RTooltip contentStyle={{ fontSize: 12, borderRadius: 8, textTransform: "capitalize" }} />
+        <Legend wrapperStyle={{ fontSize: 12, textTransform: "capitalize" }} />
+      </RPieChart>
+    </ResponsiveContainer>
   );
 }
 
