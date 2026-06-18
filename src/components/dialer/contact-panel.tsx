@@ -531,15 +531,21 @@ export function ContactPanelCompact() {
                   {(company?.industry || currentContact.industry) && (
                     <span>{company?.industry || currentContact.industry}</span>
                   )}
-                  {(company?.employee_range || currentContact.employee_range) && (
-                    <>
-                      <span className="text-border">•</span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {company?.employee_range || currentContact.employee_range}
-                      </span>
-                    </>
-                  )}
+                  {(() => {
+                    const cnt = (currentContact as { employee_count?: number | null }).employee_count;
+                    const label = typeof cnt === "number"
+                      ? `${cnt} employee${cnt === 1 ? "" : "s"}`
+                      : (company?.employee_range || currentContact.employee_range);
+                    return label ? (
+                      <>
+                        <span className="text-border">•</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {label}
+                        </span>
+                      </>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </div>
