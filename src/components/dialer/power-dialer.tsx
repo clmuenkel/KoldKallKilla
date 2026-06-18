@@ -539,6 +539,15 @@ export function PowerDialer() {
     if (requirePhone) {
       baseFiltered = baseFiltered.filter(c => c.phone || c.mobile);
     }
+    // Honor the employee-size filter so the timezone counts reflect it too.
+    if (empMin !== "" || empMax !== "") {
+      const lo = empMin === "" ? 0 : Number(empMin);
+      const hi = empMax === "" ? Infinity : Number(empMax);
+      baseFiltered = baseFiltered.filter(c => {
+        const n = (c as { employee_count?: number | null }).employee_count;
+        return typeof n === "number" && n >= lo && n <= hi;
+      });
+    }
 
     return TIMEZONE_GROUPS.reduce((acc, group) => {
       const groupContacts = baseFiltered.filter(c => {
@@ -553,7 +562,7 @@ export function PowerDialer() {
       };
       return acc;
     }, {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>);
-  }, [filterMode, missedMeetingContacts, followUpsDue, allContacts, selectedStages, selectedCompanyId, requirePhone, companiesById]);
+  }, [filterMode, missedMeetingContacts, followUpsDue, allContacts, selectedStages, selectedCompanyId, requirePhone, empMin, empMax, companiesById]);
 
   // Maximum call attempts before contact is exhausted
   const MAX_CALL_ATTEMPTS = 10;
