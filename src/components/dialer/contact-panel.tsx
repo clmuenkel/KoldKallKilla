@@ -503,7 +503,30 @@ export function ContactPanelCompact() {
                 <Building2 className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </div>
               <div className="text-left">
-                <p className="font-semibold">{company?.name || currentContact.company_name}</p>
+                <p className="font-semibold flex items-center gap-1.5">
+                  <span>{company?.name || currentContact.company_name}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    title="Copy company name"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopy(company?.name || currentContact.company_name || "", "company");
+                    }}
+                    className={cn(
+                      "inline-flex p-1 rounded-md transition-colors cursor-pointer",
+                      copiedField === "company"
+                        ? "text-emerald-600"
+                        : "text-muted-foreground hover:text-foreground hover:bg-primary/10"
+                    )}
+                  >
+                    {copiedField === "company" ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </span>
+                </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {(company?.industry || currentContact.industry) && (
                     <span>{company?.industry || currentContact.industry}</span>
