@@ -173,6 +173,8 @@ export function PowerDialer() {
   const [requirePhone, setRequirePhone] = useState(true);
   const [enableCadence, setEnableCadence] = useState(true); // Cadence filtering enabled by default
   const [selectedTimezones, setSelectedTimezones] = useState<string[]>(["all"]); // "all" or specific timezone groups
+  const [empMin, setEmpMin] = useState<string>(""); // employee-count filter (blank = no bound)
+  const [empMax, setEmpMax] = useState<string>("");
 
   const {
     isActive,
@@ -590,6 +592,17 @@ export function PowerDialer() {
       filtered = filtered.filter(c => c.phone || c.mobile);
     }
 
+    // Employee-count filter (min/max). Applies in every mode. Contacts with no
+    // employee_count are excluded only when a bound is set.
+    if (empMin !== "" || empMax !== "") {
+      const lo = empMin === "" ? 0 : Number(empMin);
+      const hi = empMax === "" ? Infinity : Number(empMax);
+      filtered = filtered.filter(c => {
+        const n = (c as { employee_count?: number | null }).employee_count;
+        return typeof n === "number" && n >= lo && n <= hi;
+      });
+    }
+
     // Apply timezone filtering (unless "all" is selected)
     if (!selectedTimezones.includes("all")) {
       filtered = filtered.filter(c => {
@@ -690,7 +703,7 @@ export function PowerDialer() {
     [
       allContacts, missedMeetingContacts, followUpsDue, filterMode, selectedStages,
       selectedCompanyId, requirePhone, enableCadence, selectedTimezones,
-      contactsCalledToday, pausedCompanyIds, companiesById,
+      empMin, empMax, contactsCalledToday, pausedCompanyIds, companiesById,
     ]
   );
   const contactsReadyToCall = filteredContacts.length;
@@ -1138,6 +1151,67 @@ export function PowerDialer() {
                   checked={requirePhone}
                   onCheckedChange={(checked) => setRequirePhone(!!checked)}
                 />
+              </div>
+
+              {/* Employee-count filter */}
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">Company size (employees)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Only call companies in this size range. Leave blank for any.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Min"
+                    value={empMin}
+                    onChange={(e) => setEmpMin(e.target.value)}
+                    className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Max"
+                    value={empMax}
+                    onChange={(e) => setEmpMax(e.target.value)}
+                    className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm"
+                  />
+                  {[
+                    { label: "5–50", lo: "5", hi: "50" },
+                    { label: "1–10", lo: "1", hi: "10" },
+                    { label: "11–50", lo: "11", hi: "50" },
+                    { label: "51–200", lo: "51", hi: "200" },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => { setEmpMin(p.lo); setEmpMax(p.hi); }}
+                      className={cn(
+                        "px-2 py-1 text-xs rounded-md border transition-colors",
+                        empMin === p.lo && empMax === p.hi
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-muted border-input"
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  {(empMin !== "" || empMax !== "") && (
+                    <button
+                      type="button"
+                      onClick={() => { setEmpMin(""); setEmpMax(""); }}
+                      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Cadence Filtering Toggle */}
