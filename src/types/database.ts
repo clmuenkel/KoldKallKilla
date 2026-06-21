@@ -178,6 +178,10 @@ export interface Database {
           next_follow_up: string | null;
           follow_up_alerted_at: string | null;
           follow_up_alert_count: number;
+          plan_tier: string | null;
+          deal_value_annual: number | null;
+          became_client_at: string | null;
+          churned_at: string | null;
           total_calls: number;
           total_emails: number;
           direct_referral_contact_id: string | null;
@@ -234,6 +238,10 @@ export interface Database {
           next_follow_up?: string | null;
           follow_up_alerted_at?: string | null;
           follow_up_alert_count?: number;
+          plan_tier?: string | null;
+          deal_value_annual?: number | null;
+          became_client_at?: string | null;
+          churned_at?: string | null;
           total_calls?: number;
           total_emails?: number;
           direct_referral_contact_id?: string | null;
@@ -290,6 +298,10 @@ export interface Database {
           next_follow_up?: string | null;
           follow_up_alerted_at?: string | null;
           follow_up_alert_count?: number;
+          plan_tier?: string | null;
+          deal_value_annual?: number | null;
+          became_client_at?: string | null;
+          churned_at?: string | null;
           total_calls?: number;
           total_emails?: number;
           direct_referral_contact_id?: string | null;

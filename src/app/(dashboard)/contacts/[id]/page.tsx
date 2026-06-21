@@ -19,6 +19,7 @@ import { GroupedNotesTimeline } from "@/components/contacts/grouped-notes-timeli
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { MissedMeetingButton } from "@/components/contacts/missed-meeting-button";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
+import { ClientCard } from "@/components/contacts/client-card";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
@@ -703,6 +704,11 @@ export default function ContactDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Client (revenue/lifecycle) — shown when this contact is a won client */}
+            {isPrimaryUser && contact.stage === "won" && (
+              <ClientCard contact={contact} />
+            )}
 
             {/* Calling Cadence */}
             <Card>
