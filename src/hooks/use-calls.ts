@@ -75,7 +75,9 @@ export function useTodayCallStats() {
 
       const data = callData as { outcome: string | null; disposition: string | null }[];
       const stats: CallStats = {
-        total: data.length,
+        // "Calls made" = real dials. Skipped contacts aren't dials, so exclude
+        // them (matches how the dialer counts dials elsewhere).
+        total: data.filter((c) => c.outcome !== "skipped").length,
         connected: data.filter((c) => c.outcome === "connected").length,
         voicemail: data.filter((c) => c.outcome === "voicemail").length,
         noAnswer: data.filter((c) => c.outcome === "no_answer").length,

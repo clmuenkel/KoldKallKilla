@@ -142,6 +142,8 @@ export interface ClientMetrics {
   wonThisMonth: number;     // became_client_at in current month
   netAddsThisMonth: number; // won - churned this month
   churnRatePct: number;     // churned this month / active at start of month
+  depositsThisMonth: number; // one-time deposit cash booked this month
+  depositsTotal: number;     // all deposit cash collected (active clients)
 }
 
 /**
@@ -159,7 +161,7 @@ export function useClientMetrics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("plan_tier, deal_value_annual, became_client_at, churned_at, stage")
+        .select("plan_tier, deal_value_annual, deal_value_monthly, deposit_paid, became_client_at, churned_at, stage")
         .eq("user_id", userId!)
         .eq("stage", "won");
       if (error) throw error;
@@ -182,6 +184,11 @@ export function useClientMetrics() {
       // Active at start of month = active now + churned this month - won this month.
       const activeAtStart = active.length + churnedThisMonth - wonThisMonth;
 
+      const depositsThisMonth = clients
+        .filter((c) => inThisMonth(c.became_client_at))
+        .reduce((sum, c) => sum + effectiveDeposit(c, s), 0);
+      const depositsTotal = active.reduce((sum, c) => sum + effectiveDeposit(c, s), 0);
+
       return {
         activeClients: active.length,
         arr,
@@ -190,6 +197,8 @@ export function useClientMetrics() {
         wonThisMonth,
         netAddsThisMonth: wonThisMonth - churnedThisMonth,
         churnRatePct: activeAtStart > 0 ? Math.round((churnedThisMonth / activeAtStart) * 1000) / 10 : 0,
+        depositsThisMonth,
+        depositsTotal,
       };
     },
   });

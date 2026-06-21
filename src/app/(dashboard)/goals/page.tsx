@@ -80,6 +80,19 @@ export default function GoalsPage() {
   const meetingsHeld = month?.meetingsHeld ?? 0;
   const closeRate = meetingsHeld > 0 ? Math.round((closesThisMonth / meetingsHeld) * 100) : 0;
 
+  // Pace + ramp position
+  const now = new Date();
+  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  const closesNeeded = Math.max(0, closeGoal - closesThisMonth);
+  const activeNow = clients?.activeClients ?? 0;
+  const targetClients = milestone?.target_active_clients ?? 0;
+  const delta = activeNow - targetClients;
+  const rampDelta = targetClients
+    ? delta >= 0
+      ? `${delta} ahead of ramp`
+      : `${Math.abs(delta)} behind ramp`
+    : undefined;
+
   const rampData = (ramp ?? []).map((m) => ({
     label: format(new Date(m.month), "MMM ''yy"),
     clients: m.target_active_clients ?? 0,
@@ -103,14 +116,26 @@ export default function GoalsPage() {
               {/* Top KPIs — business */}
               <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <KPI title="Active clients" value={clients?.activeClients ?? 0}
-                  target={milestone?.target_active_clients ?? undefined} icon={<Users className="h-4 w-4" />} />
+                  target={milestone?.target_active_clients ?? undefined} icon={<Users className="h-4 w-4" />}
+                  sub={rampDelta} />
+                <KPI title="MRR" value={clients?.mrr ?? 0} suffix="$" icon={<CircleDollarSign className="h-4 w-4" />}
+                  sub={`ARR ${$(clients?.arr ?? 0)}`} />
                 <KPI title="ARR" value={clients?.arr ?? 0} suffix="$"
                   target={milestone?.target_arr ?? undefined} icon={<CircleDollarSign className="h-4 w-4" />} />
                 <KPI title="Closes this month" value={closesThisMonth} target={closeGoal}
-                  icon={<Target className="h-4 w-4" />} />
+                  icon={<Target className="h-4 w-4" />} sub={`${closesNeeded} to go · ${daysLeft}d left`} />
+              </div>
+
+              <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <KPI title="Deposits this month" value={clients?.depositsThisMonth ?? 0} suffix="$"
+                  icon={<CircleDollarSign className="h-4 w-4" />} sub="one-time cash booked" />
                 <KPI title="Churn this month" value={clients?.churnRatePct ?? 0} suffix="%"
                   icon={<TrendingDown className="h-4 w-4" />}
                   sub={`${clients?.churnedThisMonth ?? 0} churned · net ${clients?.netAddsThisMonth ?? 0}`} />
+                <KPI title="New clients this month" value={clients?.wonThisMonth ?? 0} target={closeGoal}
+                  icon={<Users className="h-4 w-4" />} />
+                <KPI title="Deposit cash (total)" value={clients?.depositsTotal ?? 0} suffix="$"
+                  icon={<CircleDollarSign className="h-4 w-4" />} sub="across active clients" />
               </div>
 
               {/* Funnel + ramp */}

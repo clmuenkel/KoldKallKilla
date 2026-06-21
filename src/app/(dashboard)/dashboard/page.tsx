@@ -1,6 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout/header";
+import { todaysHype } from "@/lib/hype";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { TodayTasks } from "@/components/dashboard/today-tasks";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
@@ -14,16 +15,9 @@ import Link from "next/link";
 import { useDailyTargets, useUpdateTarget } from "@/hooks/use-targets";
 import { InlineEditableTarget } from "@/components/dashboard/editable-target";
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function DashboardPage() {
   const userId = useAuthId();
-  const greeting = getGreeting();
+  const hype = todaysHype();
   const { data: targets } = useDailyTargets();
   const updateTarget = useUpdateTarget();
 
@@ -45,7 +39,7 @@ export default function DashboardPage() {
           style={{ animationDelay: "0ms", animationFillMode: "forwards" }}
         >
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">{greeting}!</h2>
+            <h2 className="text-2xl font-bold tracking-tight max-w-2xl">{hype}</h2>
             <p className="text-muted-foreground flex items-center gap-2">
               <Target className="h-4 w-4" />
               Today's target:{" "}

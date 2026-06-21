@@ -478,19 +478,22 @@ export function useContactsByStage() {
   return useQuery<Record<string, number>>({
     queryKey: ["contacts-by-stage"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("stage")
-        .eq("status", "active");
-      
-      if (error) throw error;
-
-      const counts: Record<string, number> = {};
-      data.forEach((contact) => {
-        counts[contact.stage] = (counts[contact.stage] || 0) + 1;
-      });
-      
-      return counts;
+      // Per-stage exact head-counts. A plain select("stage") is capped at
+      // Supabase's 1000-row default, which badly undercounts once there are
+      // thousands of contacts — that was the "pipeline is wrong" bug.
+      const stages = ["fresh", "contacted", "qualified", "meeting", "proposal", "won", "lost"];
+      const results = await Promise.all(
+        stages.map(async (stage) => {
+          const { count, error } = await supabase
+            .from("contacts")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "active")
+            .eq("stage", stage);
+          if (error) throw error;
+          return [stage, count ?? 0] as const;
+        })
+      );
+      return Object.fromEntries(results);
     },
   });
 }
