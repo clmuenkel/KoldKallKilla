@@ -231,7 +231,7 @@ export function StatsCards() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         {[1, 2, 3, 4].map((i) => (
           <StatCardSkeleton key={i} />
         ))}
@@ -240,7 +240,7 @@ export function StatsCards() {
   }
 
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
       <StatCard
         title="Calls Made"
         value={callStats?.total || 0}
@@ -272,17 +272,6 @@ export function StatsCards() {
         ringColor="hsl(263, 70%, 50%)"
         delay={100}
         onEditGoal={updateMeetingsTarget}
-        isPending={updateTarget.isPending}
-      />
-      <StatCard
-        title="Voicemails"
-        value={callStats?.voicemail || 0}
-        goal={targets?.voicemails_target || 20}
-        icon={<Voicemail className="h-5 w-5 text-white" />}
-        color="bg-gradient-to-br from-orange-500 to-orange-600"
-        ringColor="hsl(25, 95%, 53%)"
-        delay={150}
-        onEditGoal={updateVoicemailsTarget}
         isPending={updateTarget.isPending}
       />
     </div>
