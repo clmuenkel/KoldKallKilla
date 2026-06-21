@@ -165,6 +165,7 @@ export interface AnalyticsSummary {
   setRate: number;
   noShows: number;
   noShowRate: number;
+  meetingsHeld: number;
   totalTalkTime: number;
   avgCallDuration: number;
   totalSessionTime: number;

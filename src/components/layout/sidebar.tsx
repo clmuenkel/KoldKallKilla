@@ -23,6 +23,7 @@ import {
   Calendar,
   CalendarCheck,
   BarChart3,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -40,6 +41,7 @@ const navigationSections = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Analytics", href: "/analytics", icon: BarChart3 },
+      { name: "Goals", href: "/goals", icon: Target },
     ],
   },
   {

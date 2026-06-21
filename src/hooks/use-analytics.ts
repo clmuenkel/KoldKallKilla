@@ -151,6 +151,7 @@ export function useAnalyticsSummary(
         setRate: connectedCalls > 0 ? Math.round((meetingsBooked / connectedCalls) * 100) : 0,
         noShows,
         noShowRate: resolvedMeetings > 0 ? Math.round((noShows / resolvedMeetings) * 100) : 0,
+        meetingsHeld: completedMeetings,
         totalTalkTime,
         avgCallDuration: connectedCalls > 0 ? Math.round(totalTalkTime / connectedCalls) : 0,
         totalSessionTime,
