@@ -27,9 +27,13 @@ const TIERS = [
 export function ClientCard({ contact }: { contact: Contact }) {
   const update = useUpdateContact();
   const { data: settings } = useBusinessSettings();
-  const [overrideOpen, setOverrideOpen] = useState(contact.deal_value_annual != null);
-  const [overrideVal, setOverrideVal] = useState(
-    contact.deal_value_annual != null ? String(contact.deal_value_annual) : ""
+  const isCustom = contact.deal_value_monthly != null || contact.deposit_paid != null;
+  const [customOpen, setCustomOpen] = useState(isCustom);
+  const [customMonthly, setCustomMonthly] = useState(
+    contact.deal_value_monthly != null ? String(contact.deal_value_monthly) : ""
+  );
+  const [customDeposit, setCustomDeposit] = useState(
+    contact.deposit_paid != null ? String(contact.deposit_paid) : ""
   );
 
   const isChurned = !!contact.churned_at;
@@ -95,43 +99,45 @@ export function ClientCard({ contact }: { contact: Contact }) {
           )}
         </div>
 
-        {/* Exact $ override */}
-        {overrideOpen ? (
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Exact annual value ($) — overrides tier</Label>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                value={overrideVal}
-                placeholder="e.g. 9000"
-                onChange={(e) => setOverrideVal(e.target.value)}
-                onBlur={() =>
-                  patch(
-                    { deal_value_annual: overrideVal === "" ? null : Number(overrideVal) },
-                    "Annual value saved"
-                  )
-                }
-                className="h-9"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
+        {/* Custom pricing (overrides tier) — for non-standard deals */}
+        {customOpen ? (
+          <div className="space-y-2 rounded-md border bg-muted/30 p-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">Custom pricing (overrides tier)</Label>
+              <button
+                className="text-[11px] text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setOverrideOpen(false);
-                  setOverrideVal("");
-                  patch({ deal_value_annual: null }, "Override cleared — using tier");
+                  setCustomOpen(false); setCustomMonthly(""); setCustomDeposit("");
+                  patch({ deal_value_monthly: null, deposit_paid: null }, "Custom pricing cleared");
                 }}
               >
-                Clear
-              </Button>
+                clear
+              </button>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px] text-muted-foreground">Monthly ($)</Label>
+                <Input type="number" value={customMonthly} placeholder="e.g. 75" className="h-9"
+                  onChange={(e) => setCustomMonthly(e.target.value)}
+                  onBlur={() => patch({ deal_value_monthly: customMonthly === "" ? null : Number(customMonthly) }, "Monthly saved")} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-muted-foreground">Deposit ($)</Label>
+                <Input type="number" value={customDeposit} placeholder="e.g. 3500" className="h-9"
+                  onChange={(e) => setCustomDeposit(e.target.value)}
+                  onBlur={() => patch({ deposit_paid: customDeposit === "" ? null : Number(customDeposit) }, "Deposit saved")} />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              ${Math.round(annual).toLocaleString()}/yr recurring
+            </p>
           </div>
         ) : (
           <button
             className="text-xs text-muted-foreground hover:text-foreground underline"
-            onClick={() => setOverrideOpen(true)}
+            onClick={() => setCustomOpen(true)}
           >
-            Set exact $ instead of tier
+            Custom pricing instead of tier
           </button>
         )}
 

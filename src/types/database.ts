@@ -180,6 +180,8 @@ export interface Database {
           follow_up_alert_count: number;
           plan_tier: string | null;
           deal_value_annual: number | null;
+          deal_value_monthly: number | null;
+          deposit_paid: number | null;
           became_client_at: string | null;
           churned_at: string | null;
           total_calls: number;
@@ -240,6 +242,8 @@ export interface Database {
           follow_up_alert_count?: number;
           plan_tier?: string | null;
           deal_value_annual?: number | null;
+          deal_value_monthly?: number | null;
+          deposit_paid?: number | null;
           became_client_at?: string | null;
           churned_at?: string | null;
           total_calls?: number;
@@ -300,6 +304,8 @@ export interface Database {
           follow_up_alert_count?: number;
           plan_tier?: string | null;
           deal_value_annual?: number | null;
+          deal_value_monthly?: number | null;
+          deposit_paid?: number | null;
           became_client_at?: string | null;
           churned_at?: string | null;
           total_calls?: number;

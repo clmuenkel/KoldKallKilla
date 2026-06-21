@@ -117,16 +117,21 @@ export function useUpdateBusinessSettings() {
   });
 }
 
-/** Annual RECURRING value a client pays us (= 12 * monthly), exact override wins.
- *  Deposit is one-time cash, not part of ARR. */
-export function effectiveClientValue(c: Contact, s?: BusinessSettings | null): number {
-  if (c.deal_value_annual != null) return Number(c.deal_value_annual);
-  return tierMonthly(c.plan_tier, s) * 12;
-}
-/** Monthly recurring for a client (override/12 if set, else tier monthly). */
+/** Monthly recurring for a client. Priority: custom monthly override →
+ *  legacy annual override / 12 → the plan tier's monthly. */
 export function effectiveClientMonthly(c: Contact, s?: BusinessSettings | null): number {
+  if (c.deal_value_monthly != null) return Number(c.deal_value_monthly);
   if (c.deal_value_annual != null) return Number(c.deal_value_annual) / 12;
   return tierMonthly(c.plan_tier, s);
+}
+/** Annual RECURRING value (= 12 * effective monthly). Deposit is one-time, not ARR. */
+export function effectiveClientValue(c: Contact, s?: BusinessSettings | null): number {
+  return effectiveClientMonthly(c, s) * 12;
+}
+/** One-time deposit this client paid (custom override → tier deposit). */
+export function effectiveDeposit(c: Contact, s?: BusinessSettings | null): number {
+  if (c.deposit_paid != null) return Number(c.deposit_paid);
+  return tierDeposit(c.plan_tier, s);
 }
 
 export interface ClientMetrics {
