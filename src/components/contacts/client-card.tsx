@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateContact } from "@/hooks/use-contacts";
-import { useBusinessSettings, effectiveClientValue } from "@/hooks/use-clients";
+import { useBusinessSettings, effectiveClientValue, effectiveClientMonthly, tierMonthly, tierDeposit, tierBuyout } from "@/hooks/use-clients";
 import { formatDateForDB } from "@/lib/utils";
 import { CircleDollarSign, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -19,9 +19,6 @@ const TIERS = [
   { value: "better", label: "Better" },
   { value: "best", label: "Best" },
 ];
-
-const fmt$ = (n: number) =>
-  n ? `$${n.toLocaleString()}/yr` : "—";
 
 /**
  * Client card — shown on the contact page when the contact is a won client.
@@ -36,7 +33,8 @@ export function ClientCard({ contact }: { contact: Contact }) {
   );
 
   const isChurned = !!contact.churned_at;
-  const value = effectiveClientValue(contact, settings);
+  const annual = effectiveClientValue(contact, settings);
+  const monthly = effectiveClientMonthly(contact, settings);
 
   const patch = async (updates: Record<string, unknown>, msg: string) => {
     try {
@@ -58,7 +56,9 @@ export function ClientCard({ contact }: { contact: Contact }) {
           {isChurned ? (
             <Badge variant="destructive" className="text-[10px]">Churned</Badge>
           ) : (
-            <Badge className="bg-emerald-500 text-white text-[10px]">Active · {fmt$(value)}</Badge>
+            <Badge className="bg-emerald-500 text-white text-[10px]">
+              Active · ${Math.round(monthly).toLocaleString()}/mo
+            </Badge>
           )}
         </div>
       </CardHeader>
@@ -77,15 +77,22 @@ export function ClientCard({ contact }: { contact: Contact }) {
               {TIERS.map((t) => (
                 <SelectItem key={t.value} value={t.value}>
                   {t.label}
-                  {settings && (
+                  {settings && tierMonthly(t.value, settings) > 0 && (
                     <span className="text-muted-foreground ml-2">
-                      {fmt$(Number((settings as any)[`tier_${t.value}_annual`] ?? 0))}
+                      ${tierMonthly(t.value, settings).toLocaleString()}/mo
                     </span>
                   )}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {contact.plan_tier && contact.deal_value_annual == null && settings && (
+            <p className="text-[11px] text-muted-foreground">
+              Deposit ${tierDeposit(contact.plan_tier, settings).toLocaleString()} ·
+              ${Math.round(annual).toLocaleString()}/yr recurring ·
+              Buyout ${tierBuyout(contact.plan_tier, settings).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {/* Exact $ override */}

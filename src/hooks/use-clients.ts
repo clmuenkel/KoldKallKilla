@@ -5,20 +5,42 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthId } from "@/hooks/use-auth";
 import type { Contact } from "@/types/database";
 
+export type Tier = "good" | "better" | "best";
+
 export interface BusinessSettings {
   user_id: string;
-  tier_good_annual: number | null;
-  tier_better_annual: number | null;
-  tier_best_annual: number | null;
+  tier_good_deposit: number | null;
+  tier_good_monthly: number | null;
+  tier_good_buyout: number | null;
+  tier_better_deposit: number | null;
+  tier_better_monthly: number | null;
+  tier_better_buyout: number | null;
+  tier_best_deposit: number | null;
+  tier_best_monthly: number | null;
+  tier_best_buyout: number | null;
   monthly_close_goal: number;
 }
 
 const DEFAULT_SETTINGS: Omit<BusinessSettings, "user_id"> = {
-  tier_good_annual: null,
-  tier_better_annual: null,
-  tier_best_annual: null,
+  tier_good_deposit: null, tier_good_monthly: null, tier_good_buyout: null,
+  tier_better_deposit: null, tier_better_monthly: null, tier_better_buyout: null,
+  tier_best_deposit: null, tier_best_monthly: null, tier_best_buyout: null,
   monthly_close_goal: 5,
 };
+
+/** Monthly recurring price for a tier from settings. */
+export function tierMonthly(tier: string | null | undefined, s?: BusinessSettings | null): number {
+  if (!s || !tier) return 0;
+  return Number((s as any)[`tier_${tier}_monthly`] ?? 0);
+}
+export function tierDeposit(tier: string | null | undefined, s?: BusinessSettings | null): number {
+  if (!s || !tier) return 0;
+  return Number((s as any)[`tier_${tier}_deposit`] ?? 0);
+}
+export function tierBuyout(tier: string | null | undefined, s?: BusinessSettings | null): number {
+  if (!s || !tier) return 0;
+  return Number((s as any)[`tier_${tier}_buyout`] ?? 0);
+}
 
 export interface MonthlyMilestone {
   month: string; // YYYY-MM-DD (first of month)
@@ -95,21 +117,22 @@ export function useUpdateBusinessSettings() {
   });
 }
 
-/** Annual value a client pays us: exact override, else the tier price. */
+/** Annual RECURRING value a client pays us (= 12 * monthly), exact override wins.
+ *  Deposit is one-time cash, not part of ARR. */
 export function effectiveClientValue(c: Contact, s?: BusinessSettings | null): number {
   if (c.deal_value_annual != null) return Number(c.deal_value_annual);
-  if (!s) return 0;
-  switch (c.plan_tier) {
-    case "good": return Number(s.tier_good_annual ?? 0);
-    case "better": return Number(s.tier_better_annual ?? 0);
-    case "best": return Number(s.tier_best_annual ?? 0);
-    default: return 0;
-  }
+  return tierMonthly(c.plan_tier, s) * 12;
+}
+/** Monthly recurring for a client (override/12 if set, else tier monthly). */
+export function effectiveClientMonthly(c: Contact, s?: BusinessSettings | null): number {
+  if (c.deal_value_annual != null) return Number(c.deal_value_annual) / 12;
+  return tierMonthly(c.plan_tier, s);
 }
 
 export interface ClientMetrics {
   activeClients: number;
   arr: number;
+  mrr: number;
   churnedThisMonth: number;
   wonThisMonth: number;     // became_client_at in current month
   netAddsThisMonth: number; // won - churned this month
@@ -148,6 +171,7 @@ export function useClientMetrics() {
 
       const active = clients.filter((c) => !c.churned_at);
       const arr = active.reduce((sum, c) => sum + effectiveClientValue(c, s), 0);
+      const mrr = active.reduce((sum, c) => sum + effectiveClientMonthly(c, s), 0);
       const churnedThisMonth = clients.filter((c) => inThisMonth(c.churned_at)).length;
       const wonThisMonth = clients.filter((c) => inThisMonth(c.became_client_at)).length;
       // Active at start of month = active now + churned this month - won this month.
@@ -156,6 +180,7 @@ export function useClientMetrics() {
       return {
         activeClients: active.length,
         arr,
+        mrr,
         churnedThisMonth,
         wonThisMonth,
         netAddsThisMonth: wonThisMonth - churnedThisMonth,
