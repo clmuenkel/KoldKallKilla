@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { PageHeader } from "@/components/layout/page-header";
 import { BusinessPricingCard } from "@/components/settings/business-pricing-card";
+import { OutlookCalendarCard } from "@/components/settings/outlook-calendar-card";
 import { createClient } from "@/lib/supabase/client";
 import { seedDummyData, clearDummyData } from "@/lib/seed-data";
 import { Button } from "@/components/ui/button";
@@ -382,6 +383,9 @@ export default function SettingsPage() {
 
           {/* Business pricing & monthly close goal */}
           <BusinessPricingCard />
+
+          {/* Outlook calendar connection */}
+          <OutlookCalendarCard />
 
           {/* Change Password */}
           <Card

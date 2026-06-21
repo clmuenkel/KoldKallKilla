@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { GlobalSessionBar } from "@/components/dialer/mini-session-bar";
 import { FollowUpAlertBanner } from "@/components/layout/followup-alert-banner";
+import { MorningReminders } from "@/components/layout/morning-reminders";
+import { LivePreCallAlerts } from "@/components/layout/live-precall-alerts";
 
 export default function DashboardLayout({
   children,
@@ -33,6 +35,9 @@ export default function DashboardLayout({
             {children}
           </div>
         </main>
+        {/* Morning meeting-reminder pop-up + live pre-call alerts */}
+        {mounted && <MorningReminders />}
+        {mounted && <LivePreCallAlerts />}
         <CommandPalette />
       </div>
     </TooltipProvider>
