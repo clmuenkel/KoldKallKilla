@@ -20,6 +20,41 @@ const DEFAULT_SETTINGS: Omit<BusinessSettings, "user_id"> = {
   monthly_close_goal: 5,
 };
 
+export interface MonthlyMilestone {
+  month: string; // YYYY-MM-DD (first of month)
+  target_active_clients: number | null;
+  target_closes: number | null;
+  target_arr: number | null;
+}
+
+/** The 30-month ramp (target clients / closes / ARR per month). */
+export function useMonthlyMilestones() {
+  const supabase = createClient();
+  const userId = useAuthId();
+  return useQuery<MonthlyMilestone[]>({
+    queryKey: ["monthly-milestones", userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("monthly_milestones")
+        .select("month, target_active_clients, target_closes, target_arr")
+        .eq("user_id", userId!)
+        .order("month", { ascending: true });
+      if (error) throw error;
+      return (data as MonthlyMilestone[]) ?? [];
+    },
+  });
+}
+
+/** The milestone row for the current calendar month, if any. */
+export function useCurrentMilestone() {
+  const { data, ...rest } = useMonthlyMilestones();
+  const now = new Date();
+  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const current = (data ?? []).find((m) => m.month.startsWith(key)) ?? null;
+  return { ...rest, data: current };
+}
+
 /** Per-user pricing tiers + monthly close goal. */
 export function useBusinessSettings() {
   const supabase = createClient();
