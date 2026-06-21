@@ -35,7 +35,7 @@ export function OutlookCalendarCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarClock className="h-5 w-5" />
-          Outlook calendar
+          Calendar
           {savedUrl && !error && events && (
             <Badge className="bg-emerald-500 text-white text-[10px]">
               <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -44,18 +44,19 @@ export function OutlookCalendarCard() {
           )}
         </CardTitle>
         <CardDescription>
-          Paste your published Outlook calendar link (.ics) so meeting reminders can read your
-          schedule. In Outlook: Settings → Calendar → Shared calendars → Publish → copy the ICS link.
+          Paste your private calendar link (.ics) so meeting reminders can read your schedule.
+          Google Calendar: Settings → click your calendar → Integrate calendar → copy the
+          &ldquo;Secret address in iCal format.&rdquo; (Outlook&apos;s published ICS link works too.)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="ics">Calendar ICS / webcal URL</Label>
+          <Label htmlFor="ics">Calendar ICS / secret iCal URL</Label>
           <div className="flex gap-2">
             <Input
               id="ics"
               value={url}
-              placeholder="https://outlook.office365.com/owa/calendar/.../calendar.ics"
+              placeholder="https://calendar.google.com/calendar/ical/.../private-.../basic.ics"
               onChange={(e) => setUrl(e.target.value)}
               className="font-mono text-xs"
             />
