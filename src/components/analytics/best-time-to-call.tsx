@@ -166,9 +166,25 @@ function labelFor(g: TzGroupKey): string {
   return ZONE_LABELS[g];
 }
 
+function DayTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const r = payload[0].payload;
+  return (
+    <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
+      <p className="font-semibold mb-1">{r.full}</p>
+      <p className="text-emerald-500 font-medium">{r.pickup}% pickup rate</p>
+      <p className="text-purple-500 font-medium">
+        {r.meetings} meeting{r.meetings === 1 ? "" : "s"} booked
+      </p>
+      <p className="text-muted-foreground">{r.calls.toLocaleString()} calls</p>
+    </div>
+  );
+}
+
 function DayChart({ data }: { data: CallTimingData }) {
   const rows = data.byDay.map((d) => ({
     name: d.label.slice(0, 3),
+    full: d.label,
     pickup: d.connectRate,
     calls: d.calls,
     meetings: d.meetings,
@@ -189,16 +205,7 @@ function DayChart({ data }: { data: CallTimingData }) {
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 11 }} unit="%" />
-          <RTooltip
-            formatter={(v: any, n: any) =>
-              n === "pickup" ? [`${v}%`, "Pickup rate"] : [v, n]
-            }
-            labelFormatter={(l, p: any) => {
-              const row = p?.[0]?.payload;
-              return row ? `${l} · ${row.calls} calls · ${row.meetings} mtg` : l;
-            }}
-            contentStyle={{ fontSize: 12 }}
-          />
+          <RTooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} content={<DayTooltip />} />
           <Bar dataKey="pickup" radius={[4, 4, 0, 0]}>
             {rows.map((r, i) => (
               <RCell

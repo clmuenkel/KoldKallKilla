@@ -38,6 +38,40 @@ function isMeetingDisposition(disposition: string | null | undefined): boolean {
   return !!disposition && MEETING_DISPOSITIONS.includes(disposition);
 }
 
+// Fetch ALL calls in a date range, paginating past PostgREST's 1000-row cap so
+// wide ranges (e.g. "All Time") count every row instead of silently capping.
+async function fetchAllCallsInRange(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  select: string,
+  startISO: string,
+  endISO: string
+): Promise<any[]> {
+  const PAGE = 1000;
+  let from = 0;
+  const rows: any[] = [];
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data, error } = await supabase
+      .from("calls")
+      .select(select)
+      .eq("user_id", userId)
+      .gte("started_at", startISO)
+      .lte("started_at", endISO)
+      .order("started_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      if (error.code === "42P01") break; // table doesn't exist yet
+      throw error;
+    }
+    const batch = (data as any[]) || [];
+    rows.push(...batch);
+    if (batch.length < PAGE) break;
+    from += PAGE;
+  }
+  return rows;
+}
+
 // Get date range bounds
 function getDateBounds(range: DateRange, customStart?: string, customEnd?: string) {
   const now = new Date();
@@ -59,6 +93,9 @@ function getDateBounds(range: DateRange, customStart?: string, customEnd?: strin
     case "last_month":
       const lastMonth = subDays(startOfMonth(now), 1);
       return { start: startOfMonth(lastMonth), end: endOfDay(lastMonth) };
+    case "all_time":
+      // Everything ever logged, up to end of today.
+      return { start: new Date("2000-01-01T00:00:00Z"), end: endOfDay(now) };
     case "custom":
       return {
         // Normalize to full-day bounds like every other range, so a custom end
@@ -85,15 +122,14 @@ export function useAnalyticsSummary(
     queryKey: ["analytics-summary", userId, range, customStart, customEnd],
     enabled: !!userId,
     queryFn: async (): Promise<AnalyticsSummary> => {
-      // Get call stats
-      const { data: calls, error: callsError } = await supabase
-        .from("calls")
-        .select("outcome, duration_seconds, disposition")
-        .eq("user_id", userId!)
-        .gte("started_at", start.toISOString())
-        .lte("started_at", end.toISOString());
-
-      if (callsError && callsError.code !== "42P01") throw callsError;
+      // Get call stats (paginated so wide ranges like "All Time" aren't capped)
+      const calls = await fetchAllCallsInRange(
+        supabase,
+        userId!,
+        "outcome, duration_seconds, disposition",
+        start.toISOString(),
+        end.toISOString()
+      );
 
       const { data: sessions } = await (supabase as any)
         .from("dialer_sessions")
@@ -229,18 +265,18 @@ export function useOutcomeBreakdown(range: DateRange = "this_week", customStart?
     queryKey: ["outcome-breakdown", userId!, range, customStart, customEnd],
     enabled: !!userId,
     queryFn: async (): Promise<OutcomeBreakdown[]> => {
-      const { data: calls, error } = await supabase
-        .from("calls")
-        .select("outcome")
-        .eq("user_id", userId!)
-        .gte("started_at", start.toISOString())
-        .lte("started_at", end.toISOString())
-        .neq("outcome", "skipped");
-
-      if (error && error.code !== "42P01") throw error;
+      const calls = (
+        await fetchAllCallsInRange(
+          supabase,
+          userId!,
+          "outcome",
+          start.toISOString(),
+          end.toISOString()
+        )
+      ).filter((c) => c.outcome !== "skipped");
 
       const counts: Record<string, number> = {};
-      (calls || []).forEach((call) => {
+      calls.forEach((call) => {
         counts[call.outcome] = (counts[call.outcome] || 0) + 1;
       });
 
@@ -535,16 +571,17 @@ export function useWeekComparison() {
 // connected + a meeting disposition. 'skipped' calls are excluded.
 // ============================================================================
 
-// Continental US zone groups, in west→east display order, with each group's
-// standard offset relative to Central (used to translate a prospect-local hour
-// into Zad's Central dialing time for the "(8–10am CT)" labels).
+// Continental US zone groups, in west→east display order. The offset converts a
+// prospect-LOCAL hour into Zad's Central dialing time (centralHour = localHour +
+// offset). Central is behind Eastern by 1h and ahead of Mountain/Pacific, so:
+//   Eastern 2pm → 1pm CT (-1);  Mountain 11am → 12pm CT (+1);  Pacific 10am → 12pm CT (+2).
 export const TZ_GROUP_ORDER = ["pacific", "mountain", "central", "eastern"] as const;
 export type TzGroupKey = (typeof TZ_GROUP_ORDER)[number];
 const TZ_OFFSET_FROM_CENTRAL: Record<TzGroupKey, number> = {
-  pacific: -2,
-  mountain: -1,
+  pacific: 2,
+  mountain: 1,
   central: 0,
-  eastern: 1,
+  eastern: -1,
 };
 const TZ_GROUP_LABEL: Record<TzGroupKey, string> = {
   pacific: "Pacific",

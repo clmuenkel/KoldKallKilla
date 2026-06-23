@@ -215,13 +215,14 @@ export interface AnalyticsInsight {
 }
 
 // Date range for analytics queries
-export type DateRange = 
-  | "today" 
-  | "yesterday" 
-  | "this_week" 
-  | "last_week" 
-  | "this_month" 
+export type DateRange =
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "last_week"
+  | "this_month"
   | "last_month"
+  | "all_time"
   | "custom";
 
 export interface CustomDateRange {
