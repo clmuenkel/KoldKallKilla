@@ -184,6 +184,22 @@ export function useLogCall() {
         }
       }
 
+      // The call (and its notes) are now persisted, so the autosave draft for
+      // this contact is obsolete crash-recovery scratch. Delete it. If left
+      // behind, revisiting the contact would re-hydrate the old timestamped
+      // notes into the dialer and the NEXT call would re-save them as fresh
+      // duplicate notes (different call_id, later date). Best-effort.
+      if (call.contact_id) {
+        const { error: draftError } = await supabase
+          .from("dialer_drafts")
+          .delete()
+          .eq("user_id", call.user_id)
+          .eq("contact_id", call.contact_id);
+        if (draftError) {
+          console.error("Failed to clear dialer draft after call:", draftError.message);
+        }
+      }
+
       // Create follow-up task if specified
       let taskId: string | undefined;
       if (createTask) {
@@ -511,6 +527,8 @@ export function useLogCall() {
       queryClient.invalidateQueries({ queryKey: ["dialer-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       queryClient.invalidateQueries({ queryKey: ["calls", "called-today"] });
+      // We deleted the autosave draft above; refresh so a re-render won't re-hydrate stale notes
+      queryClient.invalidateQueries({ queryKey: ["dialer-draft"] });
     },
   });
 }
