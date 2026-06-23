@@ -424,7 +424,13 @@ export function useLogCall() {
             // session via call.session_id (works for any session length). The
             // meeting dialog no longer increments separately (that double-counted
             // and also counted self-booked meetings). Supports legacy "interested_meeting".
-            if (call.disposition === "meeting" || call.disposition === "interested_meeting") {
+            // Must be a CONNECTED call — a meeting can only be booked when someone
+            // actually picked up. Without this guard a no-answer/voicemail call that
+            // carried a leftover meeting disposition inflated the count.
+            if (
+              call.outcome === "connected" &&
+              (call.disposition === "meeting" || call.disposition === "interested_meeting")
+            ) {
               if (!existingSession.first_meeting_set_at) {
                 updates.first_meeting_set_at = now.toISOString();
               }

@@ -523,3 +523,264 @@ export function useWeekComparison() {
 
   return { data, isLoading, error };
 }
+
+// ============================================================================
+// Best Time to Call — cold-calling timing analytics
+// ----------------------------------------------------------------------------
+// Answers: when (prospect-local hour) and which day do calls get answered /
+// book meetings, broken down by US timezone. Built from the calls table (the
+// robust dataset) joined to each contact's state → IANA timezone. Hours are
+// bucketed in the PROSPECT's local time; recommended windows are also shown in
+// Zad's Central dialing time. "pickup" = outcome 'connected'; "meeting" =
+// connected + a meeting disposition. 'skipped' calls are excluded.
+// ============================================================================
+
+// Continental US zone groups, in west→east display order, with each group's
+// standard offset relative to Central (used to translate a prospect-local hour
+// into Zad's Central dialing time for the "(8–10am CT)" labels).
+export const TZ_GROUP_ORDER = ["pacific", "mountain", "central", "eastern"] as const;
+export type TzGroupKey = (typeof TZ_GROUP_ORDER)[number];
+const TZ_OFFSET_FROM_CENTRAL: Record<TzGroupKey, number> = {
+  pacific: -2,
+  mountain: -1,
+  central: 0,
+  eastern: 1,
+};
+const TZ_GROUP_LABEL: Record<TzGroupKey, string> = {
+  pacific: "Pacific",
+  mountain: "Mountain",
+  central: "Central",
+  eastern: "Eastern",
+};
+const TZ_GROUP_ABBR: Record<TzGroupKey, string> = {
+  pacific: "PT",
+  mountain: "MT",
+  central: "CT",
+  eastern: "ET",
+};
+
+// Business-hour window shown in the heatmap (prospect local time, 24h).
+const TIMING_HOUR_START = 7;
+const TIMING_HOUR_END = 19; // inclusive last column = 18 (6pm)
+// A window must have at least this many calls to be eligible as a "best window".
+const MIN_WINDOW_CALLS = 15;
+
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export interface TimingCell {
+  calls: number;
+  connected: number;
+  meetings: number;
+  connectRate: number; // 0-100
+}
+export interface BestWindow {
+  group: TzGroupKey;
+  label: string;       // "Eastern"
+  abbr: string;        // "ET"
+  startHour: number;   // prospect-local
+  endHour: number;     // prospect-local (exclusive end label)
+  connectRate: number;
+  calls: number;
+  meetings: number;
+  ctStartHour: number; // translated to Central
+  ctEndHour: number;
+}
+export interface DayTiming {
+  dow: number;
+  label: string;
+  calls: number;
+  connected: number;
+  meetings: number;
+  connectRate: number;
+}
+export interface CallTimingData {
+  zones: TzGroupKey[];                              // groups present, in display order
+  hours: number[];                                 // prospect-local hour columns
+  grid: Record<TzGroupKey, Record<number, TimingCell>>;
+  byDay: DayTiming[];                              // Mon..Sun ordered
+  bestWindows: BestWindow[];                       // one per present zone
+  bestDay: DayTiming | null;
+  totalCalls: number;
+  centralOffsetForHourLabel: (group: TzGroupKey, hour: number) => number;
+}
+
+function fmtHour12(h: number): string {
+  const hr = ((h % 24) + 24) % 24;
+  const ampm = hr < 12 ? "am" : "pm";
+  const display = hr % 12 === 0 ? 12 : hr % 12;
+  return `${display}${ampm}`;
+}
+export function fmtHourRange(start: number, end: number): string {
+  return `${fmtHour12(start)}–${fmtHour12(end)}`;
+}
+export { TZ_GROUP_LABEL, TZ_GROUP_ABBR };
+
+/**
+ * Cold-calling timing analytics: prospect-local hour × timezone heatmap,
+ * day-of-week performance, and recommended call windows (with Central
+ * translation). Respects the analytics date-range selector.
+ */
+export function useCallTiming(
+  range: DateRange = "this_month",
+  customStart?: string,
+  customEnd?: string
+) {
+  const supabase = createClient();
+  const userId = useAuthId();
+  const { start, end } = getDateBounds(range, customStart, customEnd);
+
+  return useQuery({
+    queryKey: ["call-timing", userId, range, customStart, customEnd],
+    enabled: !!userId,
+    queryFn: async (): Promise<CallTimingData> => {
+      // Fetch ALL calls in range with the contact's state/company tz, paginating
+      // past PostgREST's 1000-row cap.
+      const PAGE = 1000;
+      let from = 0;
+      const rows: any[] = [];
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data, error } = await supabase
+          .from("calls")
+          .select("started_at, outcome, disposition, contacts(state, companies(timezone))")
+          .eq("user_id", userId!)
+          .neq("outcome", "skipped")
+          .gte("started_at", start.toISOString())
+          .lte("started_at", end.toISOString())
+          .order("started_at", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error && error.code !== "42P01") throw error;
+        const batch = (data as any[]) || [];
+        rows.push(...batch);
+        if (batch.length < PAGE) break;
+        from += PAGE;
+      }
+
+      // Formatters: prospect-local hour (per IANA tz) and Zad-local weekday (CT).
+      const ctWeekday = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Chicago",
+        weekday: "short",
+      });
+      const hourFmtCache: Record<string, Intl.DateTimeFormat> = {};
+      const hourInTz = (iso: string, tz: string): number => {
+        const f =
+          hourFmtCache[tz] ||
+          (hourFmtCache[tz] = new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
+            hour: "numeric",
+            hour12: false,
+          }));
+        const h = parseInt(f.format(new Date(iso)), 10);
+        return h === 24 ? 0 : h; // some environments render midnight as 24
+      };
+      const dowIndex = (label: string) => DOW_LABELS.indexOf(label);
+
+      const grid = {} as Record<TzGroupKey, Record<number, TimingCell>>;
+      for (const g of TZ_GROUP_ORDER) grid[g] = {};
+      const zonesPresent = new Set<TzGroupKey>();
+      const dayAgg: Record<number, { calls: number; connected: number; meetings: number }> = {};
+
+      for (const c of rows) {
+        const contact = c.contacts;
+        const tz = getContactTimezone(
+          { state: contact?.state ?? null },
+          contact?.companies ? { timezone: contact.companies.timezone } : null
+        );
+        const group = getTimezoneGroup(tz) as string;
+        const connected = c.outcome === "connected";
+        const meeting = connected && isMeetingDisposition(c.disposition);
+
+        // Day-of-week (in Zad's Central working day)
+        const dow = dowIndex(ctWeekday.format(new Date(c.started_at)));
+        if (dow >= 0) {
+          const d = (dayAgg[dow] ||= { calls: 0, connected: 0, meetings: 0 });
+          d.calls++;
+          if (connected) d.connected++;
+          if (meeting) d.meetings++;
+        }
+
+        // Hour grid only for the four continental US zones with a known tz
+        if (!tz || !(TZ_GROUP_ORDER as readonly string[]).includes(group)) continue;
+        const g = group as TzGroupKey;
+        zonesPresent.add(g);
+        const hour = hourInTz(c.started_at, tz);
+        const cell =
+          grid[g][hour] || (grid[g][hour] = { calls: 0, connected: 0, meetings: 0, connectRate: 0 });
+        cell.calls++;
+        if (connected) cell.connected++;
+        if (meeting) cell.meetings++;
+      }
+
+      // Finalize connect rates
+      for (const g of TZ_GROUP_ORDER) {
+        for (const h of Object.keys(grid[g])) {
+          const cell = grid[g][Number(h)];
+          cell.connectRate = cell.calls > 0 ? Math.round((cell.connected / cell.calls) * 100) : 0;
+        }
+      }
+
+      const hours: number[] = [];
+      for (let h = TIMING_HOUR_START; h < TIMING_HOUR_END; h++) hours.push(h);
+
+      // Best 2-hour window per present zone (by connect rate, min sample size)
+      const zones = TZ_GROUP_ORDER.filter((g) => zonesPresent.has(g));
+      const bestWindows: BestWindow[] = [];
+      for (const g of zones) {
+        let best: BestWindow | null = null;
+        for (let h = TIMING_HOUR_START; h < TIMING_HOUR_END - 1; h++) {
+          const a = grid[g][h];
+          const b = grid[g][h + 1];
+          const calls = (a?.calls || 0) + (b?.calls || 0);
+          if (calls < MIN_WINDOW_CALLS) continue;
+          const connected = (a?.connected || 0) + (b?.connected || 0);
+          const meetings = (a?.meetings || 0) + (b?.meetings || 0);
+          const rate = Math.round((connected / calls) * 100);
+          if (!best || rate > best.connectRate) {
+            const off = TZ_OFFSET_FROM_CENTRAL[g];
+            best = {
+              group: g,
+              label: TZ_GROUP_LABEL[g],
+              abbr: TZ_GROUP_ABBR[g],
+              startHour: h,
+              endHour: h + 2,
+              connectRate: rate,
+              calls,
+              meetings,
+              ctStartHour: h + off,
+              ctEndHour: h + 2 + off,
+            };
+          }
+        }
+        if (best) bestWindows.push(best);
+      }
+
+      // Day-of-week, Mon..Sun
+      const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+      const byDay: DayTiming[] = dayOrder.map((dow) => {
+        const d = dayAgg[dow] || { calls: 0, connected: 0, meetings: 0 };
+        return {
+          dow,
+          label: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dow],
+          calls: d.calls,
+          connected: d.connected,
+          meetings: d.meetings,
+          connectRate: d.calls > 0 ? Math.round((d.connected / d.calls) * 100) : 0,
+        };
+      });
+      const bestDay =
+        byDay.filter((d) => d.calls >= MIN_WINDOW_CALLS).sort((a, b) => b.connectRate - a.connectRate)[0] ||
+        null;
+
+      return {
+        zones,
+        hours,
+        grid,
+        byDay,
+        bestWindows,
+        bestDay,
+        totalCalls: rows.length,
+        centralOffsetForHourLabel: (group, hour) => hour + TZ_OFFSET_FROM_CENTRAL[group],
+      };
+    },
+  });
+}

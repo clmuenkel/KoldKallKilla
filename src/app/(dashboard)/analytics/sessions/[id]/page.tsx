@@ -1,7 +1,7 @@
 "use client";
 
-import { use } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +26,9 @@ const DISPO_LABEL: Record<string, string> = Object.fromEntries(
   [...CALL_DISPOSITIONS, ...PICKUP_DISPOSITIONS].map((d) => [d.value, d.label])
 );
 
-export default function SessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function SessionDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const { data, isLoading } = useSessionDetail(id);
 
   return (

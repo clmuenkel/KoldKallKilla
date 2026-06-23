@@ -60,6 +60,7 @@ import {
   useWeekComparison,
 } from "@/hooks/use-analytics";
 import { useSessions, useEndAllOpenSessions } from "@/hooks/use-sessions";
+import { BestTimeToCall } from "@/components/analytics/best-time-to-call";
 import { useTargets } from "@/hooks/use-targets";
 import type { DateRange, TrendDataPoint, SessionWithStats } from "@/types/analytics";
 import { cn } from "@/lib/utils";
@@ -222,6 +223,9 @@ export default function AnalyticsPage() {
               loading={loadingSummary}
             />
           </div>
+
+          {/* Best Time to Call — cold-calling timing analytics */}
+          <BestTimeToCall range={dateRange} customStart={cs} customEnd={ce} />
 
           {/* Charts Row */}
           <div className="grid gap-6 lg:grid-cols-2">
