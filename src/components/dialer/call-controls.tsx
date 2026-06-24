@@ -45,7 +45,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatDuration, copyToClipboard, addBusinessDays, formatDateForDB } from "@/lib/utils";
+import { formatDuration, copyToClipboard, addBusinessDays, formatDateForDB, googleVoiceDialUrl } from "@/lib/utils";
 import { MeetingDialog } from "./meeting-dialog";
 import {
   Phone,
@@ -198,13 +198,15 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
       return;
     }
 
-    const cleanNumber = phoneToCall.replace(/\D/g, "");
-    
-    window.open(
-      `https://voice.google.com/u/0/calls?a=nc,${cleanNumber}`,
+    const win = window.open(
+      googleVoiceDialUrl(phoneToCall),
       "googleVoice",
       "width=400,height=600,left=100,top=100"
     );
+    if (!win) {
+      toast.error("Pop-up blocked — allow pop-ups for this site so Google Voice can dial.");
+      return;
+    }
 
     startCall();
     toast.success(`Calling ${selectedPhoneType === "mobile" ? "mobile" : "office"}! Timer started.`);

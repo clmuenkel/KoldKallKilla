@@ -16,6 +16,29 @@ export function formatPhone(phone: string): string {
   return phone;
 }
 
+/**
+ * Normalize a phone number to E.164 (e.g. "+15551234567"). US-default: a bare
+ * 10-digit number gets a +1. Google Voice's click-to-dial deep link requires
+ * this — a bare digit string with no country code / "+" won't place the call.
+ */
+export function toE164(phone: string): string {
+  const raw = (phone || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (raw.startsWith("+")) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return `+${digits}`;
+}
+
+/**
+ * Build the Google Voice click-to-dial URL for a number. The "+" must be
+ * URL-encoded (%2B) inside the a=nc, parameter or Voice silently won't dial.
+ */
+export function googleVoiceDialUrl(phone: string): string {
+  return `https://voice.google.com/u/0/calls?a=nc,${encodeURIComponent(toE164(phone))}`;
+}
+
 export function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
