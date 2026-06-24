@@ -18,7 +18,7 @@ export default function NewContactPage() {
     <Suspense fallback={
       <div className="flex flex-col h-full">
         <Header title="New Contact" />
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="pt-6 space-y-4">
               <Skeleton className="h-10 w-full" />
@@ -79,7 +79,7 @@ function NewContactContent() {
     return (
       <div className="flex flex-col h-full">
         <Header title="New Contact" />
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="pt-6 space-y-4">
               <Skeleton className="h-10 w-full" />
@@ -98,7 +98,7 @@ function NewContactContent() {
     <div className="flex flex-col h-full">
       <Header title={company ? `New Contact at ${company.name}` : "New Contact"} />
       
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-4 sm:p-6">
         <Card className="max-w-2xl mx-auto">
           <CardContent className="pt-6 space-y-4">
             {companyMissingDetails && (

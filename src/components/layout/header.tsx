@@ -1,7 +1,8 @@
 "use client";
 
-import { Bell, Plus, Search } from "lucide-react";
+import { Bell, Plus, Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUIStore } from "@/stores/ui-store";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ interface HeaderProps {
 export function Header({ title, showSearch = true }: HeaderProps) {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
+  const toggleMobileNav = useUIStore((s) => s.toggleMobileNav);
 
   // Keyboard shortcut for search
   useEffect(() => {
@@ -43,13 +45,25 @@ export function Header({ title, showSearch = true }: HeaderProps) {
   }, []);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        {/* Hamburger — opens the nav drawer on phones */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden shrink-0 -ml-1"
+          onClick={toggleMobileNav}
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <h1 className="text-lg sm:text-2xl font-semibold text-foreground truncate">{title}</h1>
+      </div>
 
-      <div className="flex items-center gap-4">
-        {/* Search */}
+      <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
+        {/* Search — full input on desktop only */}
         {showSearch && (
-          <div className="relative">
+          <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search... (⌘K)"
@@ -63,8 +77,8 @@ export function Header({ title, showSearch = true }: HeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Add
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

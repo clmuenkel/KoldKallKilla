@@ -70,9 +70,19 @@ const navigationSections = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  mobile = false,
+  onNavigate,
+}: {
+  /** Rendered inside the mobile drawer: force-expanded, no collapse toggle. */
+  mobile?: boolean;
+  /** Called when a nav item is tapped (used to close the mobile drawer). */
+  onNavigate?: () => void;
+} = {}) {
   const pathname = usePathname();
-  const { isCollapsed, toggleSidebar } = useSidebarState();
+  const { isCollapsed: storeCollapsed, toggleSidebar } = useSidebarState();
+  // In the mobile drawer the sidebar is always fully expanded.
+  const isCollapsed = mobile ? false : storeCollapsed;
   
   // Get pending tasks count for badge
   const { data: tasks } = useTasks({});
@@ -88,7 +98,7 @@ export function Sidebar() {
     <div
       className={cn(
         "flex h-full flex-col bg-gradient-to-b from-sidebar to-sidebar/95 text-sidebar-foreground transition-all duration-300 ease-in-out overflow-hidden",
-        isCollapsed ? "w-[68px]" : "w-64"
+        mobile ? "w-full" : isCollapsed ? "w-[68px]" : "w-64"
       )}
     >
       {/* Logo */}
@@ -128,6 +138,7 @@ export function Sidebar() {
                 const linkContent = (
                   <Link
                     href={item.href}
+                    onClick={onNavigate}
                     className={cn(
                       "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       isCollapsed && "justify-center px-2",
@@ -282,6 +293,7 @@ export function Sidebar() {
         ) : (
           <Link
             href="/settings"
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
               pathname === "/settings"
@@ -294,8 +306,8 @@ export function Sidebar() {
           </Link>
         )}
 
-        {/* Collapse Toggle */}
-        {isCollapsed ? (
+        {/* Collapse Toggle — hidden in the mobile drawer (no collapsed state there) */}
+        {mobile ? null : isCollapsed ? (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button

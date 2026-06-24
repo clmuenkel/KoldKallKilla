@@ -34,7 +34,7 @@ export default function SessionDetailPage() {
   return (
     <div className="flex flex-col h-full">
       <Header title="Session Detail" showSearch={false} />
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
         <Link href="/analytics">
           <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
             <ArrowLeft className="h-4 w-4" />

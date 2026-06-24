@@ -139,6 +139,8 @@ export function PowerDialer() {
 
   // Resizable notes column (drag handle on its left edge; persisted).
   const [notesWidth, setNotesWidth] = useState(320);
+  // On phones the 3 columns collapse into one; this picks which is shown.
+  const [mobilePanel, setMobilePanel] = useState<"queue" | "contact" | "notes">("contact");
   useEffect(() => {
     const saved = Number(localStorage.getItem(NOTES_WIDTH_KEY));
     if (saved >= NOTES_WIDTH_MIN && saved <= NOTES_WIDTH_MAX) setNotesWidth(saved);
@@ -818,7 +820,7 @@ export function PowerDialer() {
   if (!isActive || isViewingHome) {
     return (
       <div className="h-full overflow-auto bg-gradient-to-br from-background to-muted/30">
-        <div className="max-w-3xl mx-auto px-6 py-12">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           {/* Header */}
           <div className="text-center mb-10">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-8 ring-primary/5">
@@ -1023,7 +1025,7 @@ export function PowerDialer() {
               <RadioGroup
                 value={CATEGORY_MODES.includes(filterMode) ? "" : filterMode}
                 onValueChange={(v) => setFilterMode(v as FilterMode)}
-                className="grid grid-cols-3 gap-3"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
               >
                 <Label
                   htmlFor="filter-stage"
@@ -1421,15 +1423,47 @@ export function PowerDialer() {
           )}
         </div>
 
-        {/* Main Content: 3-Column Layout */}
+        {/* Mobile tab bar — switches between the 3 panels on phones */}
+        <div className="lg:hidden flex border-b bg-card shrink-0">
+          {([
+            { key: "queue", label: "Queue" },
+            { key: "contact", label: "Contact" },
+            { key: "notes", label: "Notes" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setMobilePanel(t.key)}
+              className={cn(
+                "flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors",
+                mobilePanel === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Main Content: 3-Column Layout (single tabbed panel on phones) */}
         <div className="flex-1 flex min-h-0">
           {/* Column 1: Call Queue (keep same width) */}
-          <div className="w-64 border-r bg-card/30 flex flex-col shrink-0">
+          <div
+            className={cn(
+              "border-r bg-card/30 flex-col shrink-0 min-h-0 w-full lg:w-64",
+              mobilePanel === "queue" ? "flex" : "hidden lg:flex"
+            )}
+          >
             <CallQueue companiesById={companiesById} />
           </div>
 
           {/* Column 2: Contact + Company Info (flex grow) */}
-          <div className="flex-1 border-r flex flex-col min-w-0">
+          <div
+            className={cn(
+              "border-r flex-col min-w-0 flex-1 min-h-0",
+              mobilePanel === "contact" ? "flex" : "hidden lg:flex"
+            )}
+          >
             {currentContact ? (
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {isPrimaryUser && (
@@ -1503,15 +1537,21 @@ export function PowerDialer() {
             )}
           </div>
 
-          {/* Drag handle to resize the notes column */}
+          {/* Drag handle to resize the notes column (desktop only) */}
           <div
             onMouseDown={startNotesResize}
-            className="w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
+            className="hidden lg:block w-1 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
             title="Drag to resize notes"
           />
 
-          {/* Column 3: Notes + Tasks (resizable width) */}
-          <div className="flex flex-col shrink-0 bg-card/30" style={{ width: notesWidth }}>
+          {/* Column 3: Notes + Tasks (full width on mobile, resizable on desktop) */}
+          <div
+            className={cn(
+              "flex-col shrink-0 bg-card/30 min-h-0 w-full lg:w-[var(--notes-w)]",
+              mobilePanel === "notes" ? "flex" : "hidden lg:flex"
+            )}
+            style={{ ["--notes-w" as any]: `${notesWidth}px` }}
+          >
             {currentContact ? (
               <NotesAndTasks
                 key={currentContact.id}

@@ -520,8 +520,8 @@ export function ContactList() {
           <p className="text-sm text-muted-foreground mt-1">{error?.message || "Could not connect to the database. Please check your connection and try again."}</p>
         </div>
       ) : (
-        <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
-          <Table>
+        <div className="rounded-xl border bg-card overflow-x-auto shadow-sm">
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/30">
                 <TableHead className="w-12 sticky top-0 bg-muted/30">

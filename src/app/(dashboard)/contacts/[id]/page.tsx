@@ -221,7 +221,7 @@ export default function ContactDetailPage() {
     return (
       <div className="flex flex-col h-full">
         <Header title="Contact" />
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
         </div>
@@ -233,7 +233,7 @@ export default function ContactDetailPage() {
     return (
       <div className="flex flex-col h-full">
         <Header title="Contact" />
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <p>Contact not found</p>
           <Link href="/contacts">
             <Button variant="link">Back to contacts</Button>
@@ -252,7 +252,7 @@ export default function ContactDetailPage() {
     <div className="flex flex-col h-full">
       <Header title={`${contact.first_name} ${contact.last_name || ""}`} />
 
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-4 sm:p-6 overflow-auto">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[

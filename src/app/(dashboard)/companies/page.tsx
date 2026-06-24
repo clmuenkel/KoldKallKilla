@@ -16,7 +16,7 @@ export default function CompaniesPage() {
     <div className="flex flex-col h-full">
       <Header title="Companies" />
 
-      <div className="flex-1 p-6 space-y-6 overflow-auto">
+      <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-auto">
         <PageHeader
           title="All Companies"
           description="View and manage all your target companies and their contacts"

@@ -164,8 +164,8 @@ export default function CalendarPage() {
     <div className="flex flex-col h-full">
       <Header title="Calendar" />
       
-      <div className="flex-1 p-6 overflow-hidden">
-        <div className="flex gap-6 h-full">
+      <div className="flex-1 p-4 sm:p-6 overflow-auto lg:overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-full">
           {/* Main Calendar - Month View */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Month Navigation */}
@@ -194,7 +194,7 @@ export default function CalendarPage() {
               <h2 className="text-xl font-semibold">
                 {format(currentMonth, "MMMM yyyy")}
               </h2>
-              <div className="w-32" /> {/* Spacer for balance */}
+              <div className="hidden sm:block w-32" /> {/* Spacer for balance */}
             </div>
 
             {/* Day Names Header */}
@@ -274,7 +274,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Selected Date Meetings Sidebar */}
-          <div className="w-80 shrink-0">
+          <div className="w-full lg:w-80 shrink-0">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-3 shrink-0">
                 <div className="flex items-center justify-between gap-2">

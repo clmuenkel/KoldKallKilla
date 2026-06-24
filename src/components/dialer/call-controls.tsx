@@ -427,9 +427,9 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent animate-pulse pointer-events-none" />
         )}
 
-        <div className="relative flex items-center justify-between gap-4">
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
           {/* Left: Contact Info + Navigation */}
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             {/* Status Indicator */}
             <div className={cn(
               "relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 shrink-0",
@@ -562,7 +562,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
           </div>
 
           {/* Center: Phone Selector + Main Call Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 w-full justify-center lg:w-auto lg:justify-normal flex-wrap">
             {!isCallActive ? (
               <>
                 {/* Phone Number Selector */}

@@ -105,7 +105,7 @@ export default function GoalsPage() {
   return (
     <div className="flex flex-col h-full">
       <Header title="Goals" showSearch={false} />
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-4 sm:p-6 overflow-auto">
         <div className="max-w-6xl mx-auto space-y-6">
           <PageHeader title="Goals & Business Health" description="Your $1M ramp: actual vs target." />
 

@@ -59,7 +59,7 @@ export function FollowUpAlertBanner() {
   };
 
   return (
-    <div className="flex items-center gap-2 border-b bg-primary/5 px-4 py-2 text-sm">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b bg-primary/5 px-4 py-2 text-sm">
       <span className="font-medium text-muted-foreground shrink-0">Today</span>
       {followUpCount > 0 && (
         <Link

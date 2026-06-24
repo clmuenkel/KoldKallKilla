@@ -177,7 +177,7 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
           </div>
 
           {/* Date and Time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Date *</Label>
               <Input
@@ -206,7 +206,7 @@ export function MeetingDialog({ open, onOpenChange, contact, userId }: MeetingDi
           </div>
 
           {/* Duration and Reminder */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="duration" className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />

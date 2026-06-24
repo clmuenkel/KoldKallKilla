@@ -16,7 +16,7 @@ export default function TasksPage() {
     <div className="flex flex-col h-full">
       <Header title="Tasks" />
       
-      <div className="flex-1 p-6 space-y-6 overflow-auto">
+      <div className="flex-1 p-4 sm:p-6 space-y-6 overflow-auto">
         <PageHeader
           title="Task Management"
           description="Track your follow-ups and action items"
