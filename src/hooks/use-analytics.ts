@@ -142,20 +142,31 @@ export function useAnalyticsSummary(
       const totalSessionTime = ((sessions as any[]) || [])
         .reduce((sum: number, s: { duration_seconds: number | null }) => sum + (s.duration_seconds || 0), 0);
 
-      // Meetings that came due in this range, by scheduled_at. No-show rate is
-      // measured against RESOLVED meetings (no_show + completed) — "of the
-      // meetings that actually came due, what % flaked."
+      // No-show rate is measured against meetings that actually CAME DUE in this
+      // range (scheduled_at in the past), by scheduled_at: "of the meetings that
+      // should have happened, what % flaked." A meeting counts as HELD if it was
+      // explicitly completed OR it's past-due and wasn't marked a no-show — Zad
+      // rarely marks "completed", so requiring that would wrongly inflate the
+      // rate (a meeting that showed but is still 'scheduled' would be ignored,
+      // leaving only the no-show in the denominator → 100%). Cancelled and
+      // rescheduled meetings never "came due", so they're excluded entirely.
       const { data: mtgs } = await supabase
         .from("meetings")
-        .select("status")
+        .select("status, outcome, scheduled_at")
         .eq("user_id", userId!)
-        .in("status", ["no_show", "completed"])
         .gte("scheduled_at", start.toISOString())
         .lte("scheduled_at", end.toISOString());
-      const mtgList = (mtgs as { status: string }[]) || [];
-      const noShows = mtgList.filter((m) => m.status === "no_show").length;
-      const completedMeetings = mtgList.filter((m) => m.status === "completed").length;
-      const resolvedMeetings = noShows + completedMeetings;
+      const nowMs = Date.now();
+      const isNoShow = (m: any) =>
+        m.status === "no_show" || m.status === "no_show_resolved" || m.outcome === "no_show";
+      const dueMeetings = ((mtgs as any[]) || []).filter((m) => {
+        if (["cancelled", "rescheduled"].includes(m.status)) return false;
+        // Came due = past its scheduled time, OR already explicitly resolved.
+        return new Date(m.scheduled_at).getTime() <= nowMs || m.status === "completed" || isNoShow(m);
+      });
+      const noShows = dueMeetings.filter(isNoShow).length;
+      const resolvedMeetings = dueMeetings.length; // everything that came due
+      const completedMeetings = resolvedMeetings - noShows; // held (showed up)
 
       const callsList = calls || [];
       // Meetings booked FROM dials only: a CONNECTED call dispositioned as a
