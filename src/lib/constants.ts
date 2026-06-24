@@ -41,6 +41,7 @@ export const PICKUP_DISPOSITIONS = [
   { value: "wrong_number", label: "Wrong number", description: "Wrong number reached" },
   { value: "meeting", label: "Meeting", description: "Meeting scheduled" },
   { value: "interested_follow_up", label: "Interested/Follow up", description: "Interested, needs follow-up" },
+  { value: "busy_callback", label: "Busy - call later", description: "Caught them busy, no interest read yet - call back soon" },
   { value: "other", label: "Other", description: "Something else - add your own note" },
 ] as const;
 
@@ -57,6 +58,7 @@ export const DISPOSITION_LABEL_MAP: Record<string, string> = {
   wrong_number: "Wrong number",
   meeting: "Meeting",
   interested_follow_up: "Interested/Follow up",
+  busy_callback: "Busy - call later",
   other: "Other",
   // Legacy dispositions
   interested_meeting: "Interested - Book Meeting",

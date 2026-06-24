@@ -321,6 +321,11 @@ export function useLogCall() {
         else if (call.disposition === "callback") {
           // No special behavior beyond normal cadence
         }
+        // Busy - call later: neutral pickup (no interest read either way). Keep
+        // them active in the dialer and surface again soon (next business day).
+        else if (call.disposition === "busy_callback") {
+          contactUpdate.next_call_date = formatDateForDB(addBusinessDays(new Date(), 1));
+        }
         // Legacy: Not interested variants get paused for 30 days
         else if (call.disposition?.startsWith("not_interested_")) {
           contactUpdate.dialer_status = "paused";
