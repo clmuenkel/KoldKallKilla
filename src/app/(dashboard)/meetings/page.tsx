@@ -73,8 +73,6 @@ export default function MeetingsPage() {
 
   const { data: allMeetings, isLoading, isError, error } = useAllMeetings();
 
-  if (!userId) return null;
-
   const goToday = () => {
     setCurrentDate(new Date());
     setSelectedDay(new Date());
@@ -135,6 +133,11 @@ export default function MeetingsPage() {
   );
 
   const gridDays = view === "day" ? [currentDate] : weekDays;
+
+  // Guard AFTER all hooks so hook order is stable across renders (returning
+  // early before the useMemo/useCallback above caused "rendered more hooks
+  // than during the previous render" once auth resolved).
+  if (!userId) return null;
 
   return (
     <div className="flex flex-col h-full">
