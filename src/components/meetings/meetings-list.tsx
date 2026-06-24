@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMeetings } from "@/hooks/use-meetings";
+import { useMeetings, useCompleteMeeting } from "@/hooks/use-meetings";
 import { useMarkMeetingMissed } from "@/hooks/use-followups";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingDetailDialog } from "./meeting-detail";
@@ -18,6 +18,7 @@ import {
   Plus,
   ChevronRight,
   AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 import { format, isPast, isToday, isFuture } from "date-fns";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export function MeetingsList({
 }: MeetingsListProps) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const markMissed = useMarkMeetingMissed();
+  const completeMeeting = useCompleteMeeting();
   const isPrimaryUser = useIsPrimaryUser();
 
   const { data: meetings, isLoading } = useMeetings({
@@ -60,6 +62,15 @@ export function MeetingsList({
       toast.success("Marked as missed. Added to the Missed Meetings queue.");
     } catch (e: any) {
       toast.error(e.message || "Failed to mark missed");
+    }
+  };
+
+  const handleMarkShowed = async (meetingId: string) => {
+    try {
+      await completeMeeting.mutateAsync({ id: meetingId, outcome: "successful" });
+      toast.success("Marked as showed up");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update meeting");
     }
   };
 
@@ -144,7 +155,17 @@ export function MeetingsList({
                             compact={compact}
                           />
                           {unresolved && (
-                            <div className="flex justify-end">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1 text-xs text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10 dark:text-emerald-400"
+                                disabled={completeMeeting.isPending}
+                                onClick={() => handleMarkShowed(meeting.id)}
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Showed up
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -153,7 +174,7 @@ export function MeetingsList({
                                 onClick={() => handleMarkMissed(meeting.id)}
                               >
                                 <AlertTriangle className="h-3.5 w-3.5" />
-                                Mark missed (no-show)
+                                No-show
                               </Button>
                             </div>
                           )}

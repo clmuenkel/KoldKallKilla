@@ -43,6 +43,7 @@ import {
   Minimize2,
   Bell,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import { ContactCombobox } from "@/components/ui/contact-combobox";
 import { ContactMultiSelect } from "@/components/ui/contact-multi-select";
@@ -254,6 +255,40 @@ export function MeetingDetailDialog({
       setShowCompleteDialog(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to complete meeting");
+    }
+  };
+
+  // One-tap "they showed up" — marks the meeting completed.
+  const handleQuickComplete = async () => {
+    try {
+      await completeMeeting.mutateAsync({ id: meetingId, outcome: "successful" });
+      toast.success("Marked as showed up");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update meeting");
+    }
+  };
+
+  // One-tap "no-show" — sets status no_show (drives the Missed Meetings queue)
+  // and drops a dated note on the contact. Skips the note if it's already a
+  // no-show so re-confirming doesn't create duplicates.
+  const handleQuickNoShow = async () => {
+    try {
+      const wasNoShow = meeting?.status === "no_show";
+      await updateMeeting.mutateAsync({
+        id: meetingId,
+        updates: { status: "no_show", outcome: "no_show" },
+      });
+      if (!wasNoShow && meeting?.contact_id) {
+        await createNote.mutateAsync({
+          user_id: meeting.user_id,
+          contact_id: meeting.contact_id,
+          content: noShowNoteContent(meeting.title, meeting.scheduled_at),
+          source: "manual",
+        });
+      }
+      toast.success("Marked as no-show. Added to the Missed Meetings queue.");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update meeting");
     }
   };
 
@@ -657,28 +692,61 @@ export function MeetingDetailDialog({
             <MeetingNotes meeting={meeting} userId={userId} />
           </div>
 
-          <DialogFooter className="gap-2">
-            {meeting.status === "scheduled" && (
-              <>
+          {meeting.status !== "cancelled" && (
+            <DialogFooter className="gap-2 flex-wrap sm:flex-nowrap sm:items-center">
+              {/* Detailed outcome + notes (nuanced outcomes like follow-up needed) */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground sm:mr-auto"
+                onClick={() => setShowCompleteDialog(true)}
+              >
+                Outcome &amp; notes…
+              </Button>
+
+              {meeting.status === "scheduled" && (
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   onClick={handleCancel}
                   disabled={cancelMeeting.isPending}
+                  className="text-destructive border-destructive/40 hover:bg-destructive/10"
                 >
                   {cancelMeeting.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <X className="h-4 w-4 mr-2" />
                   )}
-                  Cancel Meeting
+                  Cancel
                 </Button>
-                <Button onClick={() => setShowCompleteDialog(true)}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark Complete
-                </Button>
-              </>
-            )}
-          </DialogFooter>
+              )}
+
+              {/* Direct status toggles — the active one is highlighted */}
+              <Button
+                variant="outline"
+                onClick={handleQuickNoShow}
+                disabled={updateMeeting.isPending}
+                className={cn(
+                  "border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400",
+                  meeting.status === "no_show" &&
+                    "bg-amber-500 text-white hover:bg-amber-600 hover:text-white border-amber-500"
+                )}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                No-show
+              </Button>
+              <Button
+                onClick={handleQuickComplete}
+                disabled={completeMeeting.isPending}
+                className={cn(
+                  "bg-emerald-600 hover:bg-emerald-700 text-white",
+                  meeting.status === "completed" && "ring-2 ring-emerald-400 ring-offset-1"
+                )}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Showed up
+              </Button>
+            </DialogFooter>
+          )}
           </>
           )}
         </DialogContent>
