@@ -127,9 +127,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That URL didn't return a calendar feed" }, { status: 422 });
     }
 
-    // Keep only events from yesterday through +21 days (the reminder window).
+    // Keep events from ~60 days back through +21 days. The reminders only act on
+    // today/future, but the meetings-calendar sync also wants recent PAST meetings
+    // so the 1st/2nd/3rd-meeting sequence has history to count.
     const now = Date.now();
-    const lo = now - 1 * 86400000;
+    const lo = now - 60 * 86400000;
     const hi = now + 21 * 86400000;
     const events = parseEvents(text)
       .filter((e) => {

@@ -6,6 +6,7 @@ import { useContacts } from "@/hooks/use-contacts";
 import { useCreateNote } from "@/hooks/use-notes";
 import { noShowNoteContent } from "@/hooks/use-followups";
 import { MeetingNotes } from "./meeting-notes";
+import { LinkContactControl } from "./link-contact-control";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -595,6 +596,18 @@ export function MeetingDetailDialog({
                   </Link>
                 </Button>
               </div>
+            )}
+
+            {/* No contact yet (e.g. imported from Google Calendar) — let the user
+                create or link one so the meeting counts in show metrics. */}
+            {!contact && (
+              <LinkContactControl
+                meetingId={meetingId}
+                userId={userId}
+                title={meeting.title}
+                attendees={meeting.external_attendees ?? null}
+                contacts={contacts}
+              />
             )}
 
             {/* Other attendees */}

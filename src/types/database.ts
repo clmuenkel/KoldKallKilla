@@ -586,7 +586,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          contact_id: string;
+          contact_id: string | null;
           company_id: string | null;
           title: string;
           description: string | null;
@@ -599,13 +599,17 @@ export interface Database {
           reminder_sent: boolean;
           outcome: string | null;
           outcome_notes: string | null;
+          source: string;
+          external_uid: string | null;
+          external_attendees: string[] | null;
+          sequence_override: number | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          contact_id: string;
+          contact_id?: string | null;
           company_id?: string | null;
           title: string;
           description?: string | null;
@@ -618,13 +622,17 @@ export interface Database {
           reminder_sent?: boolean;
           outcome?: string | null;
           outcome_notes?: string | null;
+          source?: string;
+          external_uid?: string | null;
+          external_attendees?: string[] | null;
+          sequence_override?: number | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          contact_id?: string;
+          contact_id?: string | null;
           company_id?: string | null;
           title?: string;
           description?: string | null;
@@ -637,6 +645,10 @@ export interface Database {
           reminder_sent?: boolean;
           outcome?: string | null;
           outcome_notes?: string | null;
+          source?: string;
+          external_uid?: string | null;
+          external_attendees?: string[] | null;
+          sequence_override?: number | null;
           created_at?: string;
           updated_at?: string;
         };

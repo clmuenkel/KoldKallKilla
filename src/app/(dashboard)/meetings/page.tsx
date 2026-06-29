@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAllMeetings } from "@/hooks/use-meetings";
+import { useCalendarSync } from "@/hooks/use-calendar-sync";
 import { MeetingDetailDialog } from "@/components/meetings/meeting-detail";
 import { CreateMeetingDialog } from "@/components/meetings/create-meeting-dialog";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,8 @@ export default function MeetingsPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const { data: allMeetings, isLoading, isError, error } = useAllMeetings();
+  // Import prospect meetings booked directly in Google Calendar (idempotent).
+  useCalendarSync();
 
   const goToday = () => {
     setCurrentDate(new Date());
@@ -570,6 +573,18 @@ function SidebarCard({
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                 <Video className="h-2.5 w-2.5" />
                 Link
+              </span>
+            )}
+            {meeting.source === "google_calendar" && (
+              <span className="text-[9px] text-muted-foreground/80 flex items-center gap-0.5 rounded bg-muted px-1 py-px">
+                <Calendar className="h-2.5 w-2.5" />
+                Google
+              </span>
+            )}
+            {!contact && (
+              <span className="text-[9px] text-amber-600 dark:text-amber-400 flex items-center gap-0.5">
+                <User className="h-2.5 w-2.5" />
+                Add contact
               </span>
             )}
           </div>

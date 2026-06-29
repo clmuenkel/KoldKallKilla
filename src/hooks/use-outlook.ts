@@ -16,6 +16,7 @@ export interface OutlookEvent {
   contactId?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
+  contactCompanyId?: string | null;
 }
 
 /** The user's saved Outlook .ics share URL (on profiles). */
@@ -82,11 +83,14 @@ export function useOutlookEvents() {
       const allEmails = Array.from(
         new Set(events.flatMap((e) => e.attendees).filter(Boolean))
       );
-      const emailToContact = new Map<string, { id: string; name: string; phone: string | null }>();
+      const emailToContact = new Map<
+        string,
+        { id: string; name: string; phone: string | null; companyId: string | null }
+      >();
       if (allEmails.length) {
         const { data } = await supabase
           .from("contacts")
-          .select("id, first_name, last_name, email, mobile, phone")
+          .select("id, first_name, last_name, email, mobile, phone, company_id")
           .in("email", allEmails);
         for (const c of (data as any[]) ?? []) {
           if (c.email) {
@@ -94,6 +98,7 @@ export function useOutlookEvents() {
               id: c.id,
               name: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(),
               phone: c.mobile || c.phone || null,
+              companyId: c.company_id ?? null,
             });
           }
         }
@@ -106,6 +111,7 @@ export function useOutlookEvents() {
           contactId: match?.id ?? null,
           contactName: match?.name ?? null,
           contactPhone: match?.phone ?? null,
+          contactCompanyId: match?.companyId ?? null,
         };
       });
     },
