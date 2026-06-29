@@ -95,6 +95,57 @@ export function useAllMeetings() {
   });
 }
 
+// ── Meeting sequence ("1st show / 2nd show / 3rd show" per prospect) ──────────
+// Rank each contact's non-cancelled meetings by scheduled_at; position is 1-based.
+// A per-meeting `sequence_override` wins (so a meeting whose earlier ones aren't
+// in the CRM can still be labelled "2nd"). Meetings with no contact have no
+// position (excluded until linked).
+type SeqMeeting = {
+  id: string;
+  contact_id: string | null;
+  scheduled_at: string;
+  status: string;
+  sequence_override: number | null;
+};
+
+export function computeMeetingPositions(meetings: SeqMeeting[]): Map<string, number> {
+  const byContact = new Map<string, SeqMeeting[]>();
+  for (const m of meetings) {
+    if (!m.contact_id) continue;
+    if (m.status === "cancelled" || m.status === "rescheduled") continue;
+    const list = byContact.get(m.contact_id) ?? [];
+    list.push(m);
+    byContact.set(m.contact_id, list);
+  }
+  const pos = new Map<string, number>();
+  for (const list of byContact.values()) {
+    list.sort(
+      (a, b) =>
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime() ||
+        a.id.localeCompare(b.id)
+    );
+    list.forEach((m, i) => pos.set(m.id, m.sequence_override ?? i + 1));
+  }
+  return pos;
+}
+
+export function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+/** This meeting's position in its contact's meeting sequence (null if unlinked). */
+export function useMeetingPosition(meeting: MeetingWithContact | null | undefined) {
+  // Always pass a contactId so the query is stable; "__none__" returns nothing.
+  const { data: contactMeetings } = useMeetings({
+    contactId: meeting?.contact_id ?? "__none__",
+  });
+  if (!meeting || !meeting.contact_id || !contactMeetings) return null;
+  const positions = computeMeetingPositions(contactMeetings as unknown as SeqMeeting[]);
+  return positions.get(meeting.id) ?? null;
+}
+
 export function useMeeting(id: string) {
   const supabase = createClient();
 

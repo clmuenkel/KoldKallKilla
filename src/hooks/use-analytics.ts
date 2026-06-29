@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthId } from "@/hooks/use-auth";
 import { getContactTimezone, getTimezoneGroup, getTimezoneGroupLabel } from "@/lib/timezone";
+import { computeMeetingPositions, ordinal } from "@/hooks/use-meetings";
 import { 
   startOfDay, 
   endOfDay, 
@@ -829,6 +830,100 @@ export function useCallTiming(
         totalCalls: rows.length,
         centralOffsetForHourLabel: (group, hour) => hour + TZ_OFFSET_FROM_CENTRAL[group],
       };
+    },
+  });
+}
+
+// ============================================================================
+// Meeting show-funnel by sequence — who shows up to the 1st / 2nd / 3rd meeting.
+// ----------------------------------------------------------------------------
+// Positions are computed across ALL meetings (a meeting's number depends on the
+// prospect's full history), then meetings that CAME DUE within the selected
+// range are bucketed by position. "Held vs no-show" reuses the same came-due
+// rules as useAnalyticsSummary. Unlinked meetings have no position (excluded).
+// ============================================================================
+
+export interface ShowFunnelRow {
+  position: number; // 1,2,3, 4 = "4th+"
+  label: string;
+  due: number; // meetings that came due at this position
+  held: number; // showed up
+  noShow: number;
+  showRate: number; // 0-100
+}
+
+export function useMeetingShowFunnel(
+  range: DateRange = "all_time",
+  customStart?: string,
+  customEnd?: string
+) {
+  const supabase = createClient();
+  const userId = useAuthId();
+  const { start, end } = getDateBounds(range, customStart, customEnd);
+
+  return useQuery({
+    queryKey: ["meeting-show-funnel", userId, range, customStart, customEnd],
+    enabled: !!userId,
+    queryFn: async (): Promise<ShowFunnelRow[]> => {
+      // All meetings (positions need full per-contact history), paginated.
+      const all: any[] = [];
+      let from = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data, error } = await supabase
+          .from("meetings")
+          .select("id, contact_id, scheduled_at, status, outcome, sequence_override")
+          .eq("user_id", userId!)
+          .order("scheduled_at", { ascending: true })
+          .range(from, from + 999);
+        if (error) {
+          if (error.code === "42P01") break;
+          throw error;
+        }
+        const batch = (data as any[]) || [];
+        all.push(...batch);
+        if (batch.length < 1000) break;
+        from += 1000;
+      }
+
+      const positions = computeMeetingPositions(all);
+      const nowMs = Date.now();
+      const startMs = start.getTime();
+      const endMs = end.getTime();
+      const isNoShow = (m: any) =>
+        m.status === "no_show" || m.status === "no_show_resolved" || m.outcome === "no_show";
+
+      const buckets = new Map<number, { due: number; noShow: number }>();
+      for (const m of all) {
+        const pos = positions.get(m.id);
+        if (pos == null) continue; // unlinked or cancelled/rescheduled
+        const t = new Date(m.scheduled_at).getTime();
+        if (t < startMs || t > endMs) continue; // range by scheduled_at
+        // Came due = past its time, or already resolved.
+        const cameDue = t <= nowMs || m.status === "completed" || isNoShow(m);
+        if (!cameDue) continue;
+        const key = pos >= 4 ? 4 : pos;
+        const b = buckets.get(key) ?? { due: 0, noShow: 0 };
+        b.due++;
+        if (isNoShow(m)) b.noShow++;
+        buckets.set(key, b);
+      }
+
+      const rows: ShowFunnelRow[] = [];
+      for (const p of [1, 2, 3, 4]) {
+        const b = buckets.get(p);
+        if (!b) continue;
+        const held = b.due - b.noShow;
+        rows.push({
+          position: p,
+          label: p === 4 ? "4th+ meeting" : `${ordinal(p)} meeting`,
+          due: b.due,
+          held,
+          noShow: b.noShow,
+          showRate: b.due > 0 ? Math.round((held / b.due) * 100) : 0,
+        });
+      }
+      return rows;
     },
   });
 }

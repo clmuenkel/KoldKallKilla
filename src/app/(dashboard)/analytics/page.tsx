@@ -61,6 +61,7 @@ import {
 } from "@/hooks/use-analytics";
 import { useSessions, useEndAllOpenSessions } from "@/hooks/use-sessions";
 import { BestTimeToCall } from "@/components/analytics/best-time-to-call";
+import { ShowFunnelCard } from "@/components/analytics/show-funnel-card";
 import { useTargets } from "@/hooks/use-targets";
 import type { DateRange, TrendDataPoint, SessionWithStats } from "@/types/analytics";
 import { cn } from "@/lib/utils";
@@ -227,6 +228,9 @@ export default function AnalyticsPage() {
 
           {/* Best Time to Call — cold-calling timing analytics */}
           <BestTimeToCall range={dateRange} customStart={cs} customEnd={ce} />
+
+          {/* Meeting show-rate funnel by meeting number */}
+          <ShowFunnelCard range={dateRange} customStart={cs} customEnd={ce} />
 
           {/* Charts Row */}
           <div className="grid gap-6 lg:grid-cols-2">

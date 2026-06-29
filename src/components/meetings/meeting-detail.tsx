@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMeeting, useUpdateMeeting, useSetMeetingAttendees, useCancelMeeting, useCompleteMeeting } from "@/hooks/use-meetings";
+import { useMeeting, useUpdateMeeting, useSetMeetingAttendees, useCancelMeeting, useCompleteMeeting, useMeetingPosition, ordinal } from "@/hooks/use-meetings";
 import { useContacts } from "@/hooks/use-contacts";
 import { useCreateNote } from "@/hooks/use-notes";
 import { noShowNoteContent } from "@/hooks/use-followups";
@@ -105,6 +105,7 @@ export function MeetingDetailDialog({
   const cancelMeeting = useCancelMeeting();
   const completeMeeting = useCompleteMeeting();
   const createNote = useCreateNote();
+  const meetingPosition = useMeetingPosition(meeting);
 
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completionOutcome, setCompletionOutcome] = useState("successful");
@@ -256,6 +257,16 @@ export function MeetingDetailDialog({
       setShowCompleteDialog(false);
     } catch (error: any) {
       toast.error(error.message || "Failed to complete meeting");
+    }
+  };
+
+  // Manually set which meeting in the sequence this is (override auto-count).
+  const handleSetSequence = async (n: number | null) => {
+    try {
+      await updateMeeting.mutateAsync({ id: meetingId, updates: { sequence_override: n } });
+      toast.success(n ? `Marked as the ${ordinal(n)} meeting` : "Sequence reset to auto");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update");
     }
   };
 
@@ -608,6 +619,46 @@ export function MeetingDetailDialog({
                 attendees={meeting.external_attendees ?? null}
                 contacts={contacts}
               />
+            )}
+
+            {/* Meeting sequence — which "show" this is for this prospect (1st / 2nd / …). */}
+            {contact && (
+              <div className="flex items-center justify-between gap-2 flex-wrap rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Meeting #</span>
+                  {meetingPosition != null && (
+                    <Badge variant="secondary" className="font-semibold">
+                      {ordinal(meetingPosition)} meeting
+                      {meeting.sequence_override != null ? " (set)" : ""}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4].map((n) => (
+                    <Button
+                      key={n}
+                      size="sm"
+                      variant={meetingPosition === n ? "default" : "outline"}
+                      className="h-7 w-9 px-0"
+                      disabled={updateMeeting.isPending}
+                      onClick={() => handleSetSequence(n)}
+                    >
+                      {n === 4 ? "4+" : n}
+                    </Button>
+                  ))}
+                  {meeting.sequence_override != null && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-muted-foreground"
+                      disabled={updateMeeting.isPending}
+                      onClick={() => handleSetSequence(null)}
+                    >
+                      auto
+                    </Button>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Other attendees */}
