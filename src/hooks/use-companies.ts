@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { applySearch, CONTACT_SEARCH_COLUMNS, COMPANY_SEARCH_COLUMNS } from "@/lib/search";
 import type { Company, Contact, Call, CallWithContact, InsertTables, UpdateTables } from "@/types/database";
 
 export interface CompanyWithStats extends Company {
@@ -52,9 +53,7 @@ export function useCompanies(filters?: CompanyFilters) {
           .select("id");
         
         // Search across company fields: name, domain, industry, city, state, country
-        companyQuery = companyQuery.or(
-          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%,industry.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`
-        );
+        companyQuery = applySearch(companyQuery, filters.search, COMPANY_SEARCH_COLUMNS);
 
         if (filters.industry) {
           companyQuery = companyQuery.eq("industry", filters.industry);
@@ -64,13 +63,11 @@ export function useCompanies(filters?: CompanyFilters) {
         const companyMatchIds = (companyMatches || []).map(c => c.id);
 
         // Step 2: Get company IDs from contacts that match the search term
-        const { data: contactMatches } = await supabase
-          .from("contacts")
-          .select("company_id")
-          .not("company_id", "is", null)
-          .or(
-            `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%`
-          );
+        const { data: contactMatches } = await applySearch(
+          supabase.from("contacts").select("company_id").not("company_id", "is", null),
+          filters.search,
+          CONTACT_SEARCH_COLUMNS
+        );
 
         const contactCompanyIds = (contactMatches || [])
           .map(c => c.company_id)
@@ -235,9 +232,7 @@ export function usePaginatedCompanies(filters?: CompanyFilters) {
           .select("id");
         
         // Search across company fields: name, domain, industry, city, state, country
-        companyQuery = companyQuery.or(
-          `name.ilike.%${filters.search}%,domain.ilike.%${filters.search}%,industry.ilike.%${filters.search}%,city.ilike.%${filters.search}%,state.ilike.%${filters.search}%,country.ilike.%${filters.search}%`
-        );
+        companyQuery = applySearch(companyQuery, filters.search, COMPANY_SEARCH_COLUMNS);
 
         if (filters.industry) {
           companyQuery = companyQuery.eq("industry", filters.industry);
@@ -247,13 +242,11 @@ export function usePaginatedCompanies(filters?: CompanyFilters) {
         const companyMatchIds = (companyMatches || []).map(c => c.id);
 
         // Step 2: Get company IDs from contacts that match the search term
-        const { data: contactMatches } = await supabase
-          .from("contacts")
-          .select("company_id")
-          .not("company_id", "is", null)
-          .or(
-            `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%`
-          );
+        const { data: contactMatches } = await applySearch(
+          supabase.from("contacts").select("company_id").not("company_id", "is", null),
+          filters.search,
+          CONTACT_SEARCH_COLUMNS
+        );
 
         const contactCompanyIds = (contactMatches || [])
           .map(c => c.company_id)

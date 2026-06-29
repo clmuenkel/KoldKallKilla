@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { applySearch, CONTACT_SEARCH_COLUMNS } from "@/lib/search";
 import type { Contact, InsertTables, UpdateTables } from "@/types/database";
 
 export interface ContactFilters {
@@ -48,11 +49,10 @@ export function useContacts(filters?: ContactFilters) {
           q = q.eq("stage", filters.stage);
         }
 
-        // Search filter (includes phone numbers for callback lookup)
+        // Search filter — every word must match some field, so full names work
+        // (includes phone numbers for callback lookup).
         if (filters?.search) {
-          q = q.or(
-            `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%`
-          );
+          q = applySearch(q, filters.search, CONTACT_SEARCH_COLUMNS);
         }
 
         // Industry filter
@@ -217,9 +217,7 @@ export function usePaginatedContacts(filters?: ContactFilters) {
         countQuery = countQuery.eq("stage", filters.stage);
       }
       if (filters?.search) {
-        countQuery = countQuery.or(
-          `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%`
-        );
+        countQuery = applySearch(countQuery, filters.search, CONTACT_SEARCH_COLUMNS);
       }
       if (filters?.industry && filters.industry !== "all") {
         countQuery = countQuery.eq("industry", filters.industry);
@@ -255,9 +253,7 @@ export function usePaginatedContacts(filters?: ContactFilters) {
         query = query.eq("stage", filters.stage);
       }
       if (filters?.search) {
-        query = query.or(
-          `first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,title.ilike.%${filters.search}%,company_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,mobile.ilike.%${filters.search}%`
-        );
+        query = applySearch(query, filters.search, CONTACT_SEARCH_COLUMNS);
       }
       if (filters?.industry && filters.industry !== "all") {
         query = query.eq("industry", filters.industry);
