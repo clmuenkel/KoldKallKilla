@@ -71,9 +71,8 @@ function buildActions(events: OutlookEvent[]): ReminderAction[] {
     out.push(mk("text_week", new Date(start.getTime() - 7 * 86400000), null));
     out.push(mk("demo_2day", new Date(start.getTime() - 2 * 86400000), null));
     out.push(mk("text_dayof", start, null));
-    // Time-based confirmation calls (fire ~30 / 20 min before)
+    // Single time-based confirmation call (fires ~30 min before).
     out.push(mk("call_30", start, new Date(start.getTime() - 30 * 60000).toISOString()));
-    out.push(mk("call_20", start, new Date(start.getTime() - 20 * 60000).toISOString()));
   }
   return out;
 }
