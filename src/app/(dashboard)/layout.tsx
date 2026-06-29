@@ -45,6 +45,8 @@ export default function DashboardLayout({
           {mounted && <GlobalSessionBar />}
           {/* Follow-ups due + missed meetings alert */}
           {mounted && <FollowUpAlertBanner />}
+          {/* Meeting-prep reminders: persistent bar + grouped checklist */}
+          {mounted && <MorningReminders />}
           <div className={`flex-1 overflow-auto ${mounted ? "animate-fade-in" : ""}`}>
             {children}
           </div>
@@ -71,8 +73,7 @@ export default function DashboardLayout({
           </div>
         )}
 
-        {/* Morning meeting-reminder pop-up + live pre-call alerts */}
-        {mounted && <MorningReminders />}
+        {/* Live pre-call alerts (30/20 min before a meeting) */}
         {mounted && <LivePreCallAlerts />}
         <CommandPalette />
       </div>

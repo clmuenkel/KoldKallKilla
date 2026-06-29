@@ -1,32 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Image, Phone, Sun } from "lucide-react";
-import { useTodaysReminders, useMarkReminderDone, cstTime, type ReminderAction } from "@/hooks/use-reminders";
+import { MessageSquare, Image, Calendar, ChevronRight, Check } from "lucide-react";
+import { useTodaysReminders, useMarkReminderDone, cstTime, type ReminderAction, type ActionType } from "@/hooks/use-reminders";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { copyToClipboard } from "@/lib/utils";
 import { toast } from "sonner";
 
-const ICON: Record<string, React.ReactNode> = {
-  text_week: <MessageSquare className="h-4 w-4 text-blue-500" />,
-  text_dayof: <MessageSquare className="h-4 w-4 text-blue-500" />,
-  demo_2day: <Image className="h-4 w-4 text-purple-500" />,
-  call_30: <Phone className="h-4 w-4 text-emerald-500" />,
-  call_20: <Phone className="h-4 w-4 text-emerald-500" />,
-};
-
-/** Today in Central time, as a stable key for per-day session dismissal. */
-function cstTodayKey(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
-}
 /** Current hour (0-23) in Central. */
 function cstHour(): number {
   return Number(
@@ -34,91 +19,135 @@ function cstHour(): number {
   );
 }
 
+// Prep actions grouped by urgency — today first. Calls are NOT here (they fire
+// live at the actual time); this is the readable prep checklist.
+const GROUPS: { type: ActionType; title: string; sub: string; icon: React.ReactNode }[] = [
+  { type: "text_dayof", title: "Text them today", sub: "Meeting is today", icon: <MessageSquare className="h-4 w-4 text-blue-500" /> },
+  { type: "demo_2day", title: "Send the demo / screenshot", sub: "Meeting in 2 days", icon: <Image className="h-4 w-4 text-purple-500" /> },
+  { type: "text_week", title: "Heads-up text", sub: "Meeting about a week out", icon: <Calendar className="h-4 w-4 text-emerald-500" /> },
+];
+
 /**
- * Morning meeting-reminder pop-up. Appears once per app-open (session) after
- * 6 AM CST when there are still-pending actions for today. Must be worked
- * through as a checklist; reappears next time the app is opened if anything's
- * left. Re-reads the calendar on every open.
+ * Meeting-prep reminders. Two surfaces:
+ *  - a persistent thin bar (stays at the top of the content until everything's
+ *    done, so it survives refreshes and reappears when you come back), and
+ *  - a compact, grouped checklist dialog that auto-opens once per app load in the
+ *    morning and can be reopened from the bar anytime.
+ * The minute-before confirmation CALLS are handled separately as live pop-ups.
  */
 export function MorningReminders() {
   const isPrimary = useIsPrimaryUser();
   const { actions, pending, isLoading } = useTodaysReminders();
   const mark = useMarkReminderDone();
   const [open, setOpen] = useState(false);
+  const autoOpenedRef = useRef(false);
 
-  const dayKey = cstTodayKey();
-  const dismissKey = `morning_reminders_dismissed_${dayKey}`;
-
+  // Auto-open once per mount (i.e. per page load / refresh) in the morning while
+  // anything's still pending — so a refresh or coming back later re-surfaces it.
   useEffect(() => {
-    if (!isPrimary || isLoading) return;
-    const dismissed = sessionStorage.getItem(dismissKey) === "1";
-    const afterSix = cstHour() >= 6;
-    if (afterSix && !dismissed && pending.length > 0) setOpen(true);
-  }, [isPrimary, isLoading, pending.length, dismissKey]);
+    if (!isPrimary || isLoading || autoOpenedRef.current) return;
+    if (cstHour() >= 6 && pending.length > 0) {
+      autoOpenedRef.current = true;
+      setOpen(true);
+    }
+  }, [isPrimary, isLoading, pending.length]);
 
   if (!isPrimary || actions.length === 0) return null;
 
-  const close = () => {
-    sessionStorage.setItem(dismissKey, "1");
-    setOpen(false);
-  };
+  const toggle = (a: ReminderAction) => mark.mutate({ action: a, done: !a.done });
+  const allDone = pending.length === 0;
 
-  const toggle = (a: ReminderAction) =>
-    mark.mutate({ action: a, done: !a.done });
-
-  const Row = ({ a }: { a: ReminderAction }) => {
-    const isCall = a.actionType === "call_30" || a.actionType === "call_20";
-    return (
-      <div className="flex items-start gap-3 py-2.5 border-b last:border-0">
-        <Checkbox checked={a.done} onCheckedChange={() => toggle(a)} className="mt-0.5" />
-        <span className="mt-0.5 shrink-0">{ICON[a.actionType]}</span>
-        <div className="flex-1 min-w-0">
-          <p className={a.done ? "text-sm line-through text-muted-foreground" : "text-sm font-medium"}>
-            {a.label}
-            {isCall && a.fireAt && (
-              <span className="text-muted-foreground font-normal"> · {cstTime(a.fireAt)} CT</span>
-            )}
-          </p>
-          <p className="text-xs text-muted-foreground truncate">
-            {a.meetingTitle} · {cstTime(a.meetingStart)} CT
-            {a.phone && (
-              <button
-                className="ml-2 underline hover:text-foreground"
-                onClick={() => { copyToClipboard(a.phone!); toast.success("Number copied"); }}
-              >
-                {a.phone}
-              </button>
-            )}
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  const doneCount = actions.filter((a) => a.done).length;
+  const Row = ({ a }: { a: ReminderAction }) => (
+    <div className="flex items-start gap-3 py-2">
+      <Checkbox checked={a.done} onCheckedChange={() => toggle(a)} className="mt-0.5" />
+      <button
+        onClick={() => toggle(a)}
+        className="flex-1 min-w-0 text-left"
+      >
+        <p className={a.done ? "text-sm line-through text-muted-foreground" : "text-sm font-medium"}>
+          {a.who}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">
+          {a.meetingTitle} · {cstTime(a.meetingStart)} CT
+        </p>
+      </button>
+      {a.phone && (
+        <button
+          className="text-xs text-primary underline shrink-0 mt-0.5"
+          onClick={() => { copyToClipboard(a.phone!); toast.success("Number copied"); }}
+        >
+          {a.phone}
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sun className="h-5 w-5 text-amber-500" />
-            Today&apos;s meeting reminders
-            <Badge variant="secondary" className="ml-1">{doneCount}/{actions.length}</Badge>
-          </DialogTitle>
-          <DialogDescription>
-            Work the list. Tick each as you do it.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[55vh] overflow-y-auto -mx-1 px-1">
-          {actions.map((a) => <Row key={a.key} a={a} />)}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={close}>
-            {pending.length === 0 ? "All done — close" : "Close for now"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      {/* Persistent bar — stays until everything's done */}
+      {!allDone && (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center gap-2 border-b bg-amber-500/10 px-4 py-2 text-sm hover:bg-amber-500/15 transition-colors"
+        >
+          <span className="text-base leading-none">📋</span>
+          <span className="font-medium">
+            {pending.length} meeting-prep {pending.length === 1 ? "task" : "tasks"} for today
+          </span>
+          <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+            Open <ChevronRight className="h-4 w-4" />
+          </span>
+        </button>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              📋 Today&apos;s meeting prep
+            </DialogTitle>
+            <DialogDescription>
+              {allDone ? "All done — nice." : `${pending.length} left. Tick each as you send it.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto px-5 py-2">
+            {allDone ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="h-12 w-12 rounded-full bg-emerald-500/15 flex items-center justify-center mb-3">
+                  <Check className="h-6 w-6 text-emerald-500" />
+                </div>
+                <p className="font-medium">You&apos;re caught up</p>
+                <p className="text-sm text-muted-foreground">All meeting-prep tasks are done for today.</p>
+              </div>
+            ) : (
+              GROUPS.map((g) => {
+                const items = actions.filter((a) => a.actionType === g.type && !a.done);
+                if (items.length === 0) return null;
+                return (
+                  <div key={g.type} className="py-2 border-b last:border-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {g.icon}
+                      <span className="text-sm font-semibold">{g.title}</span>
+                      <span className="text-xs text-muted-foreground">· {g.sub}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
+                    </div>
+                    <div className="pl-0.5">
+                      {items.map((a) => <Row key={a.key} a={a} />)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter className="px-5 py-3 border-t">
+            <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
+              {allDone ? "Close" : "Close — I'll finish later"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -78,6 +78,9 @@ function buildActions(events: OutlookEvent[]): ReminderAction[] {
   return out;
 }
 
+/** Prep actions shown in the morning checklist (the calls are live-only). */
+export const PREP_TYPES: ActionType[] = ["text_week", "demo_2day", "text_dayof"];
+
 /** All of today's reminder actions (CST), with done-state applied. */
 export function useTodaysReminders() {
   const supabase = createClient();
@@ -102,15 +105,19 @@ export function useTodaysReminders() {
 
   const all = buildActions(events ?? []);
   const doneSet = doneQuery.data ?? new Set<string>();
+  // The morning checklist is PREP tasks only — text a week out, send the demo 2
+  // days out, text day-of. The 30/20-min confirmation CALLS are time-of-day
+  // nudges that fire as live pop-ups at the actual moment, so they're kept out of
+  // the list (otherwise a busy day buries the prep tasks under ~10 call rows).
   const todays = all
-    .filter((a) => a.actionDate === today)
+    .filter((a) => a.actionDate === today && PREP_TYPES.includes(a.actionType))
     .map((a) => ({ ...a, done: doneSet.has(a.key) }))
     .sort((a, b) => a.meetingStart.localeCompare(b.meetingStart));
 
   return {
     actions: todays,
     pending: todays.filter((a) => !a.done),
-    allEventsActions: all, // for the live pre-call timer
+    allEventsActions: all, // for the live pre-call timer (call_30 / call_20)
     isLoading: doneQuery.isLoading,
   };
 }
