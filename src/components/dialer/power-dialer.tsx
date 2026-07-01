@@ -11,6 +11,7 @@ import { useLogCall, useContactsCalledToday } from "@/hooks/use-calls";
 import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use-sessions";
 import { useUpdateContact, useContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting, useAddToMissedMeetings } from "@/hooks/use-followups";
+import { useCommercialPlumbers } from "@/hooks/use-commercial-plumbers";
 import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
@@ -63,14 +64,15 @@ import {
   PhoneOff,
   Loader2,
   Calendar,
+  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthId } from "@/hooks/use-auth";
 import type { Contact } from "@/types/database";
 
-type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_due";
+type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_due" | "commercial_plumbers";
 
-const CATEGORY_MODES: FilterMode[] = ["missed_meetings", "follow_ups_due"];
+const CATEGORY_MODES: FilterMode[] = ["missed_meetings", "follow_ups_due", "commercial_plumbers"];
 
 // Representative timezone per group (for business-hours display). Pure — module level.
 function getRepresentativeTimezone(group: TimezoneGroup): string | null {
@@ -239,6 +241,7 @@ export function PowerDialer() {
   const isPrimaryUser = useIsPrimaryUser();
   const { data: followUpsDue } = useFollowUpsDue();
   const { data: missedMeetingContacts } = useMissedMeetingContacts();
+  const { data: commercialPlumbers } = useCommercialPlumbers();
 
   // Deep-link from the dashboard alert: /dialer?category=missed_meetings|follow_ups_due
   const searchParams = useSearchParams();
@@ -246,7 +249,7 @@ export function PowerDialer() {
   useEffect(() => {
     if (appliedCategoryParam.current || !isPrimaryUser) return;
     const category = searchParams.get("category");
-    if (category === "missed_meetings" || category === "follow_ups_due") {
+    if (category === "missed_meetings" || category === "follow_ups_due" || category === "commercial_plumbers") {
       setFilterMode(category);
       appliedCategoryParam.current = true;
     }
@@ -521,8 +524,9 @@ export function PowerDialer() {
     return {
       missed_meetings: count(missedMeetingContacts),
       follow_ups_due: count(followUpsDue),
+      commercial_plumbers: count(commercialPlumbers),
     };
-  }, [missedMeetingContacts, followUpsDue, requirePhone]);
+  }, [missedMeetingContacts, followUpsDue, commercialPlumbers, requirePhone]);
 
   // Calculate counts per timezone group (memoized — this iterates the whole
   // source list and does per-contact timezone work, so it must not run every render).
@@ -532,6 +536,8 @@ export function PowerDialer() {
         ? missedMeetingContacts
         : filterMode === "follow_ups_due"
         ? followUpsDue
+        : filterMode === "commercial_plumbers"
+        ? commercialPlumbers
         : allContacts;
     if (!tzSource) return {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>;
 
@@ -567,7 +573,7 @@ export function PowerDialer() {
       };
       return acc;
     }, {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>);
-  }, [filterMode, missedMeetingContacts, followUpsDue, allContacts, selectedStages, selectedCompanyId, requirePhone, empMin, empMax, companiesById]);
+  }, [filterMode, missedMeetingContacts, followUpsDue, commercialPlumbers, allContacts, selectedStages, selectedCompanyId, requirePhone, empMin, empMax, companiesById]);
 
   // Maximum call attempts before contact is exhausted
   const MAX_CALL_ATTEMPTS = 10;
@@ -583,6 +589,8 @@ export function PowerDialer() {
         ? missedMeetingContacts
         : filterMode === "follow_ups_due"
         ? followUpsDue
+        : filterMode === "commercial_plumbers"
+        ? commercialPlumbers
         : allContacts;
     if (!source) return [];
 
@@ -715,7 +723,7 @@ export function PowerDialer() {
     () => getFilteredContacts(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      allContacts, missedMeetingContacts, followUpsDue, filterMode, selectedStages,
+      allContacts, missedMeetingContacts, followUpsDue, commercialPlumbers, filterMode, selectedStages,
       selectedCompanyId, requirePhone, enableCadence, selectedTimezones,
       empMin, empMax, contactsCalledToday, pausedCompanyIds, companiesById,
     ]
@@ -975,8 +983,34 @@ export function PowerDialer() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Priority queues — Missed Meetings & Follow-ups Due (Zad's login only) */}
+              {/* Priority queues — Commercial Plumbers, Missed Meetings & Follow-ups Due (Zad's login only) */}
               {isPrimaryUser && (
+              <div className="space-y-3">
+                {/* Commercial Plumbers — top-priority segment */}
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("commercial_plumbers")}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 p-4 rounded-lg border-2 text-left transition-all",
+                    filterMode === "commercial_plumbers"
+                      ? "border-blue-500 bg-blue-500/10"
+                      : "border-blue-500/40 hover:border-blue-500 bg-blue-500/5"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+                      <Wrench className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">Commercial Plumbers</span>
+                      <span className="text-xs text-muted-foreground">Top-priority list · segment by timezone &amp; size</span>
+                    </div>
+                  </div>
+                  <Badge className="bg-blue-500 hover:bg-blue-500 text-white">
+                    {categoryCounts.commercial_plumbers}
+                  </Badge>
+                </button>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -1021,6 +1055,7 @@ export function PowerDialer() {
                     {categoryCounts.follow_ups_due}
                   </Badge>
                 </button>
+              </div>
               </div>
               )}
 
