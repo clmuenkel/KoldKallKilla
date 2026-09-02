@@ -12,7 +12,6 @@ import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use
 import { useUpdateContact, useContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting, useAddToMissedMeetings } from "@/hooks/use-followups";
 import { useCommercialPlumbers } from "@/hooks/use-commercial-plumbers";
-import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
 import { useSearchParams } from "next/navigation";
@@ -238,7 +237,6 @@ export function PowerDialer() {
 
   // Human-curated category queues (NOT the auto-dialer pool). These intentionally
   // bypass the in-pool restriction so meeting/proposal-stage contacts still surface.
-  const isPrimaryUser = useIsPrimaryUser();
   const { data: followUpsDue } = useFollowUpsDue();
   const { data: missedMeetingContacts } = useMissedMeetingContacts();
   const { data: commercialPlumbers } = useCommercialPlumbers();
@@ -247,13 +245,13 @@ export function PowerDialer() {
   const searchParams = useSearchParams();
   const appliedCategoryParam = useRef(false);
   useEffect(() => {
-    if (appliedCategoryParam.current || !isPrimaryUser) return;
+    if (appliedCategoryParam.current) return;
     const category = searchParams.get("category");
     if (category === "missed_meetings" || category === "follow_ups_due" || category === "commercial_plumbers") {
       setFilterMode(category);
       appliedCategoryParam.current = true;
     }
-  }, [searchParams, isPrimaryUser]);
+  }, [searchParams]);
 
   // Fetch companies for company filter
   const { data: companies, isLoading: loadingCompanies } = useCompanies({});
@@ -983,8 +981,7 @@ export function PowerDialer() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Priority queues — Commercial Plumbers, Missed Meetings & Follow-ups Due (Zad's login only) */}
-              {isPrimaryUser && (
+              {/* Priority queues — Commercial Plumbers, Missed Meetings & Follow-ups Due */}
               <div className="space-y-3">
                 {/* Commercial Plumbers — top-priority segment */}
                 <button
@@ -1057,7 +1054,6 @@ export function PowerDialer() {
                 </button>
               </div>
               </div>
-              )}
 
               {/* Filter Mode Selection */}
               <RadioGroup
@@ -1504,68 +1500,66 @@ export function PowerDialer() {
           >
             {currentContact ? (
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {isPrimaryUser && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Set a follow-up on this contact anytime — no need to log a call first */}
-                    <FollowUpControl
-                      contactId={currentContact.id}
-                      currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Set a follow-up on this contact anytime — no need to log a call first */}
+                  <FollowUpControl
+                    contactId={currentContact.id}
+                    currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
+                    size="sm"
+                  />
+                  <RemoveFollowUpButton
+                    contactId={currentContact.id}
+                    currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
+                    size="sm"
+                    onRemoved={() => {
+                      if (filterMode === "follow_ups_due") {
+                        pruneQueue((c) => c.id === currentContact.id);
+                      }
+                    }}
+                  />
+                  {filterMode === "missed_meetings" ? (
+                    <Button
+                      variant="outline"
                       size="sm"
-                    />
-                    <RemoveFollowUpButton
-                      contactId={currentContact.id}
-                      currentFollowUp={liveCurrentContact?.next_follow_up ?? currentContact.next_follow_up}
-                      size="sm"
-                      onRemoved={() => {
-                        if (filterMode === "follow_ups_due") {
-                          pruneQueue((c) => c.id === currentContact.id);
+                      className="text-muted-foreground"
+                      disabled={dismissMissed.isPending}
+                      onClick={async () => {
+                        const id = currentContact.id;
+                        try {
+                          await dismissMissed.mutateAsync(id);
+                          pruneQueue((c) => c.id === id);
+                          toast.success("Removed from Missed Meetings");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to remove");
                         }
                       }}
-                    />
-                    {filterMode === "missed_meetings" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-muted-foreground"
-                        disabled={dismissMissed.isPending}
-                        onClick={async () => {
-                          const id = currentContact.id;
-                          try {
-                            await dismissMissed.mutateAsync(id);
-                            pruneQueue((c) => c.id === id);
-                            toast.success("Removed from Missed Meetings");
-                          } catch (e: any) {
-                            toast.error(e.message || "Failed to remove");
-                          }
-                        }}
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        Remove from Missed Meetings
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
-                        disabled={addMissed.isPending}
-                        onClick={async () => {
-                          try {
-                            await addMissed.mutateAsync({
-                              contactId: currentContact.id,
-                              userId,
-                            });
-                            toast.success("Added to Missed Meetings");
-                          } catch (e: any) {
-                            toast.error(e.message || "Failed to add");
-                          }
-                        }}
-                      >
-                        <AlertTriangle className="mr-2 h-4 w-4" />
-                        Add to Missed Meetings
-                      </Button>
-                    )}
-                  </div>
-                )}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Remove from Missed Meetings
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-amber-600 border-amber-500/40 hover:bg-amber-500/10"
+                      disabled={addMissed.isPending}
+                      onClick={async () => {
+                        try {
+                          await addMissed.mutateAsync({
+                            contactId: currentContact.id,
+                            userId,
+                          });
+                          toast.success("Added to Missed Meetings");
+                        } catch (e: any) {
+                          toast.error(e.message || "Failed to add");
+                        }
+                      }}
+                    >
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      Add to Missed Meetings
+                    </Button>
+                  )}
+                </div>
                 <ContactPanelCompact />
               </div>
             ) : (

@@ -20,7 +20,6 @@ import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { MissedMeetingButton } from "@/components/contacts/missed-meeting-button";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
 import { ClientCard } from "@/components/contacts/client-card";
-import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { MeetingsList } from "@/components/meetings/meetings-list";
 import { MeetingDialog } from "@/components/dialer/meeting-dialog";
 import { TaskForm } from "@/components/tasks/task-form";
@@ -144,7 +143,6 @@ export default function ContactDetailPage() {
   const [newNoteText, setNewNoteText] = useState("");
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const userId = useAuthId();
-  const isPrimaryUser = useIsPrimaryUser();
 
   if (!userId) return null;
 
@@ -471,19 +469,15 @@ export default function ContactDetailPage() {
                     <Calendar className="mr-2 h-4 w-4" />
                     Schedule Meeting
                   </Button>
-                  {isPrimaryUser && (
-                    <>
-                      <FollowUpControl
-                        contactId={contactId}
-                        currentFollowUp={contact.next_follow_up}
-                      />
-                      <RemoveFollowUpButton
-                        contactId={contactId}
-                        currentFollowUp={contact.next_follow_up}
-                      />
-                      <MissedMeetingButton contactId={contactId} />
-                    </>
-                  )}
+                  <FollowUpControl
+                    contactId={contactId}
+                    currentFollowUp={contact.next_follow_up}
+                  />
+                  <RemoveFollowUpButton
+                    contactId={contactId}
+                    currentFollowUp={contact.next_follow_up}
+                  />
+                  <MissedMeetingButton contactId={contactId} />
                   <AbuButton contactName={`${contact.first_name} ${contact.last_name || ''}`.trim()} />
                 </div>
               </CardContent>
@@ -706,7 +700,7 @@ export default function ContactDetailPage() {
             </Card>
 
             {/* Client (revenue/lifecycle) — shown when this contact is a won client */}
-            {isPrimaryUser && contact.stage === "won" && (
+            {contact.stage === "won" && (
               <ClientCard contact={contact} />
             )}
 

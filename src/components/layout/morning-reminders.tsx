@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MessageSquare, Image, Calendar, ChevronRight, Check } from "lucide-react";
 import { useTodaysReminders, useMarkReminderDone, cstTime, type ReminderAction, type ActionType } from "@/hooks/use-reminders";
-import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 import { copyToClipboard } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -36,7 +35,6 @@ const GROUPS: { type: ActionType; title: string; sub: string; icon: React.ReactN
  * The minute-before confirmation CALLS are handled separately as live pop-ups.
  */
 export function MorningReminders() {
-  const isPrimary = useIsPrimaryUser();
   const { actions, pending, isLoading } = useTodaysReminders();
   const mark = useMarkReminderDone();
   const [open, setOpen] = useState(false);
@@ -45,14 +43,14 @@ export function MorningReminders() {
   // Auto-open once per mount (i.e. per page load / refresh) in the morning while
   // anything's still pending — so a refresh or coming back later re-surfaces it.
   useEffect(() => {
-    if (!isPrimary || isLoading || autoOpenedRef.current) return;
+    if (isLoading || autoOpenedRef.current) return;
     if (cstHour() >= 6 && pending.length > 0) {
       autoOpenedRef.current = true;
       setOpen(true);
     }
-  }, [isPrimary, isLoading, pending.length]);
+  }, [isLoading, pending.length]);
 
-  if (!isPrimary || actions.length === 0) return null;
+  if (actions.length === 0) return null;
 
   const toggle = (a: ReminderAction) => mark.mutate({ action: a, done: !a.done });
   const allDone = pending.length === 0;

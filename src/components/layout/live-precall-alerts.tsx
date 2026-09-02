@@ -4,21 +4,17 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Phone } from "lucide-react";
 import { useTodaysReminders, cstTime } from "@/hooks/use-reminders";
-import { useIsPrimaryUser } from "@/hooks/use-primary-user";
 
 /**
  * Fires a live pop-up ~30 and ~20 minutes before each of today's meetings
- * (while the CRM tab is open) so Zad makes the confirmation calls on time.
+ * (while the CRM tab is open) so the confirmation calls happen on time.
  * Each fires once per session.
  */
 export function LivePreCallAlerts() {
-  const isPrimary = useIsPrimaryUser();
   const { allEventsActions } = useTodaysReminders();
   const firedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!isPrimary) return;
-
     const check = () => {
       const now = Date.now();
       for (const a of allEventsActions) {
@@ -41,7 +37,7 @@ export function LivePreCallAlerts() {
     check();
     const id = setInterval(check, 30000);
     return () => clearInterval(id);
-  }, [isPrimary, allEventsActions]);
+  }, [allEventsActions]);
 
   return null;
 }
