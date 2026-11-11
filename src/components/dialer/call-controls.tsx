@@ -177,7 +177,7 @@ export function CallControlsHeader({ onShowShortcuts }: CallControlsHeaderProps 
   ]);
   
   // Fetch session call stats for summary dialog
-  const { data: callStats } = useSessionCallStats(sessionStartTime);
+  const { data: callStats } = useSessionCallStats(sessionStartTime, sessionDbId);
   
   // Pause-aware session duration (freezes when paused)
   const sessionDuration = useSessionDuration();
