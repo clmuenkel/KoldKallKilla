@@ -12,6 +12,8 @@ import { useCreateSession, usePauseSession, useResumeSession } from "@/hooks/use
 import { useUpdateContact, useContact } from "@/hooks/use-contacts";
 import { useFollowUpsDue, useMissedMeetingContacts, useDismissMissedMeeting, useAddToMissedMeetings } from "@/hooks/use-followups";
 import { useCommercialPlumbers } from "@/hooks/use-commercial-plumbers";
+import { useCommercialBidBuddy, useBidBuddyCompanyPauses } from "@/hooks/use-commercial-bid-buddy";
+import { isBidBuddyCallable, compareBidBuddyContacts } from "@/lib/commercial-bid-buddy";
 import { FollowUpControl } from "@/components/contacts/follow-up-control";
 import { RemoveFollowUpButton } from "@/components/contacts/remove-follow-up-button";
 import { useSearchParams } from "next/navigation";
@@ -69,7 +71,7 @@ import { toast } from "sonner";
 import { useAuthId } from "@/hooks/use-auth";
 import type { Contact } from "@/types/database";
 
-type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_due" | "commercial_plumbers";
+type FilterMode = "stage" | "company" | "all" | "missed_meetings" | "follow_ups_due" | "commercial_plumbers" | "commercial_bid_buddy";
 
 const CATEGORY_MODES: FilterMode[] = ["missed_meetings", "follow_ups_due", "commercial_plumbers"];
 
@@ -240,6 +242,14 @@ export function PowerDialer() {
   const { data: followUpsDue } = useFollowUpsDue();
   const { data: missedMeetingContacts } = useMissedMeetingContacts();
   const { data: commercialPlumbers } = useCommercialPlumbers();
+  const { data: bidBuddyContacts, isLoading: loadingBidBuddy, error: bidBuddyError } = useCommercialBidBuddy();
+  const sessionCategory = useDialerStore(state => state.sessionCategory);
+  const { data: bidBuddyPausedCompanies, isLoading: loadingBidBuddyPauses, error: bidBuddyPausesError } = useBidBuddyCompanyPauses();
+  const bidBuddyPausedCompanyIds = useMemo(() => new Set(bidBuddyPausedCompanies?.map(c => c.id)), [bidBuddyPausedCompanies]);
+  const callableBidBuddy = useMemo(() => {
+    if (!bidBuddyPausedCompanies || bidBuddyPausesError || bidBuddyError) return [];
+    return bidBuddyContacts?.filter(c => isBidBuddyCallable(c, bidBuddyPausedCompanyIds)) ?? [];
+  }, [bidBuddyContacts, bidBuddyPausedCompanies, bidBuddyPausedCompanyIds, bidBuddyPausesError, bidBuddyError]);
 
   // Deep-link from the dashboard alert: /dialer?category=missed_meetings|follow_ups_due
   const searchParams = useSearchParams();
@@ -247,7 +257,7 @@ export function PowerDialer() {
   useEffect(() => {
     if (appliedCategoryParam.current) return;
     const category = searchParams.get("category");
-    if (category === "missed_meetings" || category === "follow_ups_due" || category === "commercial_plumbers") {
+    if (category === "missed_meetings" || category === "follow_ups_due" || category === "commercial_plumbers" || category === "commercial_bid_buddy") {
       setFilterMode(category);
       appliedCategoryParam.current = true;
     }
@@ -311,6 +321,17 @@ export function PowerDialer() {
       return false;
     });
   }, [pausedCompanyIds, allContacts, queue.length, pruneQueue]);
+
+  // Re-check persisted BidBuddy queue members against fresh records after edits/resume.
+  useEffect(() => {
+    if (sessionCategory !== "commercial_bid_buddy" || !bidBuddyContacts || !bidBuddyPausedCompanies || bidBuddyError || bidBuddyPausesError) return;
+    const latest = new Map(bidBuddyContacts.map(c => [c.id, c]));
+    pruneQueue(contact => {
+      if (!contact.tags?.includes("commercial_bid_buddy")) return false;
+      const current = latest.get(contact.id);
+      return !current || !isBidBuddyCallable(current, bidBuddyPausedCompanyIds);
+    });
+  }, [sessionCategory, bidBuddyContacts, bidBuddyPausedCompanies, bidBuddyPausedCompanyIds, bidBuddyError, bidBuddyPausesError, queue.length, pruneQueue]);
 
   const { data: colleagues } = useCompanyColleagues(
     currentContact?.id || "",
@@ -523,8 +544,9 @@ export function PowerDialer() {
       missed_meetings: count(missedMeetingContacts),
       follow_ups_due: count(followUpsDue),
       commercial_plumbers: count(commercialPlumbers),
+      commercial_bid_buddy: count(callableBidBuddy),
     };
-  }, [missedMeetingContacts, followUpsDue, commercialPlumbers, requirePhone]);
+  }, [missedMeetingContacts, followUpsDue, commercialPlumbers, callableBidBuddy, requirePhone]);
 
   // Calculate counts per timezone group (memoized — this iterates the whole
   // source list and does per-contact timezone work, so it must not run every render).
@@ -536,6 +558,8 @@ export function PowerDialer() {
         ? followUpsDue
         : filterMode === "commercial_plumbers"
         ? commercialPlumbers
+        : filterMode === "commercial_bid_buddy"
+        ? callableBidBuddy
         : allContacts;
     if (!tzSource) return {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>;
 
@@ -571,7 +595,7 @@ export function PowerDialer() {
       };
       return acc;
     }, {} as Record<TimezoneGroup, { count: number; status: BusinessHourStatus }>);
-  }, [filterMode, missedMeetingContacts, followUpsDue, commercialPlumbers, allContacts, selectedStages, selectedCompanyId, requirePhone, empMin, empMax, companiesById]);
+  }, [filterMode, missedMeetingContacts, followUpsDue, commercialPlumbers, callableBidBuddy, allContacts, selectedStages, selectedCompanyId, requirePhone, empMin, empMax, companiesById]);
 
   // Maximum call attempts before contact is exhausted
   const MAX_CALL_ATTEMPTS = 10;
@@ -589,6 +613,8 @@ export function PowerDialer() {
         ? followUpsDue
         : filterMode === "commercial_plumbers"
         ? commercialPlumbers
+        : filterMode === "commercial_bid_buddy"
+        ? callableBidBuddy
         : allContacts;
     if (!source) return [];
 
@@ -636,6 +662,9 @@ export function PowerDialer() {
     // Category queues are explicit, human-curated lists: skip the auto-dialer
     // pool/cadence eligibility filters entirely. Sort AAA first, then by the
     // most-overdue follow-up date, then group by company.
+    if (filterMode === "commercial_bid_buddy") {
+      return [...filtered].sort(compareBidBuddyContacts);
+    }
     if (isCategory) {
       return [...filtered].sort((a, b) => {
         if (a.is_aaa && !b.is_aaa) return -1;
@@ -721,7 +750,7 @@ export function PowerDialer() {
     () => getFilteredContacts(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      allContacts, missedMeetingContacts, followUpsDue, commercialPlumbers, filterMode, selectedStages,
+      allContacts, missedMeetingContacts, followUpsDue, commercialPlumbers, callableBidBuddy, filterMode, selectedStages,
       selectedCompanyId, requirePhone, enableCadence, selectedTimezones,
       empMin, empMax, contactsCalledToday, pausedCompanyIds, companiesById,
     ]
@@ -800,12 +829,12 @@ export function PowerDialer() {
       });
 
       // Start session in store with the database session ID
-      startSession(dedupedContacts, session.id);
+      startSession(dedupedContacts, session.id, filterMode);
       toast.success(`Starting session with ${dedupedContacts.length} contacts`);
     } catch (error) {
       console.error("Failed to create session:", error);
       // Fall back to starting session without database tracking
-      startSession(dedupedContacts);
+      startSession(dedupedContacts, undefined, filterMode);
       toast.success(`Starting session with ${dedupedContacts.length} contacts`);
     }
   };
@@ -983,6 +1012,27 @@ export function PowerDialer() {
             <CardContent className="space-y-6">
               {/* Priority queues — Commercial Plumbers, Missed Meetings & Follow-ups Due */}
               <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode("commercial_bid_buddy")}
+                  disabled={loadingBidBuddy || loadingBidBuddyPauses || !!bidBuddyError || !!bidBuddyPausesError}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-2 p-4 rounded-lg border-2 text-left transition-all disabled:opacity-50",
+                    filterMode === "commercial_bid_buddy"
+                      ? "border-emerald-500 bg-emerald-500/10"
+                      : "border-emerald-500/40 hover:border-emerald-500 bg-emerald-500/5"
+                  )}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-semibold">Commercial BidBuddy</span>
+                    <span className="text-xs text-muted-foreground">
+                      {bidBuddyError || bidBuddyPausesError ? "Unable to load contacts — refresh to retry" : "Commercial plumbing first · active prospects only"}
+                    </span>
+                  </div>
+                  <Badge className="bg-emerald-500 text-white">
+                    {loadingBidBuddy || loadingBidBuddyPauses ? "Loading…" : bidBuddyError || bidBuddyPausesError ? "Unavailable" : categoryCounts.commercial_bid_buddy}
+                  </Badge>
+                </button>
                 {/* Commercial Plumbers — top-priority segment */}
                 <button
                   type="button"

@@ -38,6 +38,7 @@ interface DialerState {
   isViewingHome: boolean; // True when user pauses session to view home
   sessionStartTime: Date | null;
   sessionDbId: string | null; // Database session ID for linking calls to sessions
+  sessionCategory: string | null;
   pausedAt: Date | null;
   totalPausedSeconds: number;
   queue: Contact[];
@@ -73,7 +74,7 @@ interface DialerState {
   awaitingPickupSelection: boolean;
 
   // Actions
-  startSession: (contacts: Contact[], sessionDbId?: string) => void;
+  startSession: (contacts: Contact[], sessionDbId?: string, category?: string) => void;
   setSessionDbId: (sessionDbId: string | null) => void;
   replaceSessionWithNew: (newSessionDbId: string) => void;
   endSession: () => void;
@@ -127,6 +128,7 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   isViewingHome: false,
   sessionStartTime: null,
   sessionDbId: null,
+  sessionCategory: null,
   pausedAt: null,
   totalPausedSeconds: 0,
   queue: [],
@@ -149,12 +151,13 @@ export const useDialerStore = create<DialerState>((set, get) => ({
   showOutcomeDialog: false,
   awaitingPickupSelection: false,
 
-  startSession: (contacts, sessionDbId) => {
+  startSession: (contacts, sessionDbId, category) => {
     set({
       isActive: true,
       isViewingHome: false,
       sessionStartTime: new Date(),
       sessionDbId: sessionDbId || null,
+      sessionCategory: category || null,
       pausedAt: null,
       totalPausedSeconds: 0,
       queue: contacts,
@@ -182,6 +185,7 @@ export const useDialerStore = create<DialerState>((set, get) => ({
       isViewingHome: false,
       sessionStartTime: null,
       sessionDbId: null,
+      sessionCategory: null,
       pausedAt: null,
       totalPausedSeconds: 0,
       queue: [],
