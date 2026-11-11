@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuthId } from "@/hooks/use-auth";
 import { addBusinessDays, formatDateForDB, INDEFINITE_PAUSE_DATE } from "@/lib/utils";
 import type { Call, CallWithContact, InsertTables } from "@/types/database";
+import { fetchSessionCallStats, type SessionCallStats } from "@/lib/session-call-stats";
 
 const SESSION_GAP_MINUTES = 30;
 const MAX_CALL_ATTEMPTS = 10;
@@ -544,67 +545,15 @@ export function useLogCall() {
   });
 }
 
-// Get call stats for the current session (calls made since sessionStartTime)
-export interface SessionCallStats {
-  total: number;
-  connected: number;
-  voicemail: number;
-  noAnswer: number;
-  skipped: number;
-  aiScreener: number;
-  wrongNumber: number;
-  meetingsBooked: number;
-}
-
-export function useSessionCallStats(sessionStartTime: Date | null) {
+// Get dialer outcomes for this session, excluding synced/standalone meetings.
+export function useSessionCallStats(sessionStartTime: Date | null, sessionId: string | null) {
   const supabase = createClient();
+  const userId = useAuthId();
 
   return useQuery<SessionCallStats>({
-    queryKey: ["calls", "session-stats", sessionStartTime?.toISOString()],
-    queryFn: async () => {
-      if (!sessionStartTime) {
-        return {
-          total: 0,
-          connected: 0,
-          voicemail: 0,
-          noAnswer: 0,
-          skipped: 0,
-          aiScreener: 0,
-          wrongNumber: 0,
-          meetingsBooked: 0,
-        };
-      }
-
-      // Get all calls since session started
-      const { data: callData, error: callError } = await supabase
-        .from("calls")
-        .select("outcome, disposition")
-        .gte("started_at", sessionStartTime.toISOString());
-
-      if (callError) throw callError;
-
-      const calls = callData as { outcome: string | null; disposition: string | null }[];
-
-      // Get meetings booked since session started
-      const { data: meetingData, error: meetingError } = await supabase
-        .from("meetings")
-        .select("id")
-        .gte("created_at", sessionStartTime.toISOString());
-
-      if (meetingError) throw meetingError;
-
-      return {
-        total: calls.length,
-        connected: calls.filter((c) => c.outcome === "connected").length,
-        voicemail: calls.filter((c) => c.outcome === "voicemail").length,
-        noAnswer: calls.filter((c) => c.outcome === "no_answer").length,
-        skipped: calls.filter((c) => c.outcome === "skipped").length,
-        aiScreener: calls.filter((c) => c.outcome === "ai_screener").length,
-        wrongNumber: calls.filter((c) => c.outcome === "wrong_number").length,
-        meetingsBooked: meetingData?.length || 0,
-      };
-    },
-    enabled: !!sessionStartTime,
+    queryKey: ["calls", "session-stats", userId, sessionId, sessionStartTime?.toISOString()],
+    queryFn: () => fetchSessionCallStats(supabase, userId!, sessionId, sessionStartTime!),
+    enabled: !!userId && !!sessionStartTime,
     refetchInterval: 5000, // Refresh every 5 seconds for live updates
   });
 }

@@ -49,7 +49,7 @@ export function GlobalSessionBar() {
   const createSession = useCreateSession();
 
   // Fetch session call stats
-  const { data: callStats } = useSessionCallStats(sessionStartTime);
+  const { data: callStats } = useSessionCallStats(sessionStartTime, sessionDbId);
 
   // Don't show if no active session
   if (!isActive) {
